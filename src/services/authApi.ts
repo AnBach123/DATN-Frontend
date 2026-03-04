@@ -13,6 +13,26 @@ export type RegisterPayload = {
     dateOfBirth?: string
 }
 
+export type SendOtpPayload = {
+    email: string
+}
+
+export type VerifyOtpPayload = {
+    email: string
+    otpCode: string
+}
+
+export type RegisterOtpData = {
+    email: string
+    expiresAt: string
+    resendAfterSeconds: number
+}
+
+export type RegisterDoneData = {
+    customerId: number
+    email: string
+}
+
 export type LoginPayload = {
     email: string
     password: string
@@ -39,7 +59,15 @@ async function postJson<T>(url: string, payload: unknown): Promise<T> {
 }
 
 export function callRegister(payload: RegisterPayload) {
-    return postJson<ApiResponse<{ customerId: number; email: string }>>('/api/auth/register', payload)
+    return postJson<ApiResponse<RegisterOtpData>>('/api/auth/register', payload)
+}
+
+export function callSendOtp(payload: SendOtpPayload) {
+    return postJson<ApiResponse<RegisterOtpData>>('/api/auth/otp/send',payload)
+}
+
+export function callVerifyOtp(payload: VerifyOtpPayload) {
+    return postJson<ApiResponse<RegisterDoneData>>('/api/auth/otp/verify',payload)
 }
 
 export function callLogin(payload: LoginPayload) {
