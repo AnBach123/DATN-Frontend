@@ -2,6 +2,7 @@
 import { ref, onMounted } from "vue"
 import { getProducts } from "@/services/productApi"
 import { getVoucherCombos, getVoucherProducts } from "@/services/voucherApi"
+import { useBookingStore } from "@/composables/bookingStore"
 
 interface Product {
   productId: number
@@ -41,6 +42,8 @@ avatar:"https://randomuser.me/api/portraits/women/44.jpg",
 content:"Giá hợp lý, đồ ăn sạch sẽ. Mình sẽ quay lại cùng bạn bè."
 }
 ])
+
+const { open: openBooking } = useBookingStore()
 
 const loadProducts = async () => {
   try {
@@ -108,7 +111,7 @@ Thưởng thức lẩu cao cấp trong không gian sang trọng
 
 <div class="mt-4">
 
-<button class="btn btn-light btn-lg me-3">
+<button class="btn btn-light btn-lg me-3" @click="openBooking()">
 ĐẶT BÀN NGAY
 </button>
 
@@ -329,28 +332,73 @@ VIẾT ĐÁNH GIÁ CỦA BẠN!
 <style scoped>
 
 .home{
-background:#a80000;
+position: relative;
+min-height: 100vh;
+overflow: hidden;
+background: #5a1515;
+font-family: 'Manrope', sans-serif;
+}
+
+.home::before{
+content:"";
+position:absolute;
+inset:-8%;
+background-image:url("https://lh3.googleusercontent.com/gg-dl/AOI_d_97GQT3cq5d1SzFbhiWQy8LLR-Q6gVvwLj1HDYDw4E7VPlYKbTNuP-cDdoR-IdOtGOy4ADjYskoaqbUQeWGuO6WCPlRzVs3urxT-uDdpRO030SMfAwSkFQJKcdygLsfxN0qVE0OlI6keT44oKioO0ZhNufY__mMi_7i3yEGLuIQ-utk=s1024-rj");
+background-size: cover;
+background-position: center;
+filter: blur(8px) saturate(0.9);
+opacity: 0.28;
+transform: scale(1.05);
+z-index: 0;
+}
+
+.home::after{
+content:"";
+position:absolute;
+inset:0;
+background: linear-gradient(180deg, rgba(90,21,21,0.78) 0%, rgba(154,59,59,0.7) 45%, rgba(116,33,33,0.8) 100%);
+z-index: 0;
+}
+
+.home > *{
+position: relative;
+z-index: 1;
 }
 
 .hero{
-height:550px;
+height:600px;
 background:url("https://images.unsplash.com/photo-1559847844-5315695dadae") center/cover no-repeat;
+position:relative;
 }
 
 .overlay{
-background:rgba(0,0,0,0.55);
+background:linear-gradient(120deg, rgba(0,0,0,0.65), rgba(0,0,0,0.35));
 height:100%;
 display:flex;
 align-items:center;
 }
 
+.rating{
+display:inline-flex;
+flex-direction:column;
+align-items:center;
+gap:6px;
+background:rgba(0,0,0,0.35);
+padding:10px 16px;
+border-radius:999px;
+margin-bottom:16px;
+}
+
 .title{
-font-size:40px;
-font-weight:bold;
+font-family:'Playfair Display', serif;
+font-size:44px;
+font-weight:700;
+letter-spacing:1px;
 }
 
 .sub{
 font-size:18px;
+color:rgba(255,255,255,0.85);
 }
 
 .intro{
@@ -367,14 +415,16 @@ padding:80px 0;
 }
 
 .menu-card{
-border-radius:18px;
+border-radius:24px;
 overflow:hidden;
 transition:0.3s;
+background:#fff9f3;
+box-shadow:0 12px 30px rgba(0, 0, 0, 0.18);
 }
 
 .menu-card:hover{
 transform:translateY(-8px);
-box-shadow:0 15px 30px rgba(0,0,0,0.25);
+box-shadow:var(--shadow-strong);
 }
 
 .product-img{
@@ -383,8 +433,8 @@ object-fit:cover;
 }
 
 .price{
-color:#d00000;
-font-weight:bold;
+color:#b1120a;
+font-weight:700;
 font-size:18px;
 margin-bottom:10px;
 }
@@ -394,16 +444,17 @@ padding:80px 0;
 }
 
 .promo-card{
-background:#f1e7d0;
+background:#fff6ea;
 padding:40px;
-border-radius:15px;
+border-radius:22px;
 text-align:center;
 transition:0.3s;
+box-shadow:0 12px 28px rgba(0, 0, 0, 0.15);
 }
 
 .promo-card:hover{
 transform:translateY(-6px);
-box-shadow:0 10px 20px rgba(0,0,0,0.25);
+box-shadow:var(--shadow-strong);
 }
 
 .badge-sale{
@@ -437,15 +488,16 @@ font-weight:bold;
 }
 
 .review-card{
-background:#f1e7d0;
+background:#fff7f0;
 padding:35px;
-border-radius:18px;
+border-radius:22px;
 transition:0.3s;
+box-shadow:0 10px 26px rgba(0, 0, 0, 0.14);
 }
 
 .review-card:hover{
 transform:translateY(-6px);
-box-shadow:0 10px 25px rgba(0,0,0,0.3);
+box-shadow:var(--shadow-strong);
 }
 
 .avatar{

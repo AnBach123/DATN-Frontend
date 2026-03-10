@@ -35,7 +35,7 @@
           <span class="value">{{ data.promotionType }}</span>
         </div>
         <div class="row" v-if="data.note">
-          <span class="label">Ghi chú</span>
+          <span class="label">Ghi chú khách</span>
           <span class="value">{{ data.note }}</span>
         </div>
         <div class="row">
@@ -86,6 +86,7 @@ type ReservationResult = {
   phoneNumber: string
   promotionType: string
   note?: string
+  foodNote?: string
   tables: TableInfo[]
 }
 
@@ -123,7 +124,7 @@ const formatDateTime = (value: string) => {
   })
 }
 
-const goHome = () => router.push('/')
+const goHome = () => router.push('/home')
 const goReservation = () => router.push('/reservation')
 
 const sendEmail = async () => {
@@ -149,17 +150,18 @@ const sendEmail = async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: radial-gradient(circle at top, #f3ede6 0%, #e6d7c6 45%, #e0cdb8 100%);
-  padding: 40px 16px;
+  background: radial-gradient(circle at top, #b1120a 0%, #8e0e0a 50%, #6d0b0b 100%);
+  padding: 60px 16px;
 }
 
 .success-card {
   width: min(560px, 95vw);
-  background: #fff7ef;
+  background: #ffffff;
   border-radius: 24px;
   padding: 32px 28px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
   text-align: center;
+  border-top: 6px solid #f0b66a;
 }
 
 .success-icon {
