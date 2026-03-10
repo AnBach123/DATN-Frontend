@@ -3,6 +3,7 @@ import MainLayout from '@/layout/MainLayout.vue'
 import LoginView from '@/views/auth/LoginView.vue'
 import OtpVerifyView from '@/views/auth/OtpVerifyView.vue'
 import RegisterView from '@/views/auth/RegisterView.vue'
+import ReservationSuccessView from '@/views/reservation/ReservationSuccessView.vue'
 import { createRouter, createWebHistory } from 'vue-router'
 
 const router = createRouter({
@@ -15,7 +16,10 @@ const router = createRouter({
     {
       path: '/',
       component: MainLayout,
-      children: [{ path: 'reservation', name: 'reservation', component: ReservationForm }],
+      children: [
+        { path: 'reservation', name: 'reservation', component: ReservationForm },
+        { path: 'reservation/success', name: 'reservation-success', component: ReservationSuccessView },
+      ],
     },
   ],
 })
