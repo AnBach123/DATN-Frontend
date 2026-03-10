@@ -1,7 +1,7 @@
 import axios from 'axios'
 
-const PRODUCT_API = 'http://localhost:8080/api/products'
-const IMAGE_API = 'http://localhost:8080/api/images/product'
+const PRODUCT_API = '/api/products'
+const IMAGE_API = '/api/images/product'
 
 export const getProducts = async () => {
   try {

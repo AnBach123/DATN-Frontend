@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-const API_URL = 'http://localhost:8080/api/product-combos'
+const API_URL = '/api/product-combos'
 
 export interface ProductComboResponse {
   id: number

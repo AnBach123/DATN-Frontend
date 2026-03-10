@@ -324,10 +324,11 @@ async function order() {
     alert('Order thành công')
 
     cart.value = []
-  } catch (error) {
+  } catch (error: any) {
     console.error(error)
 
-    alert('Order thất bại')
+    const errorMsg = error?.response?.data?.message || 'Order thất bại'
+    alert(errorMsg)
   }
 }
 
