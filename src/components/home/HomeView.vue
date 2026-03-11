@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { getProducts } from '@/services/productApi'
 import { getVoucherCombos, getVoucherProducts } from '@/services/voucherApi'
+import { useBookingStore } from "@/composables/bookingStore"
 
 interface Product {
   productId: number
@@ -42,6 +43,8 @@ const reviews = ref([
     content: 'Giá hợp lý, đồ ăn sạch sẽ. Mình sẽ quay lại cùng bạn bè.',
   },
 ])
+
+const { open: openBooking } = useBookingStore()
 
 const loadProducts = async () => {
   try {
@@ -247,6 +250,319 @@ onMounted(() => {
 
 .sub {
   font-size: 18px;
+
+<div class="home">
+
+<!-- HERO -->
+<section class="hero text-center text-white">
+
+<div class="overlay">
+
+<div class="container hero-content">
+
+<div class="rating">
+⭐⭐⭐⭐⭐
+<p>4.5/5 - 1200+ Reviews</p>
+</div>
+
+<h1 class="title">
+TINH HOA LẨU VIỆT - ĂN THẢ GA, KHÔNG LO GIÁ
+</h1>
+
+<p class="sub">
+Thưởng thức lẩu cao cấp trong không gian sang trọng
+</p>
+
+<div class="mt-4">
+
+<button class="btn btn-light btn-lg me-3" @click="openBooking()">
+ĐẶT BÀN NGAY
+</button>
+
+<router-link to="/menu" class="btn btn-outline-light btn-lg">
+XEM THỰC ĐƠN
+</router-link>
+
+</div>
+
+</div>
+
+</div>
+
+</section>
+
+<!-- INTRO -->
+<section class="intro text-center text-white">
+
+<div class="intro-overlay">
+
+<div class="container">
+
+<h2>GIỚI THIỆU VỀ BYHAT</h2>
+
+<p>
+Trải nghiệm 6 loại nước dùng & hơn 60 món nhúng tươi ngon
+</p>
+
+</div>
+
+</div>
+
+</section>
+
+<!-- PRODUCTS -->
+<section class="menu-section">
+
+<div class="container">
+
+<h2 class="text-center text-white mb-3">
+TINH HOA VỊ LẨU
+</h2>
+
+<p class="text-center text-white mb-5">
+Những món ngon bạn không thể bỏ lỡ tại ByHat
+</p>
+
+<div v-if="loading" class="text-center text-white">
+Đang tải món ăn...
+</div>
+
+<div v-else-if="products.length===0" class="text-center text-white">
+Chưa có sản phẩm
+</div>
+
+<div v-else class="row g-4">
+
+<div
+class="col-lg-3 col-md-6"
+v-for="item in products"
+:key="item.productId"
+>
+
+<div class="card menu-card h-100">
+
+<img
+:src="getImage(item)"
+class="card-img-top product-img"
+onerror="this.src='https://picsum.photos/400/300'"
+>
+
+<div class="card-body text-center">
+
+<h5 class="card-title">
+{{ item.productName }}
+</h5>
+
+<p class="card-text">
+{{ item.description || "Món ăn đặc biệt của ByHat" }}
+</p>
+
+<div class="price">
+{{ item.unitPrice.toLocaleString('vi-VN') }} đ
+</div>
+
+<router-link
+:to="'/product/' + item.productId"
+class="btn btn-danger btn-sm"
+>
+Chi tiết
+</router-link>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+</section>
+
+<!-- PROMOTION -->
+<section class="promo-section">
+
+<div class="container">
+
+<h2 class="text-center text-white mb-5">
+ƯU ĐÃI ĐẶC BIỆT THÁNG NÀY
+</h2>
+
+<div v-if="vouchers.length===0" class="text-center text-white">
+Chưa có ưu đãi
+</div>
+
+<div v-else class="row g-4">
+
+<div
+class="col-md-4"
+v-for="item in vouchers"
+:key="item.voucherId"
+>
+
+<div class="promo-card">
+
+<div class="badge-sale">
+🔥 ƯU ĐÃI
+</div>
+
+<h4>{{ item.voucherName }}</h4>
+
+<p>
+{{ item.description }}
+</p>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+</section>
+
+<!-- REVIEW -->
+<section class="review-section">
+
+<div class="container text-center">
+
+<h2 class="review-title">
+Ý KIẾN KHÁCH HÀNG
+</h2>
+
+<div class="review-rating">
+
+<div class="star">⭐</div>
+
+<div class="score">
+4.9 / 5
+</div>
+
+<p>1200+ đánh giá tích cực</p>
+
+</div>
+
+<div class="row g-4 mt-4">
+
+<div
+class="col-lg-4 col-md-6"
+v-for="item in reviews"
+:key="item.id"
+>
+
+<div class="review-card">
+
+<img
+:src="item.avatar"
+class="avatar"
+/>
+
+<h5 class="review-name">
+{{ item.name }}
+</h5>
+
+<p class="review-text">
+{{ item.content }}
+</p>
+
+</div>
+
+</div>
+
+</div>
+
+<div class="review-action">
+
+<p>
+Hôm nay bạn thấy món nào ngon nhất? Cùng chia sẻ nhé!
+</p>
+
+<button class="review-btn">
+VIẾT ĐÁNH GIÁ CỦA BẠN!
+</button>
+
+</div>
+
+</div>
+
+</section>
+
+</div>
+
+</template>
+
+<style scoped>
+
+.home{
+position: relative;
+min-height: 100vh;
+overflow: hidden;
+background: #5a1515;
+font-family: 'Manrope', sans-serif;
+}
+
+.home::before{
+content:"";
+position:absolute;
+inset:-8%;
+background-image:url("https://lh3.googleusercontent.com/gg-dl/AOI_d_97GQT3cq5d1SzFbhiWQy8LLR-Q6gVvwLj1HDYDw4E7VPlYKbTNuP-cDdoR-IdOtGOy4ADjYskoaqbUQeWGuO6WCPlRzVs3urxT-uDdpRO030SMfAwSkFQJKcdygLsfxN0qVE0OlI6keT44oKioO0ZhNufY__mMi_7i3yEGLuIQ-utk=s1024-rj");
+background-size: cover;
+background-position: center;
+filter: blur(8px) saturate(0.9);
+opacity: 0.28;
+transform: scale(1.05);
+z-index: 0;
+}
+
+.home::after{
+content:"";
+position:absolute;
+inset:0;
+background: linear-gradient(180deg, rgba(90,21,21,0.78) 0%, rgba(154,59,59,0.7) 45%, rgba(116,33,33,0.8) 100%);
+z-index: 0;
+}
+
+.home > *{
+position: relative;
+z-index: 1;
+}
+
+.hero{
+height:600px;
+background:url("https://images.unsplash.com/photo-1559847844-5315695dadae") center/cover no-repeat;
+position:relative;
+}
+
+.overlay{
+background:linear-gradient(120deg, rgba(0,0,0,0.65), rgba(0,0,0,0.35));
+height:100%;
+display:flex;
+align-items:center;
+}
+
+.rating{
+display:inline-flex;
+flex-direction:column;
+align-items:center;
+gap:6px;
+background:rgba(0,0,0,0.35);
+padding:10px 16px;
+border-radius:999px;
+margin-bottom:16px;
+}
+
+.title{
+font-family:'Playfair Display', serif;
+font-size:44px;
+font-weight:700;
+letter-spacing:1px;
+}
+
+.sub{
+font-size:18px;
+color:rgba(255,255,255,0.85);
 }
 
 .intro {
@@ -272,6 +588,17 @@ onMounted(() => {
 .menu-card:hover {
   transform: translateY(-8px);
   box-shadow: 0 15px 30px rgba(0, 0, 0, 0.25);
+.menu-card{
+border-radius:24px;
+overflow:hidden;
+transition:0.3s;
+background:#fff9f3;
+box-shadow:0 12px 30px rgba(0, 0, 0, 0.18);
+}
+
+.menu-card:hover{
+transform:translateY(-8px);
+box-shadow:var(--shadow-strong);
 }
 
 .product-img {
@@ -284,6 +611,11 @@ onMounted(() => {
   font-weight: bold;
   font-size: 18px;
   margin-bottom: 10px;
+.price{
+color:#b1120a;
+font-weight:700;
+font-size:18px;
+margin-bottom:10px;
 }
 
 .promo-section {
@@ -301,6 +633,18 @@ onMounted(() => {
 .promo-card:hover {
   transform: translateY(-6px);
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.25);
+.promo-card{
+background:#fff6ea;
+padding:40px;
+border-radius:22px;
+text-align:center;
+transition:0.3s;
+box-shadow:0 12px 28px rgba(0, 0, 0, 0.15);
+}
+
+.promo-card:hover{
+transform:translateY(-6px);
+box-shadow:var(--shadow-strong);
 }
 
 .badge-sale {
@@ -343,6 +687,17 @@ onMounted(() => {
 .review-card:hover {
   transform: translateY(-6px);
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+.review-card{
+background:#fff7f0;
+padding:35px;
+border-radius:22px;
+transition:0.3s;
+box-shadow:0 10px 26px rgba(0, 0, 0, 0.14);
+}
+
+.review-card:hover{
+transform:translateY(-6px);
+box-shadow:var(--shadow-strong);
 }
 
 .avatar {
@@ -367,4 +722,5 @@ onMounted(() => {
 .review-btn:hover {
   background: white;
 }
+
 </style>

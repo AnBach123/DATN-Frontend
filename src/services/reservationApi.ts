@@ -28,3 +28,9 @@ export const sendReservationEmail = (reservationCode: string) => {
     headers: getAuthHeader(),
   })
 }
+
+export const getReservationByCode = (reservationCode: string) => {
+  return axios.get(`${API_URL}/${reservationCode}`, {
+    headers: getAuthHeader(),
+  })
+}

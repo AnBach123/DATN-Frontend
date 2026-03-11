@@ -1,5 +1,5 @@
-import ReservationForm from '@/components/reservation/ReservationForm.vue'
 import HomeView from '@/components/home/HomeView.vue'
+import MenuView from '@/views/menu/MenuView.vue'
 import MainLayout from '@/layout/MainLayout.vue'
 import LoginView from '@/views/auth/LoginView.vue'
 import OtpVerifyView from '@/views/auth/OtpVerifyView.vue'
@@ -18,6 +18,8 @@ const router = createRouter({
     { path: '/auth/login', name: 'login', component: LoginView },
     { path: '/auth/register', name: 'register', component: RegisterView },
     { path: '/auth/verify-otp', name: 'verify-otp', component: OtpVerifyView },
+    { path: '/reservation', redirect: { path: '/home' } },
+    { path: '/reservation/success', name: 'reservation-success', component: ReservationSuccessView },
 
     {
       path: '/',
@@ -30,6 +32,7 @@ const router = createRouter({
           name: 'reservation-success',
           component: ReservationSuccessView,
         },
+        { path: 'menu', name: 'menu', component: MenuView },
       ],
     },
 
