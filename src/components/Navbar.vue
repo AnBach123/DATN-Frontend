@@ -3,7 +3,7 @@
     <div class="container-fluid nav-shell">
       <RouterLink class="brand" to="/home">
         <span class="brand-mark">ByHat</span>
-        <span class="brand-sub">Quán nhậu tự do</span>
+        <span class="brand-sub">Hotpot Restaurant</span>
       </RouterLink>
 
       <button
@@ -124,7 +124,9 @@ const { open: openBooking } = useBookingStore()
   letter-spacing: 0.2px;
   text-decoration: none;
   box-shadow: 0 10px 22px rgba(0, 0, 0, 0.18);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .btn-reserve:hover {

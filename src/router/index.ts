@@ -6,6 +6,8 @@ import OtpVerifyView from '@/views/auth/OtpVerifyView.vue'
 import RegisterView from '@/views/auth/RegisterView.vue'
 import ReservationSuccessView from '@/views/reservation/ReservationSuccessView.vue'
 import { createRouter, createWebHistory } from 'vue-router'
+import MainLayoutAdmin from '@/layout/MainLayoutAdmin.vue'
+import AdminDashboard from '@/views/admin/AdminDashboard.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -16,7 +18,11 @@ const router = createRouter({
     { path: '/auth/register', name: 'register', component: RegisterView },
     { path: '/auth/verify-otp', name: 'verify-otp', component: OtpVerifyView },
     { path: '/reservation', redirect: { path: '/home' } },
-    { path: '/reservation/success', name: 'reservation-success', component: ReservationSuccessView },
+    {
+      path: '/reservation/success',
+      name: 'reservation-success',
+      component: ReservationSuccessView,
+    },
 
     {
       path: '/',
@@ -25,6 +31,11 @@ const router = createRouter({
         { path: 'home', name: 'home', component: HomeView },
         { path: 'menu', name: 'menu', component: MenuView },
       ],
+    },
+    {
+      path: '/',
+      component: MainLayoutAdmin,
+      children: [{ path: '/admin/dashboard', name: 'dashboard', component: AdminDashboard }],
     },
   ],
 })
