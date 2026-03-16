@@ -3,7 +3,7 @@
     <div class="container-fluid nav-shell">
       <RouterLink class="brand" to="/home">
         <span class="brand-mark">ByHat</span>
-        <span class="brand-sub">Quán nhậu tự do</span>
+        <span class="brand-sub">Hotpot Restaurant</span>
       </RouterLink>
 
       <button

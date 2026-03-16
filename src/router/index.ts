@@ -6,6 +6,9 @@ import OtpVerifyView from '@/views/auth/OtpVerifyView.vue'
 import RegisterView from '@/views/auth/RegisterView.vue'
 import ReservationSuccessView from '@/views/reservation/ReservationSuccessView.vue'
 import { createRouter, createWebHistory } from 'vue-router'
+import ReceptionMainLayout from '@/layout/ReceptionMainLayout.vue'
+import CheckInOnl from '@/components/reception/CheckInOnl.vue'
+import StaffOrder from '@/components/staff/StaffOrder.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -26,6 +29,16 @@ const router = createRouter({
         { path: 'menu', name: 'menu', component: MenuView },
       ],
     },
+
+    {
+      path: '/reception',
+      component: ReceptionMainLayout,
+      children: [
+        { path: '/reception/check-in-online', name: 'check-in-online', component: CheckInOnl },
+      ],
+    },
+
+    { path: '/staff-order', name: 'staff-order', component: StaffOrder },
   ],
 })
 
