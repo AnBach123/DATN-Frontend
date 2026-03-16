@@ -5,7 +5,6 @@ import LoginView from '@/views/auth/LoginView.vue'
 import OtpVerifyView from '@/views/auth/OtpVerifyView.vue'
 import RegisterView from '@/views/auth/RegisterView.vue'
 import ReservationSuccessView from '@/views/reservation/ReservationSuccessView.vue'
-import ReservationLookupView from '@/views/staff/ReservationLookupView.vue'
 import { createRouter, createWebHistory } from 'vue-router'
 import ReceptionMainLayout from '@/layout/ReceptionMainLayout.vue'
 import CheckInOnl from '@/components/reception/CheckInOnl.vue'
@@ -27,14 +26,7 @@ const router = createRouter({
       component: MainLayout,
       children: [
         { path: 'home', name: 'home', component: HomeView },
-        { path: 'reservation', name: 'reservation', component: ReservationForm },
-        {
-          path: 'reservation/success',
-          name: 'reservation-success',
-          component: ReservationSuccessView,
-        },
         { path: 'menu', name: 'menu', component: MenuView },
-        { path: 'staff/checkin', name: 'staff-checkin', component: ReservationLookupView },
       ],
     },
 

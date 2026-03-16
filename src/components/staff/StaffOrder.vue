@@ -9,7 +9,15 @@
       </div>
 
       <div style="width: 200px">
-        <input v-model="tableId" type="number" class="form-control" placeholder="Nhập ID bàn" />
+        <input
+          v-model.number="tableId"
+          type="number"
+          min="1"
+          class="form-control"
+          placeholder="Nhập mã bàn"
+          @input="normalizeTableId"
+          @blur="normalizeTableId"
+        />
       </div>
     </div>
 
@@ -138,7 +146,7 @@ import { ref, computed, onMounted } from 'vue'
 
 import { getProducts } from '@/services/productApi'
 import { getAllProductCombos } from '@/services/productComboApi'
-import { addItemToInvoice } from '@/services/staffOrderApi'
+import { addItemsToTable } from '@/services/staffOrderApi'
 
 /* STAFF */
 
@@ -176,10 +184,12 @@ interface CartItem {
   quantity: number
 }
 
+
 /* DATA */
 
 const products = ref<Product[]>([])
 const combos = ref<Combo[]>([])
+
 
 /* FETCH PRODUCTS */
 
@@ -290,6 +300,12 @@ const subtotal = computed(() =>
   cart.value.reduce((sum, item) => sum + item.price * item.quantity, 0),
 )
 
+function normalizeTableId() {
+  if (tableId.value == null) return
+  if (tableId.value < 1) tableId.value = 1
+}
+
+
 /* ORDER */
 
 async function order() {
@@ -299,30 +315,24 @@ async function order() {
   }
 
   try {
-    for (const item of cart.value) {
+    const items = cart.value.map((item) => {
       if (item.key.startsWith('product')) {
-        const productId = Number(item.key.split('-')[1])
-
-        await addItemToInvoice({
-          invoiceId: tableId.value,
+        return {
           itemType: 'PRODUCT',
-          productId,
+          productId: Number(item.key.split('-')[1]),
           quantity: item.quantity,
-        })
-      } else {
-        const comboId = Number(item.key.split('-')[1])
-
-        await addItemToInvoice({
-          invoiceId: tableId.value,
-          itemType: 'COMBO',
-          productComboId: comboId,
-          quantity: item.quantity,
-        })
+        }
       }
-    }
+      return {
+        itemType: 'COMBO',
+        productComboId: Number(item.key.split('-')[1]),
+        quantity: item.quantity,
+      }
+    })
+
+    await addItemsToTable(tableId.value, items)
 
     alert('Order thành công')
-
     cart.value = []
   } catch (error: any) {
     console.error(error)

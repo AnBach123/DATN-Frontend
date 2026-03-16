@@ -34,3 +34,9 @@ export const getReservationByCode = (reservationCode: string) => {
     headers: getAuthHeader(),
   })
 }
+
+export const checkInReservation = (reservationCode: string) => {
+  return axios.post(`${API_URL}/${reservationCode}/check-in`, null, {
+    headers: getAuthHeader(),
+  })
+}
