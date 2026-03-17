@@ -1,6 +1,6 @@
 <template>
-  <div class="bg-dark text-white p-3 vh-100 d-flex flex-column" style="width: 220px">
-    <div>
+  <div class="sidebar bg-dark text-white p-3 d-flex flex-column">
+    <div class="sidebar-nav flex-grow-1">
       <h4 class="mb-4">ByHat</h4>
 
       <ul class="nav flex-column">
@@ -21,13 +21,11 @@
         </li>
 
         <li class="nav-item mb-2">
-          <router-link class="nav-link text-white" to="/payment"> Thanh toán </router-link>
+          <router-link class="nav-link text-white" to="/reception/payment"> Thanh toán </router-link>
         </li>
 
         <li class="nav-item mb-2">
-          <router-link class="nav-link text-white" to="/invoice-list">
-            Danh sách Hóa đơn
-          </router-link>
+          <router-link class="nav-link text-white" to="/invoice-list"> Danh sách Hóa đơn </router-link>
         </li>
 
         <li class="nav-item mb-2">
@@ -42,11 +40,34 @@
       </ul>
     </div>
 
-    <!-- Logout button -->
-    <div class="mt-auto d-flex justify-content-center">
+    <div class="mt-auto d-flex justify-content-center pt-3">
       <RouterLink to="/auth/login">
         <button class="btn btn-outline-light">Logout</button>
       </RouterLink>
     </div>
   </div>
 </template>
+
+<style scoped>
+.sidebar {
+  width: 100%;
+  height: 100vh;
+  min-height: 100vh;
+  position: sticky;
+  top: 0;
+  align-self: stretch;
+  overflow: hidden;
+}
+
+.sidebar-nav {
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.sidebar-nav::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+</style>
