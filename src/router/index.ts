@@ -9,6 +9,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import ReceptionMainLayout from '@/layout/ReceptionMainLayout.vue'
 import CheckInOnl from '@/components/reception/CheckInOnl.vue'
 import StaffOrder from '@/components/staff/StaffOrder.vue'
+import PaymentView from '@/components/reception/PaymentView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -35,6 +36,7 @@ const router = createRouter({
       component: ReceptionMainLayout,
       children: [
         { path: '/reception/check-in-online', name: 'check-in-online', component: CheckInOnl },
+        { path: '/reception/payment', name: 'reception-payment', component: PaymentView },
       ],
     },
 
