@@ -1,6 +1,6 @@
-﻿<script setup lang="ts">
-import { callLogin } from '@/services/authApi';
-import { ref } from 'vue';
+<script setup lang="ts">
+import { callLogin } from '@/services/authApi'
+import { ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 
 const router = useRouter()
@@ -25,8 +25,7 @@ async function onSubmit() {
         localStorage.setItem('email', res.data.email)
 
         msg.value = 'Đăng nhập thành công!'
-       router.push('/home')
-
+        router.push('/home')
     } catch (e: any) {
         msg.value = e?.message || 'Đăng nhập thất bại'
     } finally {

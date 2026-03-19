@@ -146,7 +146,7 @@ import { ref, computed, onMounted } from 'vue'
 
 import { getProducts } from '@/services/productApi'
 import { getAllProductCombos } from '@/services/productComboApi'
-import { addItemsToTable } from '@/services/staffOrderApi'
+import { addItemsToTable, type OrderItemRequest } from '@/services/staffOrderApi'
 
 /* STAFF */
 
@@ -195,10 +195,7 @@ const combos = ref<Combo[]>([])
 
 async function fetchProducts() {
   try {
-    const res = await getProducts()
-
-    const data = res.data || res
-
+    const data = await getProducts()
     products.value = data.filter((p: Product) => p.availabilityStatus === 'AVAILABLE')
   } catch (error) {
     console.error('Load product error', error)
@@ -209,10 +206,7 @@ async function fetchProducts() {
 
 async function fetchCombos() {
   try {
-    const res = await getAllProductCombos()
-
-    const data = res.data || res
-
+    const data = await getAllProductCombos()
     combos.value = data.filter((c: Combo) => c.isActive === true)
   } catch (error) {
     console.error('Load combo error', error)
@@ -315,7 +309,7 @@ async function order() {
   }
 
   try {
-    const items = cart.value.map((item) => {
+    const items: OrderItemRequest[] = cart.value.map((item) => {
       if (item.key.startsWith('product')) {
         return {
           itemType: 'PRODUCT',

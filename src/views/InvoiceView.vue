@@ -63,7 +63,7 @@
           </thead>
           <tbody>
             <tr v-for="(item, index) in invoiceData.items" :key="index">
-              <td>{{ index + 1 }}</td>
+              <td>{{ Number(index) + 1 }}</td>
               <td class="item-name">{{ item.name }}</td>
               <td>
                 <span class="item-type-badge" :class="item.type === 'PRODUCT' ? 'product' : 'combo'">
