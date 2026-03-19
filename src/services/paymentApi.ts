@@ -18,6 +18,7 @@ export const getPaymentByTable = (tableId: number) => {
 export const checkoutPayment = (payload: {
   tableId: number
   customerVoucherId?: number | null
+  voucherCodes?: string[] | null
   usePoints?: number
   paymentMethod?: string
   cashReceived?: number
