@@ -18,6 +18,8 @@ export default defineConfig({
     },
   },
   server: {
+    host: '0.0.0.0', // Cho phép truy cập từ mạng local
+    port: 5173,
     proxy: {
       '/api': {
         target: 'http://localhost:8080',

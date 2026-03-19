@@ -10,6 +10,8 @@ import ReceptionMainLayout from '@/layout/ReceptionMainLayout.vue'
 import CheckInOnl from '@/components/reception/CheckInOnl.vue'
 import StaffOrder from '@/components/staff/StaffOrder.vue'
 import PaymentView from '@/components/reception/PaymentView.vue'
+import MockBankTransfer from '@/views/MockBankTransfer.vue'
+import InvoiceView from '@/views/InvoiceView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -41,6 +43,8 @@ const router = createRouter({
     },
 
     { path: '/staff-order', name: 'staff-order', component: StaffOrder },
+    { path: '/mock-bank-transfer', name: 'mock-bank-transfer', component: MockBankTransfer },
+    { path: '/invoice', name: 'invoice', component: InvoiceView },
   ],
 })
 
