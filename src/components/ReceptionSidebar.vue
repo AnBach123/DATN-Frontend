@@ -15,7 +15,7 @@
         </li>
 
         <li class="nav-item mb-2">
-          <router-link class="nav-link text-white" to="/check-in-offline">
+          <router-link class="nav-link text-white" to="/reception/check-in-offline">
             Check in Offline
           </router-link>
         </li>

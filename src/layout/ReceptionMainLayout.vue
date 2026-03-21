@@ -5,6 +5,11 @@
 
     <!-- Content -->
     <div class="reception-content p-4 bg-light">
+      <!-- OVERTIME ALERT PANEL -->
+      <div class="mb-4">
+        <OvertimeAlertPanel />
+      </div>
+
       <router-view />
     </div>
   </div>
@@ -12,6 +17,7 @@
 
 <script setup lang="ts">
 import ReceptionSidebar from '@/components/ReceptionSidebar.vue'
+import OvertimeAlertPanel from '@/components/staff/OvertimeAlertPanel.vue'
 </script>
 
 <style scoped>

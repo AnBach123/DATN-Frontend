@@ -14,8 +14,12 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url))
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
+      global: 'globalThis'
     },
+  },
+  define: {
+    global: 'globalThis',
   },
   server: {
     host: '0.0.0.0', // Cho phép truy cập từ mạng local

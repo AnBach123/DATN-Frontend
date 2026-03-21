@@ -51,7 +51,7 @@ const loadProducts = async () => {
     const data = await getProducts()
     products.value = data.slice(0, 4)
   } catch (error) {
-    console.log(error)
+    // Error handled silently
   } finally {
     loading.value = false
   }
@@ -63,7 +63,7 @@ const loadVouchers = async () => {
     const product = (await getVoucherProducts()) || []
     vouchers.value = [...combo, ...product].slice(0, 3)
   } catch (error) {
-    console.log(error)
+    // Error handled silently
   }
 }
 

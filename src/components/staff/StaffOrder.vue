@@ -1,5 +1,10 @@
 <template>
   <div class="container-fluid p-4">
+    <!-- OVERTIME ALERT PANEL -->
+    <div class="mb-4">
+      <OvertimeAlertPanel />
+    </div>
+
     <!-- HEADER -->
     <div class="d-flex justify-content-between align-items-center mb-4">
       <div>
@@ -147,6 +152,7 @@ import { ref, computed, onMounted } from 'vue'
 import { getProducts } from '@/services/productApi'
 import { getAllProductCombos } from '@/services/productComboApi'
 import { addItemsToTable, type OrderItemRequest } from '@/services/staffOrderApi'
+import OvertimeAlertPanel from '@/components/staff/OvertimeAlertPanel.vue'
 
 /* STAFF */
 

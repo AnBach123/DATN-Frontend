@@ -236,7 +236,7 @@ onMounted(async () => {
     }))
     buildCategories(products.value)
   } catch (error) {
-    console.log(error)
+    // Error handled silently
   } finally {
     loading.value = false
   }
