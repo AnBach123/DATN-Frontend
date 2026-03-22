@@ -35,7 +35,7 @@ export const MOCK_USERS: MockUser[] = [
 
 export const ROLE_ROUTES = {
   USER: '/home',
-  RECEPTION: '/reception/check-in-online',
+  RECEPTION: '/reception/check-in-offline',
   STAFF: '/staff-order',
   ADMIN: '/admin/dashboard'
 }

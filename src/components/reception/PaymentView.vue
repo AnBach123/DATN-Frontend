@@ -1,13 +1,15 @@
 <template>
   <div class="pos-page">
-    <div class="pos-header">
+    <!-- Header (hidden when hideHeader prop is true) -->
+    <div v-if="!hideHeader" class="pos-header">
       <div>
         <h3 class="pos-title">Thanh toán</h3>
         <p class="pos-sub">Reception / POS - ByHat</p>
       </div>
     </div>
 
-    <div class="card pos-card mb-4">
+    <!-- Search input (hidden when hideHeader prop is true) -->
+    <div v-if="!hideHeader" class="card pos-card mb-4">
       <div class="card-body">
         <div class="d-flex flex-wrap gap-2 align-items-center">
           <input
@@ -463,6 +465,16 @@ import {
 import Swal from 'sweetalert2'
 import QRCode from 'qrcode'
 
+const props = defineProps<{
+  initialTableId?: number
+  hideHeader?: boolean
+}>()
+
+const emit = defineEmits<{
+  paymentComplete: []
+  cancelComplete: []
+}>()
+
 const router = useRouter()
 const route = useRoute()
 
@@ -583,6 +595,12 @@ const stopPolling = () => {
 }
 
 onMounted(() => {
+  // Check if initialTableId prop is provided
+  if (props.initialTableId) {
+    tableIdInput.value = props.initialTableId
+    loadPayment()
+  }
+  
   // Check if reset query param is present
   if (route.query.reset === 'true') {
     payment.value = null
@@ -1336,6 +1354,9 @@ const checkout = async () => {
     payment.value = null
     tableIdInput.value = null
     
+    // Emit payment complete event
+    emit('paymentComplete')
+    
   } catch (error: any) {
     let errorMessage = 'Có lỗi xảy ra khi thanh toán'
     
@@ -1506,6 +1527,9 @@ const checkoutWithAutoPrint = async (
     payment.value = null
     tableIdInput.value = null
     
+    // Emit payment complete event
+    emit('paymentComplete')
+    
   } catch (error: any) {
     Swal.fire({
       icon: 'error',
@@ -1560,6 +1584,7 @@ const cancelInvoice = async () => {
       timerProgressBar: true,
     })
     payment.value = null
+    emit('cancelComplete')
   } catch (error: any) {
     Swal.fire({
       toast: true,
@@ -1937,7 +1962,7 @@ const formatDateTime = (value: string) => {
 <style scoped>
 .pos-page {
   padding: 24px;
-  font-family: 'Be Vietnam Pro', 'Segoe UI', sans-serif;
+  font-family: 'Inter', 'Be Vietnam Pro', sans-serif;
   width: 100%;
   max-width: 100%;
 }
@@ -1950,18 +1975,21 @@ const formatDateTime = (value: string) => {
 }
 
 .pos-title {
-  font-weight: 700;
+  font-size: 32px;
+  font-weight: 800;
+  color: #0f172a;
   margin-bottom: 4px;
 }
 
 .pos-sub {
-  color: #7c6f6f;
+  color: #64748b;
+  font-weight: 500;
   margin: 0;
 }
 
 .pos-card {
   border-radius: 16px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08);
   border: none;
   overflow: hidden;
 }
@@ -1982,14 +2010,26 @@ const formatDateTime = (value: string) => {
 .table th,
 .table td {
   vertical-align: middle;
+  font-weight: 600;
+  font-size: 15px;
+  color: #1e293b;
 }
 
 .table thead th {
-  background: #f7f2ee;
+  background: #f7fafc;
+  font-weight: 700;
+  color: #334155;
+}
+
+.table .fw-semibold {
+  font-weight: 700;
+  color: #0f172a;
 }
 
 .section-title {
-  font-weight: 700;
+  font-weight: 800;
+  font-size: 20px;
+  color: #0f172a;
   margin-bottom: 12px;
 }
 
@@ -2007,7 +2047,9 @@ const formatDateTime = (value: string) => {
 }
 
 .info-grid span {
-  color: #6b6b6b;
+  color: #475569;
+  font-weight: 600;
+  font-size: 15px;
 }
 
 .info-grid span::after {
@@ -2019,6 +2061,9 @@ const formatDateTime = (value: string) => {
 .info-grid strong {
   text-align: left;
   word-break: break-word;
+  font-weight: 700;
+  font-size: 15px;
+  color: #0f172a;
 }
 
 .summary-grid {
@@ -2029,12 +2074,22 @@ const formatDateTime = (value: string) => {
 .summary-grid div {
   display: flex;
   justify-content: space-between;
+  font-weight: 600;
+  font-size: 15px;
+  color: #334155;
+}
+
+.summary-grid strong {
+  font-weight: 700;
+  color: #0f172a;
 }
 
 .total-line {
   padding-top: 12px;
   border-top: 1px dashed #d7c9c9;
-  font-size: 18px;
+  font-size: 20px;
+  font-weight: 800;
+  color: #0f172a;
 }
 
 .payment-single {
@@ -2052,19 +2107,22 @@ const formatDateTime = (value: string) => {
 .item-type-badge {
   min-width: 64px;
   text-align: center;
-  font-weight: 600;
+  font-weight: 700;
   padding: 6px 10px;
   border-radius: 999px;
+  font-size: 13px;
 }
 
 .bg-primary-light {
   background: #e7f0ff;
-  color: #1d5bd6;
+  color: #667eea;
+  font-weight: 700;
 }
 
 .bg-success-light {
   background: #e8f8f0;
   color: #15803d;
+  font-weight: 700;
 }
 
 .voucher-modal {
@@ -2095,6 +2153,12 @@ const formatDateTime = (value: string) => {
   border-bottom: 1px solid #eee;
 }
 
+.voucher-header h6 {
+  font-weight: 800;
+  font-size: 18px;
+  color: #0f172a;
+}
+
 .voucher-body {
   padding: 16px 18px;
   max-height: 360px;
@@ -2117,6 +2181,17 @@ const formatDateTime = (value: string) => {
   border-radius: 12px;
   background: #fafafa;
   transition: all 0.2s ease;
+}
+
+.voucher-item .fw-semibold {
+  font-weight: 700;
+  font-size: 15px;
+  color: #0f172a;
+}
+
+.voucher-item .small {
+  font-weight: 600;
+  color: #64748b;
 }
 
 .voucher-item.voucher-disabled {
@@ -2158,7 +2233,7 @@ const formatDateTime = (value: string) => {
 
 /* MoMo Button Styles */
 .btn-momo {
-  background: linear-gradient(135deg, #1e88e5 0%, #1565c0 100%);
+  background: linear-gradient(135deg, rgba(30, 136, 229, 0.85) 0%, rgba(21, 101, 192, 0.85) 100%);
   color: white;
   font-weight: 600;
   border: none;
@@ -2168,17 +2243,19 @@ const formatDateTime = (value: string) => {
   display: flex;
   align-items: center;
   justify-content: center;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 8px rgba(30, 136, 229, 0.25);
 }
 
 .btn-momo:hover:not(:disabled) {
-  background: linear-gradient(135deg, #1565c0 0%, #0d47a1 100%);
+  background: linear-gradient(135deg, rgba(21, 101, 192, 0.95) 0%, rgba(13, 71, 161, 0.95) 100%);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(30, 136, 229, 0.3);
+  box-shadow: 0 4px 12px rgba(30, 136, 229, 0.35);
   color: white;
 }
 
 .btn-momo:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
@@ -2296,6 +2373,109 @@ const formatDateTime = (value: string) => {
     opacity: 0.5;
     transform: scale(1.2);
   }
+}
+
+/* Bootstrap Form Controls Override */
+.form-control,
+.form-select {
+  font-family: 'Inter', 'Be Vietnam Pro', sans-serif;
+  font-weight: 600;
+  font-size: 15px;
+  color: #0f172a;
+  border-color: #e2e8f0;
+  transition: all 0.3s ease;
+}
+
+.form-control::placeholder {
+  color: #94a3b8;
+  font-weight: 400;
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.form-label {
+  font-weight: 700;
+  color: #334155;
+  font-size: 15px;
+}
+
+.text-muted {
+  color: #64748b !important;
+  font-weight: 600;
+}
+
+.text-dark {
+  color: #0f172a !important;
+  font-weight: 700;
+}
+
+/* Bootstrap Button Overrides for Reception */
+.btn-primary {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.85) 0%, rgba(37, 99, 235, 0.85) 100%) !important;
+  border: none !important;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);
+  transition: all 0.3s ease;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.95) 0%, rgba(37, 99, 235, 0.95) 100%) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35);
+}
+
+.btn-outline-primary {
+  border-color: rgba(59, 130, 246, 0.5) !important;
+  color: #3b82f6 !important;
+  background: rgba(59, 130, 246, 0.05) !important;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.btn-outline-primary:hover:not(:disabled) {
+  background: rgba(59, 130, 246, 0.15) !important;
+  border-color: rgba(59, 130, 246, 0.7) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
+}
+
+.btn-outline-secondary {
+  border-color: rgba(100, 116, 139, 0.3) !important;
+  color: #64748b !important;
+  background: rgba(241, 245, 249, 0.5) !important;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.btn-outline-secondary:hover:not(:disabled) {
+  background: rgba(226, 232, 240, 0.7) !important;
+  border-color: rgba(100, 116, 139, 0.5) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.btn-outline-danger {
+  border-color: rgba(239, 68, 68, 0.5) !important;
+  color: #ef4444 !important;
+  background: rgba(239, 68, 68, 0.05) !important;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.btn-outline-danger:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.15) !important;
+  border-color: rgba(239, 68, 68, 0.7) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.2);
+}
+
+.btn:disabled {
+  opacity: 0.5 !important;
+  cursor: not-allowed;
 }
 
 </style>

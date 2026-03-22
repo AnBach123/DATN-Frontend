@@ -639,22 +639,31 @@ onMounted(() => {
   
   // Initialize WebSocket connection
   const token = localStorage.getItem('accessToken')
+  console.log('🔑 Admin Dashboard - Token for WebSocket:', token ? 'Present' : 'Missing')
   dashboardWs = new DashboardWebSocket()
-  dashboardWs.connect(token)
+  
+  // Set up callbacks BEFORE connecting (so they auto-subscribe when connected)
+  console.log('📡 Setting up WebSocket callbacks...')
   
   // Subscribe to table status updates
   dashboardWs.subscribeTableStatus((update) => {
+    console.log('🔄 Received table status update:', update)
     // Update table status in real-time
     update.tableIds.forEach(tableId => {
       const table = tables.value.find(t => t.id === tableId)
       if (table) {
+        console.log(`📍 Updating table ${tableId}: ${table.status} -> ${update.status}`)
         table.status = update.status
+      } else {
+        console.warn(`⚠️ Table ${tableId} not found in tables array`)
       }
     })
+    console.log('✅ Table status update complete')
   })
   
   // Subscribe to invoice updates
   dashboardWs.subscribeInvoiceUpdates((update) => {
+    console.log('📄 Received invoice update:', update)
     // Reload recent invoices when there's an update
     dashboardService.getRecentInvoices(5).then(data => {
       recentInvoices.value = data
@@ -667,6 +676,10 @@ onMounted(() => {
       stats.value = data
     })
   })
+  
+  // Now connect (callbacks will auto-subscribe when connection is established)
+  console.log('🔌 Initiating WebSocket connection...')
+  dashboardWs.connect(token || undefined)
 })
 
 onUnmounted(() => {

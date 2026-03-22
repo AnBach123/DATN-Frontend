@@ -62,8 +62,12 @@ const isActive = (path: string) => {
 
 const handleLogout = () => {
   if (confirm('Bạn có chắc muốn đăng xuất?')) {
-    localStorage.removeItem('token')
-    router.push('/login')
+    localStorage.removeItem('accessToken')
+    localStorage.removeItem('tokenType')
+    localStorage.removeItem('userRole')
+    localStorage.removeItem('email')
+    localStorage.removeItem('fullName')
+    router.push('/auth/login')
   }
 }
 </script>

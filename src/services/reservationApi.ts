@@ -1,4 +1,4 @@
-import axios from 'axios'
+import axiosInstance from './axiosInstance'
 
 const API_URL = '/api/reservation'
 
@@ -11,32 +11,32 @@ const getAuthHeader = () => {
 }
 
 export const getAvailableTables = (params: { reservedAt: string; guestCount: number }) => {
-  return axios.get(`${API_URL}/available`, {
+  return axiosInstance.get(`${API_URL}/available`, {
     params,
     headers: getAuthHeader(),
   })
 }
 
 export const createReservation = (data: any) => {
-  return axios.post(API_URL, data, {
+  return axiosInstance.post(API_URL, data, {
     headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
   })
 }
 
 export const sendReservationEmail = (reservationCode: string) => {
-  return axios.post(`${API_URL}/${reservationCode}/send-email`, null, {
+  return axiosInstance.post(`${API_URL}/${reservationCode}/send-email`, null, {
     headers: getAuthHeader(),
   })
 }
 
 export const getReservationByCode = (reservationCode: string) => {
-  return axios.get(`${API_URL}/${reservationCode}`, {
+  return axiosInstance.get(`${API_URL}/${reservationCode}`, {
     headers: getAuthHeader(),
   })
 }
 
 export const checkInReservation = (reservationCode: string) => {
-  return axios.post(`${API_URL}/${reservationCode}/check-in`, null, {
+  return axiosInstance.post(`${API_URL}/${reservationCode}/check-in`, null, {
     headers: getAuthHeader(),
   })
 }

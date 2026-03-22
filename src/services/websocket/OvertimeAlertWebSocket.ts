@@ -1,5 +1,6 @@
 import { Client, type StompSubscription } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
+import axiosInstance from '../axiosInstance';
 
 export interface OvertimeAlert {
   id: string;
@@ -215,7 +216,7 @@ export class OvertimeAlertWebSocket {
   private async pollAlerts(): Promise<void> {
     try {
       const token = localStorage.getItem('accessToken');
-      const headers: HeadersInit = {
+      const headers: any = {
         'Content-Type': 'application/json',
       };
       
@@ -223,17 +224,11 @@ export class OvertimeAlertWebSocket {
         headers['Authorization'] = `Bearer ${token}`;
       }
       
-      const response = await fetch('/api/overtime/alerts', {
-        method: 'GET',
+      const response = await axiosInstance.get('/api/overtime/alerts', {
         headers,
       });
 
-      if (!response.ok) {
-        console.error('Failed to fetch alerts:', response.statusText);
-        return;
-      }
-
-      const alerts: OvertimeAlert[] = await response.json();
+      const alerts: OvertimeAlert[] = response.data;
       
       // Emit each alert through callback
       if (this.alertCallback && alerts.length > 0) {

@@ -7,10 +7,10 @@ import RegisterView from '@/views/auth/RegisterView.vue'
 import ReservationSuccessView from '@/views/reservation/ReservationSuccessView.vue'
 import { createRouter, createWebHistory } from 'vue-router'
 import ReceptionMainLayout from '@/layout/ReceptionMainLayout.vue'
-import CheckInOnl from '@/components/reception/CheckInOnl.vue'
+import OnlineCheckInView from '@/views/reception/OnlineCheckInView.vue'
 import WalkInCheckInView from '@/views/reception/WalkInCheckInView.vue'
 import StaffOrder from '@/components/staff/StaffOrder.vue'
-import PaymentView from '@/components/reception/PaymentView.vue'
+import PaymentListView from '@/views/reception/PaymentListView.vue'
 import MockBankTransfer from '@/views/MockBankTransfer.vue'
 import InvoiceView from '@/views/InvoiceView.vue'
 import AdminLayout from '@/components/admin/AdminLayout.vue'
@@ -67,9 +67,10 @@ const router = createRouter({
       component: ReceptionMainLayout,
       beforeEnter: checkRole(['RECEPTION']),
       children: [
-        { path: '/reception/check-in-online', name: 'check-in-online', component: CheckInOnl },
-        { path: '/reception/check-in-offline', name: 'check-in-offline', component: WalkInCheckInView },
-        { path: '/reception/payment', name: 'reception-payment', component: PaymentView },
+        { path: '', redirect: '/reception/check-in-offline' },
+        { path: 'check-in-offline', name: 'check-in-offline', component: WalkInCheckInView },
+        { path: 'check-in-online', name: 'check-in-online', component: OnlineCheckInView },
+        { path: 'payment', name: 'reception-payment', component: PaymentListView },
       ],
     },
 

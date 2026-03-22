@@ -1,18 +1,18 @@
-import axios from 'axios'
+import axiosInstance from './axiosInstance'
 
 const PRODUCT_API = '/api/products'
 const IMAGE_API = '/api/images/product'
 
 export const getProducts = async () => {
   try {
-    const res = await axios.get(PRODUCT_API)
+    const res = await axiosInstance.get(PRODUCT_API)
 
     const products = res.data.data || []
 
     const result = await Promise.all(
       products.map(async (product: any) => {
         try {
-          const imgRes = await axios.get(`${IMAGE_API}/${product.id}`)
+          const imgRes = await axiosInstance.get(`${IMAGE_API}/${product.id}`)
 
           const images = imgRes.data.data || []
 

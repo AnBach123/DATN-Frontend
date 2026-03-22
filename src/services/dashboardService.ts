@@ -1,6 +1,4 @@
-import axios from 'axios'
-
-const API_URL = 'http://localhost:8080/api/dashboard'
+import axiosInstance from './axiosInstance'
 
 export interface DashboardStats {
   todayRevenue: {
@@ -89,7 +87,7 @@ export const dashboardService = {
     const params: any = {}
     if (startDate) params.startDate = startDate
     if (endDate) params.endDate = endDate
-    const response = await axios.get(`${API_URL}/stats`, { params })
+    const response = await axiosInstance.get('/api/dashboard/stats', { params })
     return response.data.data
   },
 
@@ -97,22 +95,22 @@ export const dashboardService = {
     const params: any = { limit }
     if (startDate) params.startDate = startDate
     if (endDate) params.endDate = endDate
-    const response = await axios.get(`${API_URL}/top-products`, { params })
+    const response = await axiosInstance.get('/api/dashboard/top-products', { params })
     return response.data.data
   },
 
   async getRecentInvoices(limit: number = 5): Promise<RecentInvoice[]> {
-    const response = await axios.get(`${API_URL}/recent-invoices`, { params: { limit } })
+    const response = await axiosInstance.get('/api/dashboard/recent-invoices', { params: { limit } })
     return response.data.data
   },
 
   async getTableStatus(): Promise<TableStatus[]> {
-    const response = await axios.get(`${API_URL}/table-status`)
+    const response = await axiosInstance.get('/api/dashboard/table-status')
     return response.data.data
   },
 
   async getTableDetail(tableId: number): Promise<TableDetail> {
-    const response = await axios.get(`${API_URL}/table-detail/${tableId}`)
+    const response = await axiosInstance.get(`/api/dashboard/table-detail/${tableId}`)
     return response.data.data
   },
 
@@ -120,7 +118,7 @@ export const dashboardService = {
     const params: any = {}
     if (startDate) params.startDate = startDate
     if (endDate) params.endDate = endDate
-    const response = await axios.get(`${API_URL}/revenue-chart`, { params })
+    const response = await axiosInstance.get('/api/dashboard/revenue-chart', { params })
     return response.data.data
   }
 }
@@ -145,7 +143,7 @@ export const invoiceService = {
     sortBy?: string
     sortDirection?: string
   }): Promise<InvoicePageResponse> {
-    const response = await axios.get(`${API_URL}/invoices`, { params })
+    const response = await axiosInstance.get('/api/dashboard/invoices', { params })
     return response.data.data
   }
 }

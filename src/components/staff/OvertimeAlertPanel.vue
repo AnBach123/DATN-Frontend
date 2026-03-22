@@ -45,6 +45,7 @@ import {
   type OvertimeAlert,
   type ConnectionState,
 } from '@/services/websocket/OvertimeAlertWebSocket'
+import axiosInstance from '@/services/axiosInstance'
 import Swal from 'sweetalert2'
 
 const alerts = ref<OvertimeAlert[]>([])
@@ -111,7 +112,7 @@ const formatTime = (isoString: string): string => {
 const acknowledgeAlert = async (alertId: string) => {
   try {
     const token = localStorage.getItem('accessToken')
-    const headers: HeadersInit = {
+    const headers: any = {
       'Content-Type': 'application/json',
     }
 
@@ -119,14 +120,9 @@ const acknowledgeAlert = async (alertId: string) => {
       headers['Authorization'] = `Bearer ${token}`
     }
 
-    const response = await fetch(`/api/overtime/alerts/${alertId}/acknowledge`, {
-      method: 'POST',
+    const response = await axiosInstance.post(`/api/overtime/alerts/${alertId}/acknowledge`, {}, {
       headers,
     })
-
-    if (!response.ok) {
-      throw new Error('Failed to acknowledge alert')
-    }
 
     // Remove alert from local array on success
     alerts.value = alerts.value.filter((alert) => alert.id !== alertId)

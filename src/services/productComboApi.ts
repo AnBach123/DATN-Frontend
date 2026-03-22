@@ -1,4 +1,4 @@
-import axios from 'axios'
+import axiosInstance from './axiosInstance'
 
 const API_URL = '/api/product-combos'
 
@@ -17,7 +17,7 @@ export interface ProductComboResponse {
  */
 export const getAllProductCombos = async (): Promise<ProductComboResponse[]> => {
   try {
-    const res = await axios.get(API_URL)
+    const res = await axiosInstance.get(API_URL)
 
     return res.data.data || []
   } catch (error) {

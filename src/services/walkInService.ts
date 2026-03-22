@@ -1,9 +1,9 @@
-import axios from 'axios'
+import axiosInstance from './axiosInstance'
 
-const API_URL = 'http://localhost:8080/api/walk-in'
+const API_URL = '/api/walk-in'
 
 const getAuthHeader = () => {
-  const token = localStorage.getItem('token')
+  const token = localStorage.getItem('accessToken')
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
 
@@ -20,7 +20,7 @@ export interface WalkInCheckInResponse {
 
 export const walkInService = {
   async checkIn(request: WalkInCheckInRequest): Promise<WalkInCheckInResponse> {
-    const response = await axios.post(`${API_URL}/check-in`, request, {
+    const response = await axiosInstance.post(`${API_URL}/check-in`, request, {
       headers: { 'Content-Type': 'application/json', ...getAuthHeader() }
     })
     return response.data.data

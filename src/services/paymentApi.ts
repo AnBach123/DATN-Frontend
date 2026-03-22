@@ -1,4 +1,4 @@
-import axios from 'axios'
+import axiosInstance from './axiosInstance'
 
 const API_URL = '/api/reception/payment'
 
@@ -10,7 +10,7 @@ const getAuthHeader = () => {
 }
 
 export const getPaymentByTable = (tableId: number) => {
-  return axios.get(`${API_URL}/by-table/${tableId}`, {
+  return axiosInstance.get(`${API_URL}/by-table/${tableId}`, {
     headers: getAuthHeader(),
   })
 }
@@ -28,13 +28,13 @@ export const checkoutPayment = (payload: {
   serviceFeePercent?: number
   payments?: { method: string; amount: number; note?: string }[]
 }) => {
-  return axios.post(`${API_URL}/checkout`, payload, {
+  return axiosInstance.post(`${API_URL}/checkout`, payload, {
     headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
   })
 }
 
 export const cancelPayment = (tableId: number) => {
-  return axios.post(
+  return axiosInstance.post(
     `${API_URL}/cancel`,
     { tableId },
     { headers: { 'Content-Type': 'application/json', ...getAuthHeader() } },
@@ -42,7 +42,7 @@ export const cancelPayment = (tableId: number) => {
 }
 
 export const updatePaymentItem = (itemId: number, quantity: number) => {
-  return axios.patch(
+  return axiosInstance.patch(
     `${API_URL}/items/${itemId}`,
     { quantity },
     { headers: { 'Content-Type': 'application/json', ...getAuthHeader() } },
@@ -50,7 +50,7 @@ export const updatePaymentItem = (itemId: number, quantity: number) => {
 }
 
 export const deletePaymentItem = (itemId: number) => {
-  return axios.delete(`${API_URL}/items/${itemId}`, {
+  return axiosInstance.delete(`${API_URL}/items/${itemId}`, {
     headers: getAuthHeader(),
   })
 }

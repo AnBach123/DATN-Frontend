@@ -51,44 +51,59 @@ export class DashboardWebSocket {
       return;
     }
 
-    this.connectionState = 'connecting';
-    console.log('Connecting to Dashboard WebSocket...');
+    if (!token) {
+      console.error('❌ Cannot connect to Dashboard WebSocket: No token provided');
+      return;
+    }
 
-    const socketUrl = token ? `${this.wsUrl}?token=${token}` : this.wsUrl;
+    this.connectionState = 'connecting';
+    console.log('🔌 Connecting to Dashboard WebSocket...', { url: this.wsUrl, hasToken: !!token });
+
+    const socketUrl = `${this.wsUrl}?token=${token}`;
     
     this.client = new Client({
       webSocketFactory: () => new SockJS(socketUrl) as WebSocket,
       
       onConnect: () => {
-        console.log('Dashboard WebSocket connected successfully');
+        console.log('✅ Dashboard WebSocket connected successfully');
+        console.log('📊 Connection state:', this.connectionState, '-> connected');
         this.connectionState = 'connected';
         this.reconnectAttempts = 0;
         
         // Auto-subscribe to all topics if callbacks are set
+        console.log('🔔 Checking for pending subscriptions...', {
+          hasTableStatusCallback: !!this.tableStatusCallback,
+          hasInvoiceUpdateCallback: !!this.invoiceUpdateCallback,
+          hasStatsUpdateCallback: !!this.statsUpdateCallback
+        });
+        
         if (this.tableStatusCallback) {
+          console.log('📡 Auto-subscribing to table status updates...');
           this.subscribeTableStatus(this.tableStatusCallback);
         }
         if (this.invoiceUpdateCallback) {
+          console.log('📡 Auto-subscribing to invoice updates...');
           this.subscribeInvoiceUpdates(this.invoiceUpdateCallback);
         }
         if (this.statsUpdateCallback) {
+          console.log('📡 Auto-subscribing to stats updates...');
           this.subscribeStatsUpdates(this.statsUpdateCallback);
         }
       },
       
       onStompError: (frame) => {
-        console.error('Dashboard STOMP error:', frame);
+        console.error('❌ Dashboard STOMP error:', frame);
         this.handleConnectionError();
       },
       
       onWebSocketClose: () => {
-        console.log('Dashboard WebSocket connection closed');
+        console.log('🔌 Dashboard WebSocket connection closed');
         this.connectionState = 'disconnected';
         this.handleConnectionError();
       },
       
       onWebSocketError: (error) => {
-        console.error('Dashboard WebSocket error:', error);
+        console.error('❌ Dashboard WebSocket error:', error);
         this.handleConnectionError();
       },
       
@@ -121,28 +136,35 @@ export class DashboardWebSocket {
   }
 
   subscribeTableStatus(callback: TableStatusCallback): void {
+    console.log('📡 subscribeTableStatus called', {
+      hasCallback: !!callback,
+      hasClient: !!this.client,
+      connectionState: this.connectionState
+    });
+    
     this.tableStatusCallback = callback;
     
     if (!this.client || this.connectionState !== 'connected') {
-      console.warn('Cannot subscribe to table status: WebSocket not connected');
+      console.warn('⚠️ Cannot subscribe to table status: WebSocket not connected. Will auto-subscribe when connected.');
       return;
     }
 
     try {
       const subscription = this.client.subscribe('/topic/table-status', (message) => {
         try {
+          console.log('📨 Raw message received on /topic/table-status:', message.body);
           const update: TableStatusUpdate = JSON.parse(message.body);
-          console.log('Received table status update:', update);
+          console.log('✅ Parsed table status update:', update);
           callback(update);
         } catch (error) {
-          console.error('Error parsing table status message:', error);
+          console.error('❌ Error parsing table status message:', error);
         }
       });
       
       this.subscriptions.set('table-status', subscription);
-      console.log('Subscribed to /topic/table-status');
+      console.log('✅ Successfully subscribed to /topic/table-status');
     } catch (error) {
-      console.error('Error subscribing to table status:', error);
+      console.error('❌ Error subscribing to table status:', error);
     }
   }
 

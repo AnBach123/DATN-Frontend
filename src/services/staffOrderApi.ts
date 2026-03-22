@@ -1,4 +1,4 @@
-import axios from 'axios'
+import axiosInstance from './axiosInstance'
 
 const getAuthHeader = () => {
   const token = localStorage.getItem('accessToken')
@@ -15,7 +15,7 @@ export interface OrderItemRequest {
 }
 
 export const addItemsToTable = async (tableId: number, items: OrderItemRequest[]) => {
-  const res = await axios.post(
+  const res = await axiosInstance.post(
     `/api/tables/${tableId}/order-items`,
     { items },
     { headers: getAuthHeader() },
