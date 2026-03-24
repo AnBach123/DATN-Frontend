@@ -179,10 +179,10 @@
                     <th>STT</th>
                     <th>Tên món</th>
                     <th>Loại</th>
-                    <th>Số lượng</th>
-                    <th>Đơn giá</th>
-                    <th>Giảm giá</th>
-                    <th>Thành tiền</th>
+                    <th class="text-center">Số lượng</th>
+                    <th class="text-end">Đơn giá</th>
+                    <th class="text-end">Giảm giá</th>
+                    <th class="text-end">Thành tiền</th>
                     <th>Thao tác</th>
                   </tr>
                 </thead>
@@ -203,10 +203,10 @@
                         {{ item.type === 'PRODUCT' ? 'Món' : 'Combo' }}
                       </span>
                     </td>
-                    <td>{{ item.quantity }}</td>
-                    <td>{{ formatMoney(item.unitPrice) }}</td>
-                    <td class="text-danger">-{{ formatMoney(item.discount) }}</td>
-                    <td class="fw-semibold">{{ formatMoney(item.lineTotal) }}</td>
+                    <td class="text-center">{{ item.quantity }}</td>
+                    <td class="text-end">{{ formatMoney(item.unitPrice) }}</td>
+                    <td class="text-danger text-end">-{{ formatMoney(item.discount) }}</td>
+                    <td class="fw-semibold text-end">{{ formatMoney(item.lineTotal) }}</td>
                     <td>
                       <div class="item-actions">
                         <button

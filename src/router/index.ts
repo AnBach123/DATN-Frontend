@@ -11,6 +11,7 @@ import OnlineCheckInView from '@/views/reception/OnlineCheckInView.vue'
 import WalkInCheckInView from '@/views/reception/WalkInCheckInView.vue'
 import StaffOrder from '@/components/staff/StaffOrder.vue'
 import PaymentListView from '@/views/reception/PaymentListView.vue'
+import InvoiceHistoryView from '@/views/reception/InvoiceHistoryView.vue'
 import MockBankTransfer from '@/views/MockBankTransfer.vue'
 import InvoiceView from '@/views/InvoiceView.vue'
 import AdminLayout from '@/components/admin/AdminLayout.vue'
@@ -71,6 +72,7 @@ const router = createRouter({
         { path: 'check-in-offline', name: 'check-in-offline', component: WalkInCheckInView },
         { path: 'check-in-online', name: 'check-in-online', component: OnlineCheckInView },
         { path: 'payment', name: 'reception-payment', component: PaymentListView },
+        { path: 'invoice-history', name: 'invoice-history', component: InvoiceHistoryView },
       ],
     },
 
@@ -105,8 +107,7 @@ const router = createRouter({
     { 
       path: '/mock-bank-transfer', 
       name: 'mock-bank-transfer', 
-      component: MockBankTransfer,
-      beforeEnter: checkRole(['USER'])
+      component: MockBankTransfer
     },
     { 
       path: '/invoice', 

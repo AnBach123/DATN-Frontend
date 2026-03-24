@@ -10,6 +10,7 @@ const getAuthHeader = () => {
 export interface WalkInCheckInRequest {
   tableIds: number[]
   guestCount: number
+  customerName?: string
 }
 
 export interface WalkInCheckInResponse {
@@ -24,5 +25,11 @@ export const walkInService = {
       headers: { 'Content-Type': 'application/json', ...getAuthHeader() }
     })
     return response.data.data
+  },
+
+  async cancelTable(invoiceCode: string): Promise<void> {
+    await axiosInstance.post(`${API_URL}/cancel/${invoiceCode}`, {}, {
+      headers: { ...getAuthHeader() }
+    })
   }
 }

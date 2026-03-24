@@ -131,6 +131,43 @@ export interface InvoicePageResponse {
   size: number
 }
 
+export interface InvoiceItem {
+  id: number
+  name: string
+  type: string
+  quantity: number
+  unitPrice: number
+  discount: number
+  lineTotal: number
+}
+
+export interface InvoiceDetail {
+  invoiceId: number
+  invoiceCode: string
+  invoiceStatus: string
+  customerType: string | null
+  customerName: string | null
+  customerPhone: string | null
+  loyaltyPoints: number | null
+  reservedAt: string | null
+  checkedInAt: string | null
+  guestCount: number | null
+  staffName: string | null
+  tables: Array<{
+    id: number
+    tableName: string
+    seatingCapacity: number
+  }>
+  items: InvoiceItem[]
+  subtotal: number
+  itemVoucherDiscount: number | null
+  manualDiscountPercent: number | null
+  manualDiscountAmount: number | null
+  taxPercent: number | null
+  serviceFeePercent: number | null
+  pointValue: number | null
+}
+
 export const invoiceService = {
   async getAllInvoices(params: {
     page?: number
@@ -144,6 +181,11 @@ export const invoiceService = {
     sortDirection?: string
   }): Promise<InvoicePageResponse> {
     const response = await axiosInstance.get('/api/dashboard/invoices', { params })
+    return response.data.data
+  },
+
+  async getInvoiceDetail(invoiceId: number): Promise<InvoiceDetail> {
+    const response = await axiosInstance.get(`/api/dashboard/invoice-detail/${invoiceId}`)
     return response.data.data
   }
 }

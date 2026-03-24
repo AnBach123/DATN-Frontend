@@ -45,6 +45,7 @@ const menuItems = [
   { path: '/reception/check-in-offline', label: 'Trạng thái bàn', icon: '🏠' },
   { path: '/reception/check-in-online', label: 'Check-in Online', icon: '📱' },
   { path: '/reception/payment', label: 'Thanh toán', icon: '💳' },
+  { path: '/reception/invoice-history', label: 'Lịch sử HĐ', icon: '📋' },
 ]
 
 const isActive = (path: string) => {

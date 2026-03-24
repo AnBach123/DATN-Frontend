@@ -7,6 +7,7 @@ export interface TableStatus {
   status: string;
   minutesSinceCheckIn?: number;
   reservedAt?: string;
+  customerName?: string;
 }
 
 export const tableService = {
