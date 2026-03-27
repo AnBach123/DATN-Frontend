@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div v-if="isOpen" class="booking-overlay" @click.self="close">
     <div class="booking-panel">
       <div class="booking-header">
@@ -46,6 +46,16 @@
               <option v-for="p in promotions" :key="p" :value="p">{{ p }}</option>
             </select>
           </div>
+        </div>
+
+        <div v-if="foodNote" class="form-group">
+          <label>Món đặt trước (tham khảo)</label>
+          <textarea
+            :value="foodNote"
+            rows="3"
+            readonly
+            class="readonly-textarea"
+          ></textarea>
         </div>
 
         <div class="form-group">

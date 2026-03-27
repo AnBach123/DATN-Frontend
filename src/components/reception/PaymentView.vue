@@ -107,38 +107,16 @@
           <div class="col-12 col-lg-4">
             <div class="card pos-card h-100">
               <div class="card-body">
-                <h5 class="section-title">Giảm giá</h5>
-                <div class="row g-2">
-                  <div class="col-6">
-                    <label class="form-label">Hình thức giảm giá</label>
-                    <select v-model="discountMode" class="form-select">
-                      <option value="PERCENT">Theo %</option>
-                      <option value="AMOUNT">Theo số tiền</option>
-                    </select>
+                <h5 class="section-title">Thuế VAT</h5>
+                <div class="tax-service-info">
+                  <div class="info-row">
+                    <span class="text-muted">VAT (8%): </span>
+                    <strong class="text-dark">{{ formatMoney(vatAmount) }}</strong>
                   </div>
-                  <div class="col-6">
-                    <label class="form-label">Giá trị giảm</label>
-                    <input
-                      v-if="discountMode === 'PERCENT'"
-                      v-model.number="manualDiscountPercentInput"
-                      type="number"
-                      min="0"
-                      max="100"
-                      class="form-control"
-                      placeholder="% giảm"
-                    />
-                    <input
-                      v-else
-                      v-model.number="manualDiscountAmountInput"
-                      type="number"
-                      min="0"
-                      class="form-control"
-                      placeholder="Số tiền giảm"
-                    />
+                  <div class="info-row mt-2 pt-2" style="border-top: 1px solid #dee2e6;">
+                    <span class="fw-semibold">Tổng thuế: </span>
+                    <strong class="text-primary">{{ formatMoney(vatAmount) }}</strong>
                   </div>
-                </div>
-                <div class="mt-2 small text-muted">
-                  Giảm thủ công: <strong class="text-dark">{{ formatMoney(manualDiscount) }}</strong>
                 </div>
               </div>
             </div>
@@ -257,10 +235,10 @@
                 ><strong>-{{ formatMoney(invoiceVoucherDiscount) }}</strong>
               </div>
               <div>
-                <span>Giảm thủ công</span><strong>-{{ formatMoney(manualDiscount) }}</strong>
+                <span>Giảm từ điểm</span><strong>-{{ formatMoney(pointsDiscount) }}</strong>
               </div>
               <div>
-                <span>Giảm từ điểm</span><strong>-{{ formatMoney(pointsDiscount) }}</strong>
+                <span>VAT (8%)</span><strong>+{{ formatMoney(vatAmount) }}</strong>
               </div>
               <div class="total-line">
                 <span>TỔNG THANH TOÁN</span><strong>{{ formatMoney(totalPayable) }}</strong>
@@ -517,8 +495,8 @@ type Payment = {
   }[]
   subtotal: number
   itemVoucherDiscount: number
-  manualDiscountPercent: number | null
-  manualDiscountAmount: number | null
+  vatPercent: number
+  serviceFeePercent: number
   pointValue: number
 }
 
@@ -535,10 +513,6 @@ const selectedVoucherId = ref<number | ''>('')
 const selectedProductVoucherCodes = ref<string[]>([]) // Product/Combo voucher codes
 const voucherCodeInput = ref('')
 const usePoints = ref(0)
-
-const discountMode = ref<'PERCENT' | 'AMOUNT'>('PERCENT')
-const manualDiscountPercentInput = ref(0)
-const manualDiscountAmountInput = ref(0)
 
 const paymentMethod = ref<'CASH' | 'TRANSFER' | 'EWALLET'>('CASH')
 const cashReceived = ref(0)
@@ -634,7 +608,8 @@ const handlePaymentSuccess = async (amount: number) => {
   const savedSubtotal = subtotal.value
   const savedItemVoucherDiscount = itemVoucherDiscount.value
   const savedInvoiceVoucherDiscount = invoiceVoucherDiscount.value
-  const savedManualDiscount = manualDiscount.value
+  const savedVatAmount = vatAmount.value
+  const savedServiceFeeAmount = serviceFeeAmount.value
   const savedPointsDiscount = pointsDiscount.value
   const savedTableText = tableText.value
   const savedSelectedVoucher = selectedVoucher.value
@@ -657,7 +632,7 @@ const handlePaymentSuccess = async (amount: number) => {
   await new Promise(resolve => setTimeout(resolve, 2000))
   
   // Process payment with auto print
-  await checkoutWithAutoPrint(savedPayment, savedTotalPayable, savedSubtotal, savedItemVoucherDiscount, savedInvoiceVoucherDiscount, savedManualDiscount, savedPointsDiscount, savedTableText, savedSelectedVoucher)
+  await checkoutWithAutoPrint(savedPayment, savedTotalPayable, savedSubtotal, savedItemVoucherDiscount, savedInvoiceVoucherDiscount, savedVatAmount, savedServiceFeeAmount, savedPointsDiscount, savedTableText, savedSelectedVoucher)
 }
 
 const allVouchers = computed(() => {
@@ -751,36 +726,42 @@ const invoiceVoucherDiscount = computed(() => {
   return Math.floor((base * voucher.percent) / 100)
 })
 
-const manualDiscount = computed(() => {
-  const base = Math.max(
-    0,
-    subtotal.value - itemVoucherDiscount.value - invoiceVoucherDiscount.value,
-  )
-  if (discountMode.value === 'AMOUNT') {
-    return Math.min(Math.max(0, manualDiscountAmountInput.value || 0), base)
-  }
-  const percent = Math.max(0, manualDiscountPercentInput.value || 0)
-  return Math.floor((base * percent) / 100)
+// Calculate taxable base (after all discounts except points)
+const baseAfterVoucher = computed(() => {
+  return Math.max(0, subtotal.value - itemVoucherDiscount.value - invoiceVoucherDiscount.value)
 })
 
 const pointsDiscount = computed(() => {
   if (!payment.value) return 0
   const pointValue = payment.value.pointValue || 1000
   const maxByPoints = Math.max(0, usePoints.value) * pointValue
-  const maxAllowed =
-    subtotal.value - itemVoucherDiscount.value - invoiceVoucherDiscount.value - manualDiscount.value
+  
+  // Points can only reduce up to baseAfterVoucher
+  const maxAllowed = baseAfterVoucher.value
   return Math.max(0, Math.min(maxByPoints, maxAllowed))
 })
 
+// Taxable base = baseAfterVoucher - pointsDiscount
+const taxableBase = computed(() => {
+  return Math.max(0, baseAfterVoucher.value - pointsDiscount.value)
+})
+
+// VAT amount (8% of taxable base)
+const vatAmount = computed(() => {
+  if (!payment.value) return 0
+  const vatPercent = payment.value.vatPercent || 8
+  return Math.floor((taxableBase.value * vatPercent) / 100)
+})
+
+// Service fee amount (0% of taxable base)
+const serviceFeeAmount = computed(() => {
+  if (!payment.value) return 0
+  const serviceFeePercent = payment.value.serviceFeePercent || 0
+  return Math.floor((taxableBase.value * serviceFeePercent) / 100)
+})
+
 const totalPayable = computed(() =>
-  Math.max(
-    0,
-    subtotal.value -
-      itemVoucherDiscount.value -
-      invoiceVoucherDiscount.value -
-      manualDiscount.value -
-      pointsDiscount.value,
-  ),
+  Math.max(0, taxableBase.value + vatAmount.value + serviceFeeAmount.value),
 )
 
 const changeDue = computed(() =>
@@ -807,9 +788,6 @@ const loadPayment = async () => {
     selectedProductVoucherCodes.value = []
     usePoints.value = 0
     voucherCodeInput.value = ''
-    discountMode.value = 'PERCENT'
-    manualDiscountPercentInput.value = res.data.data.manualDiscountPercent || 0
-    manualDiscountAmountInput.value = res.data.data.manualDiscountAmount || 0
     paymentMethod.value = 'CASH'
     cashReceived.value = 0
     paymentNote.value = ''
@@ -1199,7 +1177,8 @@ const checkout = async () => {
   const savedSubtotal = subtotal.value
   const savedItemVoucherDiscount = itemVoucherDiscount.value
   const savedInvoiceVoucherDiscount = invoiceVoucherDiscount.value
-  const savedManualDiscount = manualDiscount.value
+  const savedVatAmount = vatAmount.value
+  const savedServiceFeeAmount = serviceFeeAmount.value
   const savedPointsDiscount = pointsDiscount.value
   const savedTableText = tableText.value
   const savedSelectedVoucher = selectedVoucher.value
@@ -1236,10 +1215,6 @@ const checkout = async () => {
       usePoints: usePoints.value,
       paymentMethod: paymentMethod.value,
       cashReceived: paymentMethod.value === 'CASH' ? cashReceived.value : 0,
-      manualDiscountPercent:
-        discountMode.value === 'PERCENT' ? manualDiscountPercentInput.value : 0,
-      manualDiscountAmount:
-        discountMode.value === 'AMOUNT' ? manualDiscountAmountInput.value : 0,
       payments: [
         {
           method: paymentMethod.value,
@@ -1329,7 +1304,8 @@ const checkout = async () => {
         savedSubtotal,
         savedItemVoucherDiscount,
         savedInvoiceVoucherDiscount,
-        savedManualDiscount,
+        savedVatAmount,
+        savedServiceFeeAmount,
         savedPointsDiscount,
         savedTableText,
         savedSelectedVoucher
@@ -1387,7 +1363,8 @@ const checkoutWithAutoPrint = async (
   savedSubtotal: number,
   savedItemVoucherDiscount: number,
   savedInvoiceVoucherDiscount: number,
-  savedManualDiscount: number,
+  savedVatAmount: number,
+  savedServiceFeeAmount: number,
   savedPointsDiscount: number,
   savedTableText: string,
   savedSelectedVoucher: any
@@ -1431,10 +1408,6 @@ const checkoutWithAutoPrint = async (
       usePoints: usePoints.value,
       paymentMethod: 'TRANSFER',
       cashReceived: 0,
-      manualDiscountPercent:
-        discountMode.value === 'PERCENT' ? manualDiscountPercentInput.value : 0,
-      manualDiscountAmount:
-        discountMode.value === 'AMOUNT' ? manualDiscountAmountInput.value : 0,
       payments: [
         {
           method: 'TRANSFER',
@@ -1502,7 +1475,8 @@ const checkoutWithAutoPrint = async (
         savedSubtotal,
         savedItemVoucherDiscount,
         savedInvoiceVoucherDiscount,
-        savedManualDiscount,
+        savedVatAmount,
+        savedServiceFeeAmount,
         savedPointsDiscount,
         savedTableText,
         savedSelectedVoucher
@@ -1742,8 +1716,9 @@ const printInvoice = async () => {
         <div class="totals">
           <div><span>Tạm tính</span><span>${formatMoney(subtotal.value)}</span></div>
           <div><span>Giảm voucher món</span><span>-${formatMoney(itemVoucherDiscount.value)}</span></div>
-          <div><span>Giảm thủ công</span><span>-${formatMoney(manualDiscount.value)}</span></div>
+          <div><span>Giảm voucher hóa đơn</span><span>-${formatMoney(invoiceVoucherDiscount.value)}</span></div>
           <div><span>Giảm từ điểm</span><span>-${formatMoney(pointsDiscount.value)}</span></div>
+          <div><span>VAT (8%)</span><span>+${formatMoney(vatAmount.value)}</span></div>
           <div class="total"><span>TỔNG THANH TOÁN</span><span>${formatMoney(totalPayable.value)}</span></div>
         </div>
         <div class="voucher">
@@ -1786,7 +1761,8 @@ const printInvoiceWithData = (
   savedSubtotal: number,
   savedItemVoucherDiscount: number,
   savedInvoiceVoucherDiscount: number,
-  savedManualDiscount: number,
+  savedVatAmount: number,
+  savedServiceFeeAmount: number,
   savedPointsDiscount: number,
   savedTableText: string,
   savedSelectedVoucher: any
@@ -1905,8 +1881,9 @@ const printInvoiceWithData = (
         <div class="totals">
           <div><span>Tạm tính</span><span>${formatMoney(savedSubtotal)}</span></div>
           <div><span>Giảm voucher món</span><span>-${formatMoney(savedItemVoucherDiscount)}</span></div>
-          <div><span>Giảm thủ công</span><span>-${formatMoney(savedManualDiscount)}</span></div>
+          <div><span>Giảm voucher hóa đơn</span><span>-${formatMoney(savedInvoiceVoucherDiscount)}</span></div>
           <div><span>Giảm từ điểm</span><span>-${formatMoney(savedPointsDiscount)}</span></div>
+          <div><span>VAT (8%)</span><span>+${formatMoney(savedVatAmount)}</span></div>
           <div class="total"><span>TỔNG THANH TOÁN</span><span>${formatMoney(savedTotalPayable)}</span></div>
         </div>
         <div class="voucher">

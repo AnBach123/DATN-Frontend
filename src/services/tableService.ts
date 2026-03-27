@@ -12,10 +12,7 @@ export interface TableStatus {
 
 export const tableService = {
   async getAllTablesWithStatus(): Promise<TableStatus[]> {
-    const token = localStorage.getItem('accessToken');
-    const response = await axiosInstance.get('/api/dashboard/table-status', {
-      headers: { Authorization: `Bearer ${token}` }
-    });
+    const response = await axiosInstance.get('/api/dashboard/table-status');
     return response.data.data;
   }
 };

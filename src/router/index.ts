@@ -21,6 +21,16 @@ import InvoiceListView from '@/views/admin/InvoiceListView.vue'
 // Route guard helper
 function checkRole(allowedRoles: string[]) {
   return () => {
+    // Check if role-based routing is enabled
+    const roleCheckEnabled = import.meta.env.VITE_ENABLE_AUTO_LOGOUT === 'true';
+    
+    // If role check is disabled (development mode), allow all routes
+    if (!roleCheckEnabled) {
+      console.log('🔓 Role check disabled - allowing access to route');
+      return true;
+    }
+    
+    // Role check enabled (production mode)
     const userRole = localStorage.getItem('userRole')
     if (!userRole) {
       return '/auth/login'

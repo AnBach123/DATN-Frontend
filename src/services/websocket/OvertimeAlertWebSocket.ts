@@ -27,6 +27,7 @@ export class OvertimeAlertWebSocket {
   private alertCallback: AlertCallback | null = null;
   private pollingInterval: number | null = null;
   private wsUrl: string;
+  private token: string | null = null; // Store token for reconnect
 
   constructor(wsUrl: string = 'http://localhost:8080/ws/overtime-alerts') {
     this.wsUrl = wsUrl;
@@ -37,21 +38,27 @@ export class OvertimeAlertWebSocket {
    */
   connect(token?: string): void {
     if (this.connectionState === 'connected' || this.connectionState === 'connecting') {
-      console.log('WebSocket already connected or connecting');
-      return;
+      return; // Silent return - already connected
     }
 
-    this.connectionState = 'connecting';
-    console.log('Connecting to WebSocket...');
+    if (!token) {
+      return; // Silent return - no token
+    }
 
-    // Create SockJS socket with optional JWT token
-    const socketUrl = token ? `${this.wsUrl}?token=${token}` : this.wsUrl;
+    // Store token for reconnect
+    this.token = token;
+    this.connectionState = 'connecting';
+
+    // Pass token via query parameter (industry standard for SockJS)
+    const socketUrl = `${this.wsUrl}?token=${encodeURIComponent(token)}`;
     
     this.client = new Client({
       webSocketFactory: () => new SockJS(socketUrl) as WebSocket,
       
+      // No headers needed - authentication happens at handshake level
+      connectHeaders: {},
+      
       onConnect: () => {
-        console.log('WebSocket connected successfully');
         this.connectionState = 'connected';
         this.reconnectAttempts = 0;
         
@@ -65,18 +72,17 @@ export class OvertimeAlertWebSocket {
       },
       
       onStompError: (frame) => {
-        console.error('STOMP error:', frame);
+        console.error('Overtime Alert STOMP error:', frame);
         this.handleConnectionError();
       },
       
       onWebSocketClose: () => {
-        console.log('WebSocket connection closed');
         this.connectionState = 'disconnected';
         this.handleConnectionError();
       },
       
       onWebSocketError: (error) => {
-        console.error('WebSocket error:', error);
+        console.error('Overtime Alert WebSocket error:', error);
         this.handleConnectionError();
       },
       
@@ -86,6 +92,14 @@ export class OvertimeAlertWebSocket {
       
       // Reconnection disabled - we handle it manually
       reconnectDelay: 0,
+      
+      // Disable debug logging
+      debug: (str) => {
+        // Only log errors
+        if (str.includes('ERROR') || str.includes('error')) {
+          console.error('WebSocket:', str);
+        }
+      }
     });
 
     this.client.activate();
@@ -95,8 +109,6 @@ export class OvertimeAlertWebSocket {
    * Disconnect from WebSocket server
    */
   disconnect(): void {
-    console.log('Disconnecting WebSocket...');
-    
     // Clear reconnection timer
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
@@ -120,6 +132,7 @@ export class OvertimeAlertWebSocket {
     
     this.connectionState = 'disconnected';
     this.reconnectAttempts = 0;
+    this.token = null; // Clear token on disconnect
   }
 
   /**
@@ -129,22 +142,18 @@ export class OvertimeAlertWebSocket {
     this.alertCallback = callback;
     
     if (!this.client || this.connectionState !== 'connected') {
-      console.warn('Cannot subscribe: WebSocket not connected');
-      return;
+      return; // Silent return - will auto-subscribe when connected
     }
 
     try {
       this.subscription = this.client.subscribe('/topic/overtime-alerts', (message) => {
         try {
           const alert: OvertimeAlert = JSON.parse(message.body);
-          console.log('Received overtime alert:', alert);
           callback(alert);
         } catch (error) {
           console.error('Error parsing alert message:', error);
         }
       });
-      
-      console.log('Subscribed to /topic/overtime-alerts');
     } catch (error) {
       console.error('Error subscribing to alerts:', error);
     }
@@ -162,7 +171,6 @@ export class OvertimeAlertWebSocket {
    */
   private handleConnectionError(): void {
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.warn('Max reconnection attempts reached, falling back to polling');
       this.connectionState = 'disconnected';
       this.startPolling();
       return;
@@ -172,11 +180,9 @@ export class OvertimeAlertWebSocket {
     const delay = Math.pow(2, this.reconnectAttempts) * 1000;
     this.reconnectAttempts++;
     
-    console.log(`Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})...`);
-    
     this.reconnectTimer = window.setTimeout(() => {
       this.connectionState = 'disconnected';
-      this.connect();
+      this.connect(this.token || undefined);
     }, delay);
   }
 
@@ -187,8 +193,6 @@ export class OvertimeAlertWebSocket {
     if (this.pollingInterval) {
       return; // Already polling
     }
-
-    console.log('Starting polling fallback (every 30 seconds)');
     
     // Poll immediately
     this.pollAlerts();
@@ -206,7 +210,6 @@ export class OvertimeAlertWebSocket {
     if (this.pollingInterval) {
       clearInterval(this.pollingInterval);
       this.pollingInterval = null;
-      console.log('Stopped polling fallback');
     }
   }
 

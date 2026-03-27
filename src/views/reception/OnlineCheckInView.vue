@@ -193,6 +193,19 @@
               <span class="detail-label">Ghi chú khách</span>
               <span class="detail-value">{{ selectedReservation.note }}</span>
             </div>
+            <div v-if="selectedReservation.foodNote" class="detail-row full-width">
+              <span class="detail-label">Món đặt trước</span>
+              <div class="food-note-box">
+                <div 
+                  v-for="(item, index) in parseFoodNote(selectedReservation.foodNote)" 
+                  :key="index"
+                  class="food-item"
+                >
+                  <span class="bullet">•</span>
+                  <span class="food-text">{{ item }}</span>
+                </div>
+              </div>
+            </div>
             <div class="detail-row full-width">
               <span class="detail-label">Bàn đã xếp</span>
               <div class="table-list">
@@ -410,6 +423,14 @@ const formatDateTime = (dateStr: string): string => {
     hour: '2-digit',
     minute: '2-digit'
   });
+};
+
+const parseFoodNote = (note: string): string[] => {
+  if (!note) return [];
+  // Split by comma and clean up each item
+  return note.split(',')
+    .map(item => item.trim())
+    .filter(item => item.length > 0);
 };
 
 </script>
@@ -736,6 +757,22 @@ const formatDateTime = (dateStr: string): string => {
 .detail-value {
   color: #111827;
   font-weight: 700;
+}
+
+.food-note-box {
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+  border-left: 4px solid #f97316;
+  border-radius: 13px;
+  box-shadow: 0 4px 7px rgba(249, 115, 22, 0.1);
+}
+
+.food-text {
+  color: #1e293b;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.6;
+  flex: 1;
 }
 
 .table-list {

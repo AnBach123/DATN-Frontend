@@ -150,7 +150,7 @@ const acknowledgeAlert = async (alertId: string) => {
       headers['Authorization'] = `Bearer ${token}`
     }
 
-    const response = await axiosInstance.post(`/api/overtime/alerts/${alertId}/acknowledge`, {}, {
+    await axiosInstance.post(`/api/overtime/alerts/${alertId}/acknowledge`, {}, {
       headers,
     })
 
