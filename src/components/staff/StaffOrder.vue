@@ -1,146 +1,100 @@
 <template>
-  <div class="container-fluid p-4">
-    <!-- HEADER -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-      <div>
-        <h5 class="mb-0">
-          Nhân viên phục vụ: <strong>{{ staffName }}</strong>
-        </h5>
-      </div>
-
-      <div style="width: 200px">
-        <input
-          v-model.number="tableId"
-          type="number"
-          min="1"
-          class="form-control"
-          placeholder="Nhập mã bàn"
-          @input="normalizeTableId"
-          @blur="normalizeTableId"
-        />
-      </div>
+  <div class="order-container">
+    <!-- ALERT -->
+    <div class="mb-4">
+      <OvertimeAlertPanel />
     </div>
 
-    <div class="row">
+  <div class="container-fluid p-4">
+    <!-- HEADER -->
+    <div class="header-section">
+      <div>
+        <h2>Order món</h2>
+        <p>
+          Nhân viên: <strong>{{ staffName }}</strong>
+        </p>
+      </div>
+
+      <input
+        v-model="tableId"
+        type="text"
+        class="table-input"
+        placeholder="Nhập mã bàn"
+        @input="normalizeTableId"
+      />
+    </div>
+
+    <!-- MAIN -->
+    <div class="grid-container">
       <!-- PRODUCT -->
-      <div class="col-md-4">
-        <div class="card shadow-sm h-100">
-          <div class="card-header bg-primary text-white">Product</div>
+      <div class="panel">
+        <div class="panel-header blue">Sản phẩm</div>
 
-          <div class="p-2">
-            <input
-              v-model="productSearch"
-              class="form-control form-control-sm"
-              placeholder="Tìm sản phẩm..."
-            />
-          </div>
+        <input v-model="productSearch" class="search-input" placeholder="Tìm sản phẩm..." />
 
-          <div class="card-body product-scroll">
-            <div v-for="p in filteredProducts" :key="p.id" class="card mb-2 product-item">
-              <div class="card-body p-2 d-flex justify-content-between align-items-center">
-                <div>
-                  <div class="fw-bold">{{ p.productName }}</div>
-                  <small class="text-muted">
-                    {{ formatPrice(p.unitPrice) }}
-                  </small>
-                </div>
-
-                <button class="btn btn-sm btn-primary" @click="addProduct(p)">+</button>
-              </div>
+        <div class="scroll">
+          <div v-for="p in filteredProducts" :key="p.id" class="item-card">
+            <div>
+              <div class="item-name">{{ p.productName }}</div>
+              <div class="item-price">{{ formatPrice(p.unitPrice) }}</div>
             </div>
 
-            <div v-if="filteredProducts.length === 0" class="text-muted">
-              Không tìm thấy sản phẩm
-            </div>
+            <button class="btn primary" @click="addProduct(p)">+</button>
           </div>
         </div>
       </div>
 
       <!-- COMBO -->
-      <div class="col-md-4">
-        <div class="card shadow-sm h-100">
-          <div class="card-header bg-success text-white">Combo</div>
+      <div class="panel">
+        <div class="panel-header green">Combo</div>
 
-          <div class="p-2">
-            <input
-              v-model="comboSearch"
-              class="form-control form-control-sm"
-              placeholder="Tìm combo..."
-            />
-          </div>
+        <input v-model="comboSearch" class="search-input" placeholder="Tìm combo..." />
 
-          <div class="card-body product-scroll">
-            <div v-for="c in filteredCombos" :key="c.id" class="card mb-2 product-item">
-              <div class="card-body p-2 d-flex justify-content-between align-items-center">
-                <div>
-                  <div class="fw-bold">{{ c.comboName }}</div>
-                  <small class="text-muted">
-                    {{ formatPrice(c.comboPrice) }}
-                  </small>
-                </div>
-
-                <button class="btn btn-sm btn-success" @click="addCombo(c)">+</button>
-              </div>
+        <div class="scroll">
+          <div v-for="c in filteredCombos" :key="c.id" class="item-card">
+            <div>
+              <div class="item-name">{{ c.comboName }}</div>
+              <div class="item-price">{{ formatPrice(c.comboPrice) }}</div>
             </div>
 
-            <div v-if="filteredCombos.length === 0" class="text-muted">Không tìm thấy combo</div>
+            <button class="btn success" @click="addCombo(c)">+</button>
           </div>
         </div>
       </div>
 
       <!-- ORDER -->
-      <div class="col-md-4">
-        <div class="card shadow-sm h-100">
-          <div class="card-header bg-dark text-white">Order</div>
+      <div class="panel">
+        <div class="panel-header dark">Order</div>
 
-          <div class="card-body order-scroll">
-            <div v-if="cart.length === 0" class="text-muted">Chưa có món</div>
+        <div class="scroll">
+          <div v-if="cart.length === 0" class="empty">Chưa có món</div>
 
-            <div
-              v-for="item in cart"
-              :key="item.key"
-              class="d-flex justify-content-between align-items-center mb-2"
-            >
-              <div>
-                <strong>{{ item.quantity }}x</strong>
-                {{ item.name }}
-              </div>
-
-              <div>
-                <button class="btn btn-sm btn-outline-secondary me-1" @click="decrease(item)">
-                  -
-                </button>
-
-                <button class="btn btn-sm btn-outline-secondary" @click="increase(item)">+</button>
-              </div>
-            </div>
-          </div>
-
-          <div class="card-footer">
-            <div class="d-flex justify-content-between mb-3">
-              <strong>Tạm tính</strong>
-              <strong class="text-danger">
-                {{ formatPrice(subtotal) }}
-              </strong>
+          <div v-for="item in cart" :key="item.key" class="cart-item">
+            <div>
+              <strong>{{ item.quantity }}x</strong> {{ item.name }}
             </div>
 
-            <button
-              class="btn btn-primary w-100"
-              :disabled="!tableId || cart.length === 0"
-              @click="order"
-            >
-              Order
-            </button>
+            <div>
+              <button class="btn small" @click="decrease(item)">-</button>
+              <button class="btn small" @click="increase(item)">+</button>
+            </div>
           </div>
+        </div>
+
+        <div class="footer">
+          <div class="total">
+            <span>Tạm tính</span>
+            <strong>{{ formatPrice(subtotal) }}</strong>
+          </div>
+
+          <button class="btn order-btn" :disabled="!tableId || cart.length === 0" @click="order">
+            Order
+          </button>
         </div>
       </div>
     </div>
-
-    <!-- LOGOUT -->
-    <button class="btn btn-danger logout-btn" @click="logout">Logout</button>
   </div>
 </template>
-
 <script lang="ts" setup>
 import { ref, computed, onMounted } from 'vue'
 
@@ -150,11 +104,11 @@ import { addItemsToTable, type OrderItemRequest } from '@/services/staffOrderApi
 
 /* STAFF */
 
-const staffName = 'Nguyễn Văn A'
+const staffName = 'Staff'
 
 /* TABLE */
 
-const tableId = ref<number | null>(null)
+const tableId = ref<string>('')
 
 /* SEARCH */
 
@@ -184,12 +138,10 @@ interface CartItem {
   quantity: number
 }
 
-
 /* DATA */
 
 const products = ref<Product[]>([])
 const combos = ref<Combo[]>([])
-
 
 /* FETCH PRODUCTS */
 
@@ -295,11 +247,16 @@ const subtotal = computed(() =>
 )
 
 function normalizeTableId() {
-  if (tableId.value == null) return
-  if (tableId.value < 1) tableId.value = 1
+  let value = String(tableId.value || '')
+
+  // chỉ giữ số
+  value = value.replace(/\D/g, '')
+
+  // bỏ số 0 ở đầu
+  value = value.replace(/^0+/, '')
+
+  tableId.value = value
 }
-
-
 /* ORDER */
 
 async function order() {
@@ -324,7 +281,7 @@ async function order() {
       }
     })
 
-    await addItemsToTable(tableId.value, items)
+    await addItemsToTable(Number(tableId.value) || 1, items)
 
     alert('Order thành công')
     cart.value = []
@@ -336,16 +293,6 @@ async function order() {
   }
 }
 
-/* LOGOUT */
-
-function logout() {
-  const confirmLogout = confirm('Bạn có chắc muốn logout?')
-
-  if (confirmLogout) {
-    alert('Đã logout')
-  }
-}
-
 /* FORMAT PRICE */
 
 function formatPrice(price: number) {
@@ -354,23 +301,168 @@ function formatPrice(price: number) {
 </script>
 
 <style scoped>
-.product-scroll {
-  max-height: 60vh;
+.order-container {
+  padding: 24px;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
+}
+
+/* HEADER */
+.header-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.header-section h2 {
+  margin: 0;
+  color: #2d3748;
+}
+
+.table-input {
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 2px solid #e2e8f0;
+  width: 200px;
+}
+
+/* GRID */
+.grid-container {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+/* PANEL */
+.panel {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  padding: 12px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+}
+
+.panel-header {
+  padding: 10px;
+  border-radius: 10px;
+  color: white;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.panel-header.blue {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+}
+
+.panel-header.green {
+  background: linear-gradient(135deg, #38a169, #2f855a);
+}
+
+.panel-header.dark {
+  background: linear-gradient(135deg, #2d3748, #1a202c);
+}
+
+/* INPUT */
+.search-input {
+  padding: 10px;
+  border-radius: 10px;
+  border: 2px solid #e2e8f0;
+  margin-bottom: 10px;
+}
+
+/* LIST */
+.scroll {
+  max-height: 50vh;
   overflow-y: auto;
 }
 
-.order-scroll {
-  max-height: 45vh;
-  overflow-y: auto;
+/* ITEM */
+.item-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  border-radius: 10px;
+  transition: 0.2s;
 }
 
-.product-item:hover {
-  background: #f8f9fa;
+.item-card:hover {
+  background: rgba(102, 126, 234, 0.08);
 }
 
-.logout-btn {
-  position: fixed;
-  bottom: 20px;
-  left: 20px;
+.item-name {
+  font-weight: 600;
+}
+
+.item-price {
+  font-size: 13px;
+  color: #718096;
+}
+
+/* CART */
+.cart-item {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+/* FOOTER */
+.footer {
+  margin-top: auto;
+}
+
+.total {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.total strong {
+  color: #667eea;
+}
+
+/* BUTTON */
+.btn {
+  border: none;
+  border-radius: 10px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.btn.primary {
+  background: #667eea;
+  color: white;
+}
+
+.btn.success {
+  background: #38a169;
+  color: white;
+}
+
+.btn.small {
+  margin-left: 5px;
+  background: #edf2f7;
+}
+
+.order-btn {
+  width: 100%;
+  padding: 10px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  font-weight: 600;
+}
+.order-btn:disabled {
+  background: #686868;
+  color: white;
+  cursor: not-allowed;
+}
+
+/* EMPTY */
+.empty {
+  text-align: center;
+  color: #718096;
 }
 </style>
