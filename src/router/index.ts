@@ -11,6 +11,7 @@ import OnlineCheckInView from '@/views/reception/OnlineCheckInView.vue'
 import WalkInCheckInView from '@/views/reception/WalkInCheckInView.vue'
 import StaffOrder from '@/components/staff/StaffOrder.vue'
 import PaymentListView from '@/views/reception/PaymentListView.vue'
+import InvoiceHistoryView from '@/views/reception/InvoiceHistoryView.vue'
 import MockBankTransfer from '@/views/MockBankTransfer.vue'
 import InvoiceView from '@/views/InvoiceView.vue'
 import AdminLayout from '@/components/admin/AdminLayout.vue'
@@ -23,6 +24,16 @@ import StaffViewOrder from '@/components/staff/StaffViewOrder.vue'
 // Route guard helper
 function checkRole(allowedRoles: string[]) {
   return () => {
+    // Check if role-based routing is enabled
+    const roleCheckEnabled = import.meta.env.VITE_ENABLE_AUTO_LOGOUT === 'true';
+    
+    // If role check is disabled (development mode), allow all routes
+    if (!roleCheckEnabled) {
+      console.log('🔓 Role check disabled - allowing access to route');
+      return true;
+    }
+    
+    // Role check enabled (production mode)
     const userRole = localStorage.getItem('userRole')
     if (!userRole) {
       return '/auth/login'
@@ -74,6 +85,7 @@ const router = createRouter({
         { path: 'check-in-offline', name: 'check-in-offline', component: WalkInCheckInView },
         { path: 'check-in-online', name: 'check-in-online', component: OnlineCheckInView },
         { path: 'payment', name: 'reception-payment', component: PaymentListView },
+        { path: 'invoice-history', name: 'invoice-history', component: InvoiceHistoryView },
       ],
     },
 
@@ -108,11 +120,10 @@ const router = createRouter({
         { path: 'view-orders', name: 'staff-view-orders', component: StaffViewOrder },
       ],
     },
-    {
-      path: '/mock-bank-transfer',
-      name: 'mock-bank-transfer',
-      component: MockBankTransfer,
-      beforeEnter: checkRole(['USER']),
+    { 
+      path: '/mock-bank-transfer', 
+      name: 'mock-bank-transfer', 
+      component: MockBankTransfer
     },
     {
       path: '/invoice',

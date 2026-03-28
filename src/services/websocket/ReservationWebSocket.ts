@@ -16,6 +16,7 @@ export class ReservationWebSocket {
   private callback: TableStatusCallback | null = null;
   private reconnectAttempts: number = 0;
   private maxReconnectAttempts: number = 3;
+  private token: string | null = null; // Store token for reconnect
 
   constructor(wsUrl: string = 'http://localhost:8080/ws') {
     this.wsUrl = wsUrl;
@@ -27,11 +28,20 @@ export class ReservationWebSocket {
       return;
     }
 
+    // Store token for reconnect
+    this.token = token;
     this.callback = callback;
-    const socketUrl = `${this.wsUrl}?token=${token}`;
+    
+    // Use clean URL without token query parameter
+    const socketUrl = this.wsUrl;
     
     this.client = new Client({
       webSocketFactory: () => new SockJS(socketUrl) as WebSocket,
+      
+      // Send token via STOMP CONNECT header (secure approach)
+      connectHeaders: {
+        Authorization: `Bearer ${token}`
+      },
       
       onConnect: () => {
         console.log('Reservation WebSocket connected');
@@ -95,5 +105,7 @@ export class ReservationWebSocket {
       this.client.deactivate();
       this.client = null;
     }
+    
+    this.token = null; // Clear token on disconnect
   }
 }

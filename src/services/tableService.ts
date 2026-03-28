@@ -7,14 +7,12 @@ export interface TableStatus {
   status: string;
   minutesSinceCheckIn?: number;
   reservedAt?: string;
+  customerName?: string;
 }
 
 export const tableService = {
   async getAllTablesWithStatus(): Promise<TableStatus[]> {
-    const token = localStorage.getItem('accessToken');
-    const response = await axiosInstance.get('/api/dashboard/table-status', {
-      headers: { Authorization: `Bearer ${token}` }
-    });
+    const response = await axiosInstance.get('/api/dashboard/table-status');
     return response.data.data;
   }
 };

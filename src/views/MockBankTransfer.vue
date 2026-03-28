@@ -89,22 +89,36 @@ const confirmTransfer = async () => {
       invoiceId: invoiceId.value
     })
 
-    // Hiển thị thông báo thành công cho khách
-    await Swal.fire({
+    // Hiển thị toast thành công với animated checkmark
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top',
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true,
+      customClass: {
+        popup: 'payment-success-toast',
+        icon: 'payment-success-icon'
+      },
+      didOpen: (toast) => {
+        toast.addEventListener('mouseenter', Swal.stopTimer)
+        toast.addEventListener('mouseleave', Swal.resumeTimer)
+      }
+    })
+
+    await Toast.fire({
       icon: 'success',
-      title: 'Chuyển khoản thành công!',
+      title: 'Thanh toán thành công!',
       html: `
-        <div style="text-align: center; margin-top: 20px;">
-          <p><strong>Số tiền:</strong> ${formatMoney(amount.value)}</p>
-          <p style="color: #28a745; margin-top: 20px; font-size: 18px;">✓ Đã hoàn tất thanh toán</p>
-          <p style="font-size: 14px; color: #666; margin-top: 15px;">
-            Hệ thống đã thông báo cho nhân viên.<br/>
+        <div style="text-align: center; margin-top: 8px;">
+          <p style="font-size: 16px; font-weight: 600; color: #28a745; margin: 8px 0;">
+            ${formatMoney(amount.value)}
+          </p>
+          <p style="font-size: 13px; color: #666; margin: 4px 0;">
             Cảm ơn quý khách!
           </p>
         </div>
-      `,
-      confirmButtonText: 'Đóng',
-      confirmButtonColor: '#28a745',
+      `
     })
   } catch (error: any) {
     console.error('Payment error:', error)
@@ -223,5 +237,35 @@ const formatMoney = (value: number) => value.toLocaleString('vi-VN') + 'đ'
 .btn-transfer:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+/* Custom toast styles */
+:deep(.payment-success-toast) {
+  background: white !important;
+  border-radius: 16px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15) !important;
+  padding: 20px !important;
+  min-width: 320px !important;
+  max-width: 90vw !important;
+}
+
+:deep(.payment-success-icon) {
+  border-color: #28a745 !important;
+  color: #28a745 !important;
+  animation: checkmarkSpin 0.8s ease-in-out !important;
+}
+
+@keyframes checkmarkSpin {
+  0% {
+    transform: rotate(0deg) scale(0);
+    opacity: 0;
+  }
+  50% {
+    transform: rotate(180deg) scale(1.1);
+  }
+  100% {
+    transform: rotate(360deg) scale(1);
+    opacity: 1;
+  }
 }
 </style>

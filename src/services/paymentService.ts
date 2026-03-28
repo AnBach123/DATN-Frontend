@@ -31,18 +31,12 @@ export interface InvoiceSummary {
 
 export const paymentService = {
   async getAllInProgressInvoices(): Promise<InvoiceSummary[]> {
-    const token = localStorage.getItem('accessToken');
-    const response = await axiosInstance.get('/api/reception/payment/all-in-progress', {
-      headers: { Authorization: `Bearer ${token}` }
-    });
+    const response = await axiosInstance.get('/api/reception/payment/all-in-progress');
     return response.data.data;
   },
 
   async getInvoiceByTable(tableId: number): Promise<InvoiceSummary> {
-    const token = localStorage.getItem('accessToken');
-    const response = await axiosInstance.get(`/api/reception/payment/by-table/${tableId}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
+    const response = await axiosInstance.get(`/api/reception/payment/by-table/${tableId}`);
     return response.data.data;
   }
 };

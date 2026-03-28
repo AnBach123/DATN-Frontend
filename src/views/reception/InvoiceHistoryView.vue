@@ -1,7 +1,7 @@
 <template>
   <div class="invoice-list-container">
     <div class="header-section">
-      <h2>Danh sách hóa đơn</h2>
+      <h2>Lịch sử hóa đơn</h2>
     </div>
 
     <div class="filters-section">
@@ -14,14 +14,6 @@
           @input="handleSearch"
         />
         
-        <select v-model="filters.status" @change="loadInvoices" class="filter-select">
-          <option value="">Tất cả trạng thái</option>
-          <option value="PAID">Đã thanh toán</option>
-          <option value="IN_PROGRESS">Đang phục vụ</option>
-          <option value="RESERVED">Đã đặt</option>
-          <option value="CANCELLED">Đã hủy</option>
-        </select>
-
         <select v-model="filters.paymentMethod" @change="loadInvoices" class="filter-select">
           <option value="">Tất cả PTTT</option>
           <option value="CASH">Tiền mặt</option>
@@ -257,7 +249,7 @@ const loadingDetail = ref(false)
 
 const filters = ref({
   search: '',
-  status: '',
+  status: 'PAID',
   paymentMethod: '',
   startDate: '',
   endDate: '',
@@ -412,9 +404,9 @@ onMounted(() => {
 
 <style scoped>
 .invoice-list-container {
-  padding: 24px;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-  min-height: 100vh;
+  max-width: 1600px;
+  margin: 0 auto;
+  font-family: 'Inter', 'Be Vietnam Pro', sans-serif;
 }
 
 .header-section {
@@ -422,19 +414,18 @@ onMounted(() => {
 }
 
 .header-section h2 {
-  font-size: 28px;
-  font-weight: 600;
-  color: #2d3748;
+  font-size: 34px;
+  font-weight: 800;
+  color: #0f172a;
   margin: 0;
 }
 
 .filters-section {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
+  background: white;
   border-radius: 16px;
   padding: 20px;
   margin-bottom: 24px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .filter-row {
@@ -447,10 +438,11 @@ onMounted(() => {
 .search-input {
   flex: 1;
   min-width: 250px;
-  padding: 10px 16px;
+  padding: 12px 18px;
   border: 2px solid #e2e8f0;
   border-radius: 10px;
-  font-size: 14px;
+  font-size: 15px;
+  font-weight: 500;
   transition: all 0.3s;
 }
 
@@ -461,57 +453,53 @@ onMounted(() => {
 }
 
 .filter-select {
-  padding: 10px 16px;
+  padding: 12px 18px;
   padding-right: 40px;
   border: 2px solid #e2e8f0;
   border-radius: 10px;
-  font-size: 14px;
-  font-weight: 600;
-  color: #2d3748;
+  font-size: 15px;
+  font-weight: 500;
   background: white;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath fill='%23667eea' d='M8 11L3 6h10z'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23667eea' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: right 10px center;
-  background-size: 16px;
+  background-position: right 14px center;
+  background-size: 12px;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.3s;
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .filter-select:hover {
   border-color: #667eea;
   background-color: #f8f9ff;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(102, 126, 234, 0.15);
 }
 
 .filter-select:focus {
   outline: none;
   border-color: #667eea;
-  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.15);
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
   background-color: white;
 }
 
 .filter-select option {
-  padding: 12px;
-  font-weight: 600;
-  color: #2d3748;
+  padding: 10px;
+  font-weight: 500;
+  color: #0f172a;
   background: white;
 }
 
-.filter-select option:checked {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+.filter-select option:hover {
+  background: #f0f4ff;
 }
 
 .date-input {
-  padding: 10px 16px;
+  padding: 12px 18px;
   border: 2px solid #e2e8f0;
   border-radius: 10px;
-  font-size: 14px;
+  font-size: 15px;
+  font-weight: 500;
   transition: all 0.3s;
 }
 
@@ -521,16 +509,16 @@ onMounted(() => {
 }
 
 .date-separator {
-  color: #718096;
+  color: #64748b;
   font-size: 14px;
+  font-weight: 600;
 }
 
 .table-container {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
+  background: white;
   border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .invoice-table {
@@ -544,9 +532,9 @@ onMounted(() => {
 }
 
 .invoice-table th {
-  padding: 16px;
+  padding: 18px 16px;
   text-align: left;
-  font-weight: 600;
+  font-weight: 700;
   font-size: 14px;
   cursor: pointer;
   user-select: none;
@@ -569,100 +557,94 @@ onMounted(() => {
 .invoice-table td {
   padding: 16px;
   font-size: 14px;
-  color: #4a5568;
+  color: #1e293b;
 }
 
 .code-cell {
-  font-weight: 600;
+  font-weight: 700;
   color: #667eea;
 }
 
 .amount-cell {
-  font-weight: 500;
-  color: #2d3748;
+  font-weight: 600;
+  color: #0f172a;
 }
 
 .discount-cell {
-  color: #e53e3e;
-  font-weight: 500;
+  color: #f43f5e;
+  font-weight: 600;
 }
 
 .fee-cell,
 .tax-cell {
-  color: #718096;
+  color: #64748b;
   font-weight: 500;
 }
 
 .total-cell {
-  font-weight: 700;
-  color: #2d3748;
+  font-weight: 800;
+  color: #0f172a;
   font-size: 15px;
 }
 
 .detail-btn {
-  padding: 8px 20px;
+  padding: 10px 24px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   border: none;
   border-radius: 10px;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
-  letter-spacing: 0.3px;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
 .detail-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.5);
-  background: linear-gradient(135deg, #5568d3 0%, #6a3f8f 100%);
-}
-
-.detail-btn:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
 }
 
 .status-badge {
   display: inline-block;
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .status-paid {
-  background: #c6f6d5;
-  color: #22543d;
+  background: #dcfce7;
+  color: #166534;
 }
 
 .status-in-progress {
-  background: #fed7d7;
-  color: #742a2a;
+  background: #ffe4e6;
+  color: #be123c;
 }
 
 .status-reserved {
-  background: #feebc8;
-  color: #7c2d12;
+  background: #fef9c3;
+  color: #854d0e;
 }
 
 .status-cancelled {
   background: #e2e8f0;
-  color: #4a5568;
+  color: #475569;
 }
 
 .status-no-show {
-  background: #fef3c7;
-  color: #78350f;
+  background: #ffedd5;
+  color: #9a3412;
 }
 
 .loading-cell,
 .empty-cell {
   text-align: center;
-  padding: 40px;
-  color: #718096;
-  font-style: italic;
+  padding: 60px;
+  color: #64748b;
+  font-size: 16px;
+  font-weight: 500;
 }
 
 .pagination-section {
@@ -674,13 +656,13 @@ onMounted(() => {
 }
 
 .pagination-btn {
-  padding: 8px 16px;
+  padding: 10px 20px;
   border: 2px solid #e2e8f0;
   border-radius: 10px;
   background: white;
-  color: #4a5568;
+  color: #475569;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.3s;
 }
@@ -701,14 +683,14 @@ onMounted(() => {
 }
 
 .page-btn {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border: 2px solid #e2e8f0;
   border-radius: 10px;
   background: white;
-  color: #4a5568;
+  color: #475569;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.3s;
 }
@@ -752,7 +734,7 @@ onMounted(() => {
   background: white;
   border-radius: 20px;
   width: 90%;
-  max-width: 600px;
+  max-width: 700px;
   max-height: 90vh;
   overflow-y: auto;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
@@ -774,7 +756,7 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 24px;
+  padding: 28px;
   border-bottom: 2px solid #e2e8f0;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
@@ -783,17 +765,17 @@ onMounted(() => {
 
 .modal-header h2 {
   margin: 0;
-  font-size: 22px;
-  font-weight: 700;
+  font-size: 24px;
+  font-weight: 800;
 }
 
 .close-btn {
   background: rgba(255, 255, 255, 0.2);
   border: none;
   color: white;
-  font-size: 24px;
-  width: 36px;
-  height: 36px;
+  font-size: 28px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   cursor: pointer;
   display: flex;
@@ -808,59 +790,59 @@ onMounted(() => {
 }
 
 .modal-body {
-  padding: 24px;
+  padding: 28px;
 }
 
 .detail-section {
-  margin-bottom: 24px;
+  margin-bottom: 28px;
 }
 
 .detail-section h3 {
-  font-size: 16px;
-  font-weight: 700;
-  color: #2d3748;
-  margin: 0 0 16px 0;
-  padding-bottom: 8px;
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 18px 0;
+  padding-bottom: 10px;
   border-bottom: 2px solid #e2e8f0;
 }
 
 .detail-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
+  gap: 18px;
 }
 
 .detail-item {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
 .detail-item .label {
-  font-size: 12px;
-  color: #718096;
-  font-weight: 600;
+  font-size: 13px;
+  color: #64748b;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .detail-item .value {
-  font-size: 14px;
-  color: #2d3748;
-  font-weight: 600;
+  font-size: 15px;
+  color: #0f172a;
+  font-weight: 700;
 }
 
 .payment-details {
-  background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
   border-radius: 12px;
-  padding: 20px;
+  padding: 24px;
 }
 
 .payment-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 0;
+  padding: 14px 0;
   border-bottom: 1px solid #e2e8f0;
 }
 
@@ -869,43 +851,43 @@ onMounted(() => {
 }
 
 .payment-label {
-  font-size: 14px;
-  color: #4a5568;
-  font-weight: 500;
-}
-
-.payment-value {
-  font-size: 14px;
-  color: #2d3748;
+  font-size: 15px;
+  color: #475569;
   font-weight: 600;
 }
 
+.payment-value {
+  font-size: 15px;
+  color: #0f172a;
+  font-weight: 700;
+}
+
 .discount-row .payment-value {
-  color: #e53e3e;
+  color: #f43f5e;
 }
 
 .total-row {
-  margin-top: 8px;
-  padding-top: 16px;
+  margin-top: 10px;
+  padding-top: 18px;
   border-top: 2px solid #cbd5e0;
 }
 
 .total-row .payment-label {
-  font-size: 16px;
-  font-weight: 700;
-  color: #2d3748;
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
 }
 
 .total-row .payment-value {
-  font-size: 18px;
-  font-weight: 700;
+  font-size: 20px;
+  font-weight: 800;
   color: #667eea;
 }
 
 .loading-items {
   text-align: center;
   padding: 20px;
-  color: #718096;
+  color: #64748b;
   font-size: 14px;
 }
 
@@ -927,10 +909,10 @@ onMounted(() => {
 }
 
 .items-table th {
-  padding: 10px;
+  padding: 12px;
   text-align: left;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -957,31 +939,31 @@ onMounted(() => {
 }
 
 .items-table td {
-  padding: 10px;
-  font-size: 13px;
-  color: #4a5568;
+  padding: 12px;
+  font-size: 14px;
+  color: #1e293b;
 }
 
 .item-name {
   font-weight: 600;
-  color: #2d3748;
+  color: #0f172a;
 }
 
 .item-quantity {
   text-align: center;
-  font-weight: 600;
+  font-weight: 700;
   color: #667eea;
 }
 
 .item-price {
   font-weight: 500;
-  color: #718096;
+  color: #64748b;
   text-align: right;
 }
 
 .item-total {
-  font-weight: 600;
-  color: #2d3748;
+  font-weight: 700;
+  color: #0f172a;
   text-align: right;
 }
 </style>

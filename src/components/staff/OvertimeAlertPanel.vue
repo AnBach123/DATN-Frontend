@@ -1,38 +1,62 @@
 <template>
-  <div class="overtime-alert-panel">
-    <div class="alert-header">
-      <h3>Bàn quá giờ</h3>
-      <span class="alert-count" :class="{ 'has-alerts': alerts.length > 0 }">
-        {{ alerts.length }}
-      </span>
-      <span class="connection-status" :class="connectionStatusClass">
+  <div class="overtime-alert-container" :class="{ 'is-open': isOpen }">
+    <!-- Toggle Button -->
+    <button 
+      class="sidebar-toggle" 
+      @click="toggleSidebar"
+      :class="{ 'has-alerts': alerts.length > 0 }"
+      :title="isOpen ? 'Đóng' : 'Mở cảnh báo bàn quá giờ'"
+    >
+      <i :class="isOpen ? 'bi bi-chevron-right' : 'bi bi-chevron-left'"></i>
+      <span v-if="alerts.length > 0 && !isOpen" class="alert-badge">{{ alerts.length }}</span>
+    </button>
+
+    <!-- Panel -->
+    <div class="overtime-alert-panel">
+      <div class="alert-header">
+        <h3>
+          <i class="bi bi-exclamation-triangle-fill me-2"></i>
+          Bàn quá giờ
+        </h3>
+        <span class="alert-count" :class="{ 'has-alerts': alerts.length > 0 }">
+          {{ alerts.length }}
+        </span>
+      </div>
+
+      <div class="connection-status" :class="connectionStatusClass">
         {{ connectionStatusText }}
-      </span>
-    </div>
+      </div>
 
-    <div v-if="alerts.length === 0" class="no-alerts">
-      <p>Không có cảnh báo nào</p>
-    </div>
+      <div v-if="alerts.length === 0" class="no-alerts">
+        <i class="bi bi-check-circle"></i>
+        <p>Không có cảnh báo nào</p>
+      </div>
 
-    <div v-else class="alert-list">
-      <div
-        v-for="alert in sortedAlerts"
-        :key="alert.id"
-        :class="['alert-item', getUrgencyClass(alert)]"
-      >
-        <div class="alert-content">
-          <div class="table-info">
-            <strong>{{ alert.tableNames.join(', ') }}</strong>
-            <span class="duration">{{ alert.diningDuration }} phút</span>
+      <div v-else class="alert-list">
+        <div
+          v-for="alert in sortedAlerts"
+          :key="alert.id"
+          :class="['alert-item', getUrgencyClass(alert)]"
+        >
+          <div class="alert-content">
+            <div class="table-info">
+              <strong>{{ alert.tableNames.join(', ') }}</strong>
+              <span class="duration">{{ alert.diningDuration }} phút</span>
+            </div>
+            <div class="reservation-info">
+              <i class="bi bi-calendar-event"></i>
+              {{ formatTime(alert.nextReservationTime) }}
+            </div>
+            <div class="invoice-code">
+              <i class="bi bi-receipt"></i>
+              {{ alert.invoiceCode }}
+            </div>
           </div>
-          <div class="reservation-info">
-            Đặt bàn tiếp theo: {{ formatTime(alert.nextReservationTime) }}
-          </div>
-          <div class="invoice-code">Hóa đơn: {{ alert.invoiceCode }}</div>
+          <button @click="acknowledgeAlert(alert.id)" class="acknowledge-btn">
+            <i class="bi bi-check-lg"></i>
+            Xác nhận
+          </button>
         </div>
-        <button @click="acknowledgeAlert(alert.id)" class="acknowledge-btn">
-          Xác nhận
-        </button>
       </div>
     </div>
   </div>
@@ -51,6 +75,12 @@ import Swal from 'sweetalert2'
 const alerts = ref<OvertimeAlert[]>([])
 const wsClient = ref<OvertimeAlertWebSocket | null>(null)
 const connectionState = ref<ConnectionState>('disconnected')
+const isOpen = ref(false)
+
+// Methods
+const toggleSidebar = () => {
+  isOpen.value = !isOpen.value
+}
 
 // Computed properties
 const sortedAlerts = computed(() => {
@@ -71,11 +101,11 @@ const connectionStatusClass = computed(() => {
 const connectionStatusText = computed(() => {
   switch (connectionState.value) {
     case 'connected':
-      return '● Đã kết nối'
+      return 'Đã kết nối'
     case 'connecting':
-      return '● Đang kết nối...'
+      return 'Đang kết nối...'
     case 'disconnected':
-      return '● Mất kết nối'
+      return 'Mất kết nối'
     default:
       return ''
   }
@@ -120,7 +150,7 @@ const acknowledgeAlert = async (alertId: string) => {
       headers['Authorization'] = `Bearer ${token}`
     }
 
-    const response = await axiosInstance.post(`/api/overtime/alerts/${alertId}/acknowledge`, {}, {
+    await axiosInstance.post(`/api/overtime/alerts/${alertId}/acknowledge`, {}, {
       headers,
     })
 
@@ -161,6 +191,11 @@ const handleNewAlert = (alert: OvertimeAlert) => {
   const exists = alerts.value.some((a) => a.id === alert.id)
   if (!exists) {
     alerts.value.push(alert)
+
+    // Auto-open sidebar when new alert arrives
+    if (!isOpen.value) {
+      isOpen.value = true
+    }
 
     // Show notification for new alert
     Swal.fire({
@@ -230,220 +265,490 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+/* Container for the entire sidebar system */
+.overtime-alert-container {
+  position: fixed;
+  top: 80px;
+  right: 0;
+  z-index: 9998;
+  display: flex;
+  align-items: flex-start;
+  transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform: translateX(400px);
+}
+
+.overtime-alert-container.is-open {
+  transform: translateX(0);
+}
+
+/* Toggle Button - Elegant floating button */
+.sidebar-toggle {
+  width: 48px;
+  height: 48px;
+  border-radius: 50% 0 0 50%;
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+  border: none;
+  color: white;
+  font-size: 20px;
+  cursor: pointer;
+  box-shadow: -6px 4px 20px rgba(255, 107, 107, 0.4), 
+              inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  flex-shrink: 0;
+  margin-top: 10px;
+  backdrop-filter: blur(10px);
+}
+
+.sidebar-toggle:hover {
+  transform: scale(1.1) translateX(-4px);
+  box-shadow: -8px 6px 28px rgba(255, 107, 107, 0.5),
+              inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.sidebar-toggle:active {
+  transform: scale(0.95) translateX(-2px);
+}
+
+.sidebar-toggle.has-alerts {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: -6px 4px 20px rgba(255, 107, 107, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2),
+                0 0 0 0 rgba(255, 107, 107, 0.7);
+  }
+  50% {
+    box-shadow: -8px 6px 28px rgba(255, 107, 107, 0.6),
+                inset 0 1px 0 rgba(255, 255, 255, 0.3),
+                0 0 0 8px rgba(255, 107, 107, 0);
+  }
+}
+
+.sidebar-toggle i {
+  transition: transform 0.3s ease;
+}
+
+.sidebar-toggle:hover i {
+  transform: scale(1.2);
+}
+
+.alert-badge {
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
+  color: #000;
+  border-radius: 50%;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  box-shadow: 0 3px 12px rgba(255, 193, 7, 0.5),
+              inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  border: 2px solid white;
+  animation: badge-bounce 0.6s ease-out;
+}
+
+@keyframes badge-bounce {
+  0% {
+    transform: scale(0);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Sidebar Panel - Modern glass morphism design */
 .overtime-alert-panel {
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  padding: 16px;
-  max-width: 600px;
-  margin: 0 auto;
+  width: 400px;
+  max-height: calc(100vh - 100px);
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(20px);
+  border-radius: 20px 0 0 20px;
+  box-shadow: -12px 0 48px rgba(0, 0, 0, 0.12),
+              -4px 0 16px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-right: none;
 }
 
 .alert-header {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+  color: white;
+  padding: 20px 24px;
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 16px;
-  padding-bottom: 12px;
-  border-bottom: 2px solid #f0f0f0;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.alert-header::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+  animation: shimmer 3s linear infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .alert-header h3 {
   margin: 0;
   font-size: 18px;
-  font-weight: 600;
-  color: #333;
+  font-weight: 700;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  letter-spacing: -0.3px;
+  position: relative;
+  z-index: 1;
+}
+
+.alert-header h3 i {
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
 }
 
 .alert-count {
-  background: #e0e0e0;
-  color: #666;
-  padding: 4px 12px;
-  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.25);
+  padding: 6px 14px;
+  border-radius: 24px;
   font-size: 14px;
-  font-weight: 600;
-  transition: all 0.3s ease;
+  font-weight: 700;
+  min-width: 36px;
+  text-align: center;
+  margin-left: auto;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .alert-count.has-alerts {
-  background: #ff4444;
-  color: #fff;
-  animation: pulse 2s infinite;
+  background: rgba(255, 255, 255, 0.35);
+  animation: count-pulse 2s ease-in-out infinite;
 }
 
-@keyframes pulse {
-  0%,
-  100% {
-    opacity: 1;
+@keyframes count-pulse {
+  0%, 100% {
+    transform: scale(1);
   }
   50% {
-    opacity: 0.7;
+    transform: scale(1.08);
   }
 }
 
 .connection-status {
-  margin-left: auto;
+  padding: 12px 24px;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 10px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  flex-shrink: 0;
+  backdrop-filter: blur(10px);
+}
+
+.connection-status::before {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 3px currentColor;
+  opacity: 0.2;
 }
 
 .status-connected {
   color: #28a745;
+  background: linear-gradient(to right, rgba(40, 167, 69, 0.08) 0%, transparent 100%);
+}
+
+.status-connected::before {
+  background: #28a745;
+  box-shadow: 0 0 12px rgba(40, 167, 69, 0.6),
+              0 0 0 3px rgba(40, 167, 69, 0.2);
 }
 
 .status-connecting {
   color: #ffc107;
+  background: linear-gradient(to right, rgba(255, 193, 7, 0.08) 0%, transparent 100%);
+}
+
+.status-connecting::before {
+  background: #ffc107;
+  box-shadow: 0 0 12px rgba(255, 193, 7, 0.6),
+              0 0 0 3px rgba(255, 193, 7, 0.2);
+  animation: connecting-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes connecting-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.8);
+  }
 }
 
 .status-disconnected {
   color: #dc3545;
+  background: linear-gradient(to right, rgba(220, 53, 69, 0.08) 0%, transparent 100%);
+}
+
+.status-disconnected::before {
+  background: #dc3545;
+  box-shadow: 0 0 12px rgba(220, 53, 69, 0.6),
+              0 0 0 3px rgba(220, 53, 69, 0.2);
 }
 
 .no-alerts {
   text-align: center;
-  padding: 32px 16px;
+  padding: 80px 24px;
   color: #999;
+}
+
+.no-alerts i {
+  font-size: 64px;
+  color: #28a745;
+  margin-bottom: 20px;
+  opacity: 0.7;
+  filter: drop-shadow(0 4px 12px rgba(40, 167, 69, 0.2));
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
 }
 
 .no-alerts p {
   margin: 0;
-  font-size: 14px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #6c757d;
 }
 
 .alert-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
 }
 
 .alert-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px;
-  border-radius: 8px;
+  padding: 18px;
+  border-radius: 16px;
   border-left: 4px solid;
-  background: #fff;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  animation: slideIn 0.3s ease;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  background: white;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.alert-item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: inherit;
+  filter: brightness(1.2);
 }
 
 .alert-item:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-}
-
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateX(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
+  transform: translateX(-8px) scale(1.02);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.12);
 }
 
 .urgency-critical {
   border-left-color: #dc3545;
-  background: #fff5f5;
+  background: linear-gradient(135deg, rgba(220, 53, 69, 0.08) 0%, white 30%);
 }
 
 .urgency-high {
   border-left-color: #ff9800;
-  background: #fff8f0;
+  background: linear-gradient(135deg, rgba(255, 152, 0, 0.08) 0%, white 30%);
 }
 
 .urgency-medium {
   border-left-color: #ffc107;
-  background: #fffbf0;
+  background: linear-gradient(135deg, rgba(255, 193, 7, 0.08) 0%, white 30%);
 }
 
 .alert-content {
-  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
+  margin-bottom: 14px;
 }
 
 .table-info {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
 .table-info strong {
-  font-size: 16px;
-  color: #333;
+  font-size: 17px;
+  color: #212529;
+  font-weight: 700;
+  letter-spacing: -0.3px;
 }
 
 .duration {
-  background: #f0f0f0;
-  padding: 4px 8px;
-  border-radius: 4px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  padding: 5px 12px;
+  border-radius: 8px;
   font-size: 12px;
-  color: #666;
+  color: #495057;
+  font-weight: 700;
+  border: 1px solid #dee2e6;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.reservation-info,
+.invoice-code {
+  font-size: 13px;
+  color: #6c757d;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-weight: 500;
 }
 
-.reservation-info {
+.reservation-info i,
+.invoice-code i {
+  color: #adb5bd;
   font-size: 14px;
-  color: #666;
-}
-
-.invoice-code {
-  font-size: 12px;
-  color: #999;
 }
 
 .acknowledge-btn {
-  padding: 8px 16px;
-  background: #007bff;
-  color: #fff;
+  width: 100%;
+  padding: 12px;
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+  color: white;
   border: none;
-  border-radius: 6px;
+  border-radius: 12px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 700;
   cursor: pointer;
-  transition: background 0.2s ease;
-  white-space: nowrap;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.25);
+  position: relative;
+  overflow: hidden;
+}
+
+.acknowledge-btn::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.acknowledge-btn:hover::before {
+  width: 300px;
+  height: 300px;
 }
 
 .acknowledge-btn:hover {
-  background: #0056b3;
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(40, 167, 69, 0.35);
 }
 
 .acknowledge-btn:active {
-  transform: scale(0.98);
+  transform: translateY(-1px);
 }
 
-/* Responsive design */
+.acknowledge-btn i {
+  position: relative;
+  z-index: 1;
+}
+
+/* Scrollbar styling - Modern minimal */
+.alert-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.alert-list::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 8px 0;
+}
+
+.alert-list::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #dee2e6 0%, #ced4da 100%);
+  border-radius: 10px;
+  transition: background 0.3s ease;
+}
+
+.alert-list::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #ced4da 0%, #adb5bd 100%);
+}
+
+/* Responsive */
 @media (max-width: 768px) {
+  .overtime-alert-container {
+    transform: translateX(calc(100vw - 48px));
+  }
+  
   .overtime-alert-panel {
-    padding: 12px;
+    width: calc(100vw - 68px);
+    max-width: 400px;
   }
-
-  .alert-header h3 {
-    font-size: 16px;
-  }
-
-  .alert-item {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .acknowledge-btn {
-    width: 100%;
-  }
-
-  .table-info {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
+  
+  .sidebar-toggle {
+    width: 44px;
+    height: 44px;
+    font-size: 18px;
   }
 }
 </style>

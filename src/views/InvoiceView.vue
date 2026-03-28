@@ -103,12 +103,12 @@
           <strong class="text-danger">-{{ formatMoney(invoiceData.invoiceVoucherDiscount) }}</strong>
         </div>
         <div class="summary-row">
-          <span>Giảm thủ công:</span>
-          <strong class="text-danger">-{{ formatMoney(invoiceData.manualDiscount) }}</strong>
-        </div>
-        <div class="summary-row">
           <span>Giảm từ điểm:</span>
           <strong class="text-danger">-{{ formatMoney(invoiceData.pointsDiscount) }}</strong>
+        </div>
+        <div class="summary-row">
+          <span>VAT (8%):</span>
+          <strong class="text-primary">+{{ formatMoney(invoiceData.vatAmount) }}</strong>
         </div>
         <div class="summary-row total-row">
           <span>TỔNG THANH TOÁN:</span>

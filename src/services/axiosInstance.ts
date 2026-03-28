@@ -7,10 +7,34 @@ const axiosInstance = axios.create({
   baseURL: API_BASE_URL
 });
 
+// Request interceptor để tự động gửi JWT token
+axiosInstance.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('accessToken');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
 // Response interceptor để xử lý token hết hạn
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Check if auto-logout is enabled via environment variable
+    const autoLogoutEnabled = import.meta.env.VITE_ENABLE_AUTO_LOGOUT === 'true';
+    
+    // If auto-logout is disabled, just log the error and reject
+    if (!autoLogoutEnabled) {
+      console.warn('⚠️ API Error (auto-logout disabled):', error.response?.status, error.response?.data);
+      return Promise.reject(error);
+    }
+    
+    // Auto-logout enabled: Handle 401 errors
     // Chỉ xử lý khi:
     // 1. Có response từ server (không phải network error)
     // 2. Status là 401 (Unauthorized) - token hết hạn hoặc không hợp lệ

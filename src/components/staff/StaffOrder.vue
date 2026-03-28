@@ -5,6 +5,7 @@
       <OvertimeAlertPanel />
     </div>
 
+  <div class="container-fluid p-4">
     <!-- HEADER -->
     <div class="header-section">
       <div>
@@ -100,7 +101,6 @@ import { ref, computed, onMounted } from 'vue'
 import { getProducts } from '@/services/productApi'
 import { getAllProductCombos } from '@/services/productComboApi'
 import { addItemsToTable, type OrderItemRequest } from '@/services/staffOrderApi'
-import OvertimeAlertPanel from '@/components/staff/OvertimeAlertPanel.vue'
 
 /* STAFF */
 
