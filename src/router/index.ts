@@ -17,6 +17,7 @@ import InvoiceView from '@/views/InvoiceView.vue'
 import AdminLayout from '@/components/admin/AdminLayout.vue'
 import DashboardView from '@/views/admin/DashboardView.vue'
 import InvoiceListView from '@/views/admin/InvoiceListView.vue'
+import EmployeeView from '@/views/admin/EmployeeView.vue'
 
 // Route guard helper
 function checkRole(allowedRoles: string[]) {
@@ -86,27 +87,32 @@ const router = createRouter({
       ],
     },
 
+   {
+  path: '/admin',
+  component: AdminLayout,
+  beforeEnter: checkRole(['ADMIN']),
+  children: [
     {
-      path: '/admin',
-      component: AdminLayout,
-      beforeEnter: checkRole(['ADMIN']),
-      children: [
-        {
-          path: 'dashboard',
-          name: 'admin-dashboard',
-          component: DashboardView
-        },
-        {
-          path: 'invoices',
-          name: 'admin-invoices',
-          component: InvoiceListView
-        },
-        {
-          path: '',
-          redirect: '/admin/dashboard'
-        }
-      ]
+      path: 'dashboard',
+      name: 'admin-dashboard',
+      component: DashboardView
     },
+    {
+      path: 'invoices',
+      name: 'admin-invoices',
+      component: InvoiceListView
+    },
+     {
+      path: 'employees',
+      name: 'admin-employees',
+      component: EmployeeView
+    },
+    {
+      path: '',
+      redirect: '/admin/dashboard'
+    }
+  ]
+},
 
     { 
       path: '/staff-order', 
