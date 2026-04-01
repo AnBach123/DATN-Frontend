@@ -48,7 +48,14 @@ function checkRole(allowedRoles: string[]) {
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
-    { path: '/', redirect: '/auth/login' },
+    { 
+      path: '/', 
+      redirect: () => {
+        // In development mode (security disabled), redirect to home instead of login
+        const roleCheckEnabled = import.meta.env.VITE_ENABLE_AUTO_LOGOUT === 'true';
+        return roleCheckEnabled ? '/auth/login' : '/home';
+      }
+    },
 
     { path: '/auth/login', name: 'login', component: LoginView },
     { path: '/auth/register', name: 'register', component: RegisterView },
