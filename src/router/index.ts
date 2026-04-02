@@ -23,6 +23,7 @@ import StaffMainLayout from '@/layout/StaffMainLayout.vue'
 import StaffViewOrder from '@/components/staff/StaffViewOrder.vue'
 import DiningTableView from '@/views/admin/DiningTableView.vue'
 import ProfileView from '@/views/customer/ProfileView.vue'
+import CustomerView from '@/views/admin/CustomerView.vue'
 
 // Route guard helper
 function checkRole(allowedRoles: string[]) {
@@ -124,6 +125,11 @@ const router = createRouter({
       path: 'employees',
       name: 'admin-employees',
       component: EmployeeView,
+    },
+     {
+      path: 'customers',
+      name: 'admin-customers',
+      component: CustomerView,
     },
     {
       path: '',
