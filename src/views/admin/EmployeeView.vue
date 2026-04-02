@@ -26,7 +26,13 @@
           <option value="FEMALE">Nữ</option>
           <option value="OTHER">Khác</option>
         </select>
+        <select v-model="filters.status" class="filter-input" @change="searchEmployees">
+  <option value="">Tất cả trạng thái</option>
+  <option value="true">Đang hoạt động</option>
+  <option value="false">Ngừng hoạt động</option>
+</select>
         <input
+      
           v-model="filters.fromDate"
           type="date"
           class="filter-input date-input"
@@ -104,43 +110,54 @@
           <h3>{{ isEdit ? 'Cập nhật nhân viên' : 'Thêm nhân viên' }}</h3>
           <button class="close-btn" @click="closeModal">×</button>
         </div>
-        <div class="modal-body">
-          <div class="form-grid">
-            <div class="form-group">
-              <label>Họ tên *</label><input v-model="form.fullName" type="text" />
-            </div>
-            <div class="form-group">
-              <label>Username *</label><input v-model="form.username" type="text" />
-            </div>
-            <div class="form-group">
-              <label>Số điện thoại *</label><input v-model="form.phoneNumber" type="text" />
-            </div>
-            <div class="form-group">
-              <label>Email *</label><input v-model="form.email" type="email" />
-            </div>
-            <div class="form-group">
-              <label>Giới tính</label>
-              <select v-model="form.gender">
-                <option value="">-- Chọn giới tính --</option>
-                <option value="MALE">Nam</option>
-                <option value="FEMALE">Nữ</option>
-                <option value="OTHER">Khác</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Địa chỉ</label><input v-model="form.address" type="text" />
-            </div>
-            <div class="form-group">
-              <label>Vai trò *</label>
-              <select v-model="form.role">
-                <option value="">-- Chọn vai trò --</option>
-                <option value="STAFF">Nhân viên</option>
-                <option value="RECEPTION">Lễ tân</option>
-                <option value="KITCHEN">Nhà bếp</option>
-              </select>
-            </div>
-          </div>
-        </div>
+   <div class="modal-body">
+  <div class="form-grid">
+    <div class="form-group">
+      <label>Họ tên *</label>
+      <input v-model="form.fullName" type="text"  />
+    </div>
+
+    <div class="form-group">
+      <label>Username *</label>
+      <input v-model="form.username" type="text"  />
+    </div>
+
+    <div class="form-group">
+      <label>Số điện thoại *</label>
+      <input v-model="form.phoneNumber" type="text"  />
+    </div>
+
+    <div class="form-group">
+      <label>Email *</label>
+      <input v-model="form.email" type="email"  />
+    </div>
+
+    <div class="form-group">
+      <label>Giới tính</label>
+      <select v-model="form.gender" :disabled="!form.isActive">
+        <option value="">-- Chọn giới tính --</option>
+        <option value="MALE">Nam</option>
+        <option value="FEMALE">Nữ</option>
+        <option value="OTHER">Khác</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>Địa chỉ</label>
+      <input v-model="form.address" type="text" :disabled="!form.isActive" />
+    </div>
+
+    <div class="form-group">
+      <label>Vai trò *</label>
+      <select v-model="form.role" :disabled="!form.isActive">
+        <option value="">-- Chọn vai trò --</option>
+        <option value="STAFF">Nhân viên</option>
+        <option value="RECEPTION">Lễ tân</option>
+        <option value="KITCHEN">Nhà bếp</option>
+      </select>
+    </div>
+  </div>
+</div>
         <div class="modal-footer">
           <button class="reset-btn" @click="closeModal">Hủy</button>
           <button class="save-btn" @click="submitForm">
@@ -157,8 +174,8 @@
           <h3>Chi tiết / Cập nhật nhân viên</h3>
           <button class="close-btn" @click="closeDetailModal">×</button>
         </div>
-        <div class="detail-body">
-          <div class="form-grid">
+       <div class="detail-body">
+  <div class="form-grid" :class="{ 'form-disabled': !form.isActive }">
             <div class="form-group">
               <label>ID</label><input :value="form.id" type="text" disabled />
             </div>
@@ -214,12 +231,34 @@
           </div>
         </div>
         <div class="detail-footer">
-          <button class="reset-btn" @click="closeDetailModal">Đóng</button>
-          <button class="save-btn" @click="openDetailConfirm">Cập nhật</button>
-          <button class="lock-btn" @click="lockEmployeeFromDetail">
-            {{ form.isActive ? 'Khóa tài khoản' : 'Mở khóa tài khoản' }}
-          </button>
-        </div>
+  <button class="reset-btn" @click="closeDetailModal">Đóng</button>
+
+  <!-- ✅ CHỈ cho sửa khi đang hoạt động -->
+  <button
+    v-if="form.isActive"
+    class="save-btn"
+    @click="openDetailConfirm"
+  >
+    Cập nhật
+  </button>
+
+ 
+  <button
+    v-if="form.isActive"
+    class="lock-btn"
+    @click="lockEmployeeFromDetail"
+  >
+    Khóa tài khoản
+  </button>
+
+  <button
+    v-if="!form.isActive"
+    class="lock-btn"
+    @click="lockEmployeeFromDetail"
+  >
+    Mở khóa tài khoản
+  </button>
+</div>
       </div>
     </div>
 
@@ -270,7 +309,14 @@ import EmployeeService from '@/services/employee'
 const employees = ref<any[]>([])
 const loading = ref(false)
 const errorMessage = ref('')
-const filters = ref({ keyword: '', role: '', gender: '', fromDate: '', toDate: '' })
+const filters = ref({
+  keyword: '',
+  role: '',
+  gender: '',
+  fromDate: '',
+  toDate: '',
+  status: ''
+})
 const sortBy = ref('')
 const direction = ref('asc')
 
@@ -319,12 +365,13 @@ const searchEmployees = () => {
       employees.value = []
       return
     }
-    const hasFilter =
-      filters.value.keyword ||
-      filters.value.role ||
-      filters.value.gender ||
-      filters.value.fromDate ||
-      filters.value.toDate
+ const hasFilter =
+  filters.value.keyword ||
+  filters.value.role ||
+  filters.value.gender ||
+  filters.value.fromDate ||
+  filters.value.toDate ||
+  filters.value.status 
     if (!hasFilter) return await loadEmployees()
     try {
       loading.value = true
@@ -444,10 +491,23 @@ const lockEmployeeFromDetail = async () => {
   const actionText = form.value.isActive ? 'khóa' : 'mở khóa'
   if (!confirm(`Bạn có chắc muốn ${actionText} tài khoản này?`)) return
   try {
-    await EmployeeService.deleteEmployee(form.value.id)
+   await EmployeeService.toggleStatus(form.value.id)
     alert(`${actionText === 'khóa' ? 'Khóa' : 'Mở khóa'} thành công`)
-    closeDetailModal()
-    await loadEmployees()
+   closeDetailModal()
+
+const hasFilter =
+  filters.value.keyword ||
+  filters.value.role ||
+  filters.value.gender ||
+  filters.value.fromDate ||
+  filters.value.toDate ||
+  filters.value.status
+
+if (hasFilter) {
+  await searchEmployees()
+} else {
+  await loadEmployees()
+}
   } catch (error: any) {
     alert(error?.response?.data || 'Thao tác thất bại')
   }
@@ -984,5 +1044,9 @@ select:focus {
 .clear-filter-btn:hover {
   transform: translateY(-1px);
   box-shadow: 0 6px 14px rgba(229, 62, 62, 0.25);
+}
+.form-disabled {
+  pointer-events: none;   /* chặn mọi thao tác */
+  opacity: 0.7;           /* nhìn mờ đi */
 }
 </style>

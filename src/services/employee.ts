@@ -29,6 +29,7 @@ const EmployeeService = {
     if (params.gender) queryParams.gender = params.gender
     if (params.fromDate) queryParams.fromDate = params.fromDate
     if (params.toDate) queryParams.toDate = params.toDate
+    if (params.status !== '' && params.status != null) queryParams.status = params.status
 
     const response = await api.get('/employees/search', {
       params: queryParams
@@ -82,10 +83,10 @@ const EmployeeService = {
     return response.data
   },
 
-  async deleteEmployee(id: number) {
-    const response = await api.delete(`/employees/${id}`)
-    return response.data
-  },
+  async toggleStatus(id: number) {
+  const response = await api.put(`/employees/${id}/toggle-status`)
+  return response.data
+}
 }
 
 export default EmployeeService
