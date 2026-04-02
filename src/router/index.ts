@@ -18,6 +18,9 @@ import AdminLayout from '@/components/admin/AdminLayout.vue'
 import DashboardView from '@/views/admin/DashboardView.vue'
 import InvoiceListView from '@/views/admin/InvoiceListView.vue'
 import EmployeeView from '@/views/admin/EmployeeView.vue'
+import KitchenBoard from '@/views/kitchen/KitchenBoard.vue'
+import StaffMainLayout from '@/layout/StaffMainLayout.vue'
+import StaffViewOrder from '@/components/staff/StaffViewOrder.vue'
 
 // Route guard helper
 function checkRole(allowedRoles: string[]) {
@@ -46,7 +49,14 @@ function checkRole(allowedRoles: string[]) {
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
-    { path: '/', redirect: '/auth/login' },
+    { 
+      path: '/', 
+      redirect: () => {
+        // In development mode (security disabled), redirect to home instead of login
+        const roleCheckEnabled = import.meta.env.VITE_ENABLE_AUTO_LOGOUT === 'true';
+        return roleCheckEnabled ? '/auth/login' : '/home';
+      }
+    },
 
     { path: '/auth/login', name: 'login', component: LoginView },
     { path: '/auth/register', name: 'register', component: RegisterView },
@@ -62,16 +72,16 @@ const router = createRouter({
       ],
     },
 
-    { 
-      path: '/reservation', 
+    {
+      path: '/reservation',
       redirect: { path: '/home' },
-      beforeEnter: checkRole(['USER'])
+      beforeEnter: checkRole(['USER']),
     },
-    { 
-      path: '/reservation/success', 
-      name: 'reservation-success', 
+    {
+      path: '/reservation/success',
+      name: 'reservation-success',
       component: ReservationSuccessView,
-      beforeEnter: checkRole(['USER'])
+      beforeEnter: checkRole(['USER']),
     },
 
     {
@@ -114,22 +124,32 @@ const router = createRouter({
   ]
 },
 
-    { 
-      path: '/staff-order', 
-      name: 'staff-order', 
-      component: StaffOrder,
-      beforeEnter: checkRole(['STAFF'])
+    {
+      path: '/staff',
+      component: StaffMainLayout,
+      beforeEnter: checkRole(['STAFF']),
+      children: [
+        { path: 'order', name: 'staff-order', component: StaffOrder },
+        { path: 'view-orders', name: 'staff-view-orders', component: StaffViewOrder },
+      ],
     },
     { 
       path: '/mock-bank-transfer', 
       name: 'mock-bank-transfer', 
       component: MockBankTransfer
     },
-    { 
-      path: '/invoice', 
-      name: 'invoice', 
+    {
+      path: '/invoice',
+      name: 'invoice',
       component: InvoiceView,
-      beforeEnter: checkRole(['USER', 'RECEPTION'])
+      beforeEnter: checkRole(['USER', 'RECEPTION']),
+    },
+
+    {
+      path: '/kitchen',
+      name: 'kitchen',
+      component: KitchenBoard,
+      beforeEnter: checkRole(['KITCHEN']),
     },
   ],
 })

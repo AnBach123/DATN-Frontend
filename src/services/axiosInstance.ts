@@ -10,9 +10,14 @@ const axiosInstance = axios.create({
 // Request interceptor để tự động gửi JWT token
 axiosInstance.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('accessToken');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    // Chỉ gửi JWT token khi auto-logout được bật (production mode)
+    const autoLogoutEnabled = import.meta.env.VITE_ENABLE_AUTO_LOGOUT === 'true';
+    
+    if (autoLogoutEnabled) {
+      const token = localStorage.getItem('accessToken');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
     }
     return config;
   },

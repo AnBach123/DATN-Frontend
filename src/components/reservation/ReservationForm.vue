@@ -48,10 +48,15 @@
           <div class="row g-3 mt-1">
             <div class="col-md-6">
               <label class="form-label">Số lượng khách</label>
-              <select v-model.number="guestCount" class="form-select form-select-lg" required>
-                <option :value="null">Chọn số khách</option>
-                <option v-for="n in guestOptions" :key="n" :value="n">{{ n }}</option>
-              </select>
+              <input 
+                type="number" 
+                v-model.number="guestCount" 
+                class="form-control form-control-lg" 
+                min="1" 
+                max="310"
+                placeholder="Nhập số khách (tối đa 310)"
+                required 
+              />
             </div>
 
             <div class="col-md-6">
@@ -107,7 +112,6 @@ const router = useRouter()
 
 const today = new Date().toISOString().split('T')[0]
 
-const guestOptions = Array.from({ length: 20 }, (_, i) => i + 1)
 const promotions = [
   'Ưu đãi sinh nhật 10% tổng hóa đơn',
   'Có mã ưu đãi riêng',
