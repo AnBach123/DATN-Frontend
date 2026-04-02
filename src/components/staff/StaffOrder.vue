@@ -3,97 +3,98 @@
     <!-- ALERT -->
     <div class="mb-4">
       <OvertimeAlertPanel />
+      <NoShowNotificationPanel />
     </div>
 
-  <div class="container-fluid p-4">
-    <!-- HEADER -->
-    <div class="header-section">
-      <div>
-        <h2>Order món</h2>
-        <p>
-          Nhân viên: <strong>{{ staffName }}</strong>
-        </p>
+    <div class="container-fluid p-4">
+      <!-- HEADER -->
+      <div class="header-section">
+        <div>
+          <h2>Order món</h2>
+          <p>
+            Nhân viên: <strong>{{ staffName }}</strong>
+          </p>
+        </div>
+
+        <input
+          v-model="tableId"
+          type="text"
+          class="table-input"
+          placeholder="Nhập mã bàn"
+          @input="normalizeTableId"
+        />
       </div>
 
-      <input
-        v-model="tableId"
-        type="text"
-        class="table-input"
-        placeholder="Nhập mã bàn"
-        @input="normalizeTableId"
-      />
+      <!-- MAIN -->
+      <div class="grid-container">
+        <!-- PRODUCT -->
+        <div class="panel">
+          <div class="panel-header blue">Sản phẩm</div>
+
+          <input v-model="productSearch" class="search-input" placeholder="Tìm sản phẩm..." />
+
+          <div class="scroll">
+            <div v-for="p in filteredProducts" :key="p.id" class="item-card">
+              <div>
+                <div class="item-name">{{ p.productName }}</div>
+                <div class="item-price">{{ formatPrice(p.unitPrice) }}</div>
+              </div>
+
+              <button class="btn primary" @click="addProduct(p)">+</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- COMBO -->
+        <div class="panel">
+          <div class="panel-header green">Combo</div>
+
+          <input v-model="comboSearch" class="search-input" placeholder="Tìm combo..." />
+
+          <div class="scroll">
+            <div v-for="c in filteredCombos" :key="c.id" class="item-card">
+              <div>
+                <div class="item-name">{{ c.comboName }}</div>
+                <div class="item-price">{{ formatPrice(c.comboPrice) }}</div>
+              </div>
+
+              <button class="btn success" @click="addCombo(c)">+</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ORDER -->
+        <div class="panel">
+          <div class="panel-header dark">Order</div>
+
+          <div class="scroll">
+            <div v-if="cart.length === 0" class="empty">Chưa có món</div>
+
+            <div v-for="item in cart" :key="item.key" class="cart-item">
+              <div>
+                <strong>{{ item.quantity }}x</strong> {{ item.name }}
+              </div>
+
+              <div>
+                <button class="btn small" @click="decrease(item)">-</button>
+                <button class="btn small" @click="increase(item)">+</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="footer">
+            <div class="total">
+              <span>Tạm tính</span>
+              <strong>{{ formatPrice(subtotal) }}</strong>
+            </div>
+
+            <button class="btn order-btn" :disabled="!tableId || cart.length === 0" @click="order">
+              Order
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
-
-    <!-- MAIN -->
-    <div class="grid-container">
-      <!-- PRODUCT -->
-      <div class="panel">
-        <div class="panel-header blue">Sản phẩm</div>
-
-        <input v-model="productSearch" class="search-input" placeholder="Tìm sản phẩm..." />
-
-        <div class="scroll">
-          <div v-for="p in filteredProducts" :key="p.id" class="item-card">
-            <div>
-              <div class="item-name">{{ p.productName }}</div>
-              <div class="item-price">{{ formatPrice(p.unitPrice) }}</div>
-            </div>
-
-            <button class="btn primary" @click="addProduct(p)">+</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- COMBO -->
-      <div class="panel">
-        <div class="panel-header green">Combo</div>
-
-        <input v-model="comboSearch" class="search-input" placeholder="Tìm combo..." />
-
-        <div class="scroll">
-          <div v-for="c in filteredCombos" :key="c.id" class="item-card">
-            <div>
-              <div class="item-name">{{ c.comboName }}</div>
-              <div class="item-price">{{ formatPrice(c.comboPrice) }}</div>
-            </div>
-
-            <button class="btn success" @click="addCombo(c)">+</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- ORDER -->
-      <div class="panel">
-        <div class="panel-header dark">Order</div>
-
-        <div class="scroll">
-          <div v-if="cart.length === 0" class="empty">Chưa có món</div>
-
-          <div v-for="item in cart" :key="item.key" class="cart-item">
-            <div>
-              <strong>{{ item.quantity }}x</strong> {{ item.name }}
-            </div>
-
-            <div>
-              <button class="btn small" @click="decrease(item)">-</button>
-              <button class="btn small" @click="increase(item)">+</button>
-            </div>
-          </div>
-        </div>
-
-        <div class="footer">
-          <div class="total">
-            <span>Tạm tính</span>
-            <strong>{{ formatPrice(subtotal) }}</strong>
-          </div>
-
-          <button class="btn order-btn" :disabled="!tableId || cart.length === 0" @click="order">
-            Order
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
   </div>
 </template>
 <script lang="ts" setup>
@@ -102,6 +103,8 @@ import { ref, computed, onMounted } from 'vue'
 import { getProducts } from '@/services/productApi'
 import { getAllProductCombos } from '@/services/productComboApi'
 import { addItemsToTable, type OrderItemRequest } from '@/services/staffOrderApi'
+import OvertimeAlertPanel from './OvertimeAlertPanel.vue'
+import NoShowNotificationPanel from './NoShowNotificationPanel.vue'
 
 /* STAFF */
 

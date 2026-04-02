@@ -272,6 +272,9 @@ const showModal = ref(false);
 const tableDetail = ref<TableDetail | null>(null);
 const showCancelConfirm = ref(false);
 const cancellingTable = ref(false);
+const suggestedTablesData = ref<{tables: number[], message: string}>({ tables: [], message: '' });
+const recommendedTables = ref<number[]>([]);
+const recommendationMessage = ref<string>('');
 
 const availableCount = computed(() => 
   tables.value.filter(t => t.status === 'AVAILABLE').length
@@ -345,58 +348,40 @@ const isCheckInDisabled = computed(() => {
          validationMessage.value !== '';
 });
 
-// Smart recommendation algorithm
-const recommendedTables = computed(() => {
-  if (guestCount.value <= 0) return [];
-  
-  const availableTables = tables.value.filter(t => t.status === 'AVAILABLE');
-  if (availableTables.length === 0) return [];
-  
-  // For 10 or fewer guests: recommend single best table
-  if (guestCount.value <= 10) {
-    // Find table with capacity closest to guest count (but >= guest count)
-    const suitableTables = availableTables.filter(t => t.capacity >= guestCount.value);
-    if (suitableTables.length === 0) return [];
-    
-    // Sort by capacity ascending, pick the smallest one that fits
-    suitableTables.sort((a, b) => a.capacity - b.capacity);
-    return [suitableTables[0].id];
-  }
-  
-  // For more than 10 guests: recommend best 2-table combination
-  const combinations: Array<{tables: number[], totalCapacity: number, waste: number}> = [];
-  
-  for (let i = 0; i < availableTables.length; i++) {
-    for (let j = i + 1; j < availableTables.length; j++) {
-      const table1 = availableTables[i];
-      const table2 = availableTables[j];
-      const totalCapacity = table1.capacity + table2.capacity;
-      
-      // Only consider if total capacity >= guest count
-      if (totalCapacity >= guestCount.value) {
-        const waste = totalCapacity - guestCount.value;
-        combinations.push({
-          tables: [table1.id, table2.id],
-          totalCapacity,
-          waste
-        });
-      }
+// Smart recommendation algorithm - call backend API
+watch(guestCount, async (newCount) => {
+  console.log('[WalkIn] Guest count changed:', newCount);
+  if (newCount > 0) {
+    try {
+      console.log('[WalkIn] Calling suggest API...');
+      const response = await walkInService.suggestTables(newCount);
+      console.log('[WalkIn] API response:', response);
+      recommendedTables.value = response.suggestedTables.map(t => t.id);
+      recommendationMessage.value = response.message;
+      console.log('[WalkIn] Recommended table IDs:', recommendedTables.value);
+    } catch (error) {
+      console.error('[WalkIn] Error fetching table suggestions:', error);
+      recommendedTables.value = [];
+      recommendationMessage.value = '';
     }
+  } else {
+    recommendedTables.value = [];
+    recommendationMessage.value = '';
   }
-  
-  if (combinations.length === 0) return [];
-  
-  // Sort by waste (ascending) - prefer combination with least waste
-  combinations.sort((a, b) => a.waste - b.waste);
-  return combinations[0].tables;
 });
 
 const getRecommendationText = () => {
+  console.log('[WalkIn] getRecommendationText called');
+  console.log('[WalkIn] recommendedTables.value:', recommendedTables.value);
+  console.log('[WalkIn] tables.value:', tables.value.map(t => ({ id: t.id, name: t.name })));
+  
   if (recommendedTables.value.length === 0) return '';
   
   const tableNames = recommendedTables.value
     .map(id => tables.value.find(t => t.id === id)?.name)
     .filter(Boolean);
+  
+  console.log('[WalkIn] tableNames:', tableNames);
   
   if (recommendedTables.value.length === 1) {
     return `Bàn ${tableNames[0]} phù hợp nhất`;
@@ -852,23 +837,33 @@ const handleCheckIn = async () => {
 
 /* Smart Table Suggestion Styles */
 .table-card.recommended {
+  position: relative;
   border-color: #10b981;
-  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.3), 0 8px 24px rgba(16, 185, 129, 0.2);
-  animation: recommendedGlow 2s ease-in-out infinite;
+  border-width: 4px;
+  animation: floatingShadow 2.5s ease-in-out infinite;
 }
 
-@keyframes recommendedGlow {
+@keyframes floatingShadow {
   0%, 100% {
-    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.3), 0 8px 24px rgba(16, 185, 129, 0.2);
+    box-shadow: 
+      0 4px 12px rgba(16, 185, 129, 0.3),
+      0 8px 24px rgba(16, 185, 129, 0.2),
+      0 0 0 0 rgba(16, 185, 129, 0.4);
+    transform: translateY(0px);
   }
   50% {
-    box-shadow: 0 0 0 6px rgba(16, 185, 129, 0.4), 0 12px 32px rgba(16, 185, 129, 0.3);
+    box-shadow: 
+      0 12px 28px rgba(16, 185, 129, 0.4),
+      0 16px 40px rgba(16, 185, 129, 0.25),
+      0 0 0 8px rgba(16, 185, 129, 0.15);
+    transform: translateY(-6px);
   }
 }
 
 .table-card.recommended:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 0 0 6px rgba(16, 185, 129, 0.4), 0 12px 32px rgba(16, 185, 129, 0.3);
+  animation-play-state: paused;
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 }
 
 .table-header {

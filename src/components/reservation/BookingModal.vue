@@ -34,10 +34,14 @@
         <div class="grid">
           <div class="form-group">
             <label>Số lượng khách</label>
-            <select v-model.number="guestCount" required>
-              <option :value="null">Chọn số khách</option>
-              <option v-for="n in guestOptions" :key="n" :value="n">{{ n }}</option>
-            </select>
+            <input 
+              v-model.number="guestCount" 
+              type="number" 
+              min="1" 
+              max="302" 
+              placeholder="Nhập số khách"
+              required 
+            />
           </div>
           <div class="form-group">
             <label>Ưu đãi</label>
