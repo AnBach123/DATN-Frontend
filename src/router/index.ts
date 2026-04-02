@@ -20,6 +20,7 @@ import InvoiceListView from '@/views/admin/InvoiceListView.vue'
 import KitchenBoard from '@/views/kitchen/KitchenBoard.vue'
 import StaffMainLayout from '@/layout/StaffMainLayout.vue'
 import StaffViewOrder from '@/components/staff/StaffViewOrder.vue'
+import DiningTableView from '@/views/admin/DiningTableView.vue'
 
 // Route guard helper
 function checkRole(allowedRoles: string[]) {
@@ -97,27 +98,31 @@ const router = createRouter({
     },
 
     {
-      path: '/admin',
-      component: AdminLayout,
-      beforeEnter: checkRole(['ADMIN']),
-      children: [
-        {
-          path: 'dashboard',
-          name: 'admin-dashboard',
-          component: DashboardView,
-        },
-        {
-          path: 'invoices',
-          name: 'admin-invoices',
-          component: InvoiceListView,
-        },
-        {
-          path: '',
-          redirect: '/admin/dashboard',
-        },
-      ],
+  path: '/admin',
+  component: AdminLayout,
+  beforeEnter: checkRole(['ADMIN']),
+  children: [
+    {
+      path: 'dashboard',
+      name: 'admin-dashboard',
+      component: DashboardView,
     },
-
+    {
+      path: 'invoices',
+      name: 'admin-invoices',
+      component: InvoiceListView,
+    },
+    {
+      path: 'tables',
+      name: 'admin-tables',
+      component: DiningTableView,
+    },
+    {
+      path: '',
+      redirect: '/admin/dashboard',
+    },
+  ],
+},
     {
       path: '/staff',
       component: StaffMainLayout,
