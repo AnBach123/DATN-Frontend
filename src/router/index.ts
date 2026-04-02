@@ -21,6 +21,7 @@ import EmployeeView from '@/views/admin/EmployeeView.vue'
 import KitchenBoard from '@/views/kitchen/KitchenBoard.vue'
 import StaffMainLayout from '@/layout/StaffMainLayout.vue'
 import StaffViewOrder from '@/components/staff/StaffViewOrder.vue'
+import DiningTableView from '@/views/admin/DiningTableView.vue'
 import ProfileView from '@/views/customer/ProfileView.vue'
 
 // Route guard helper
@@ -112,20 +113,19 @@ const router = createRouter({
     {
       path: 'invoices',
       name: 'admin-invoices',
-      component: InvoiceListView
+      component: InvoiceListView,
     },
-     {
-      path: 'employees',
-      name: 'admin-employees',
-      component: EmployeeView
+    {
+      path: 'tables',
+      name: 'admin-tables',
+      component: DiningTableView,
     },
     {
       path: '',
-      redirect: '/admin/dashboard'
-    }
-  ]
+      redirect: '/admin/dashboard',
+    },
+  ],
 },
-
     {
       path: '/staff',
       component: StaffMainLayout,
