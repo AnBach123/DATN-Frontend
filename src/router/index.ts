@@ -121,6 +121,11 @@ const router = createRouter({
       component: DiningTableView,
     },
     {
+      path: 'employees',
+      name: 'admin-employees',
+      component: EmployeeView,
+    },
+    {
       path: '',
       redirect: '/admin/dashboard',
     },
