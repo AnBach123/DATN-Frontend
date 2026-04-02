@@ -76,6 +76,8 @@ type TableInfo = {
   tableCode: string
   tableName: string
   seatingCapacity: number
+  area?: string
+  floor?: number
 }
 
 type ReservationResult = {
@@ -105,9 +107,28 @@ onMounted(() => {
 
 const tableText = computed(() => {
   if (!data.value?.tables?.length) return 'Chưa có'
-  return data.value.tables
-    .map((t) => `${t.tableCode} (${t.seatingCapacity} chỗ)`)
-    .join(', ')
+  
+  // Group tables by area and floor
+  const grouped = data.value.tables.reduce((acc, t) => {
+    const key = `${t.area || '?'}-${t.floor || '?'}`
+    if (!acc[key]) {
+      acc[key] = { area: t.area, floor: t.floor, tables: [] }
+    }
+    acc[key].tables.push(t)
+    return acc
+  }, {} as Record<string, { area?: string; floor?: number; tables: TableInfo[] }>)
+  
+  // Format output
+  return Object.values(grouped)
+    .map(group => {
+      const tableNames = group.tables.map(t => t.tableName).join(', ')
+      const totalSeats = group.tables.reduce((sum, t) => sum + t.seatingCapacity, 0)
+      const floorText = group.floor ? `Tầng ${group.floor}` : ''
+      const areaText = group.area ? `Khu ${group.area}` : ''
+      const location = [floorText, areaText].filter(Boolean).join(', ')
+      return `${tableNames} (${totalSeats} chỗ${location ? ` - ${location}` : ''})`
+    })
+    .join(' | ')
 })
 
 const formatDateTime = (value: string) => {
