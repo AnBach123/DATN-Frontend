@@ -21,19 +21,20 @@ import EmployeeView from '@/views/admin/EmployeeView.vue'
 import KitchenBoard from '@/views/kitchen/KitchenBoard.vue'
 import StaffMainLayout from '@/layout/StaffMainLayout.vue'
 import StaffViewOrder from '@/components/staff/StaffViewOrder.vue'
+import ProfileView from '@/views/customer/ProfileView.vue'
 
 // Route guard helper
 function checkRole(allowedRoles: string[]) {
   return () => {
     // Check if role-based routing is enabled
-    const roleCheckEnabled = import.meta.env.VITE_ENABLE_AUTO_LOGOUT === 'true';
-    
+    const roleCheckEnabled = import.meta.env.VITE_ENABLE_AUTO_LOGOUT === 'true'
+
     // If role check is disabled (development mode), allow all routes
     if (!roleCheckEnabled) {
-      console.log('🔓 Role check disabled - allowing access to route');
-      return true;
+      console.log('🔓 Role check disabled - allowing access to route')
+      return true
     }
-    
+
     // Role check enabled (production mode)
     const userRole = localStorage.getItem('userRole')
     if (!userRole) {
@@ -49,13 +50,13 @@ function checkRole(allowedRoles: string[]) {
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
-    { 
-      path: '/', 
+    {
+      path: '/',
       redirect: () => {
         // In development mode (security disabled), redirect to home instead of login
-        const roleCheckEnabled = import.meta.env.VITE_ENABLE_AUTO_LOGOUT === 'true';
-        return roleCheckEnabled ? '/auth/login' : '/home';
-      }
+        const roleCheckEnabled = import.meta.env.VITE_ENABLE_AUTO_LOGOUT === 'true'
+        return roleCheckEnabled ? '/auth/login' : '/home'
+      },
     },
 
     { path: '/auth/login', name: 'login', component: LoginView },
@@ -69,6 +70,7 @@ const router = createRouter({
       children: [
         { path: 'home', name: 'home', component: HomeView },
         { path: 'menu', name: 'menu', component: MenuView },
+        { path: 'profile', name: 'profile', component: ProfileView },
       ],
     },
 
@@ -133,10 +135,10 @@ const router = createRouter({
         { path: 'view-orders', name: 'staff-view-orders', component: StaffViewOrder },
       ],
     },
-    { 
-      path: '/mock-bank-transfer', 
-      name: 'mock-bank-transfer', 
-      component: MockBankTransfer
+    {
+      path: '/mock-bank-transfer',
+      name: 'mock-bank-transfer',
+      component: MockBankTransfer,
     },
     {
       path: '/invoice',

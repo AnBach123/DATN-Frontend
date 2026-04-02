@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <nav class="site-nav navbar navbar-expand-lg">
     <div class="container-fluid nav-shell">
       <RouterLink class="brand" to="/home">
@@ -17,16 +17,38 @@
 
       <div class="collapse navbar-collapse nav-collapse" id="navbarNav">
         <ul class="nav-list ms-auto">
-          <li class="nav-item"><RouterLink class="nav-link" to="/menu">Thực đơn</RouterLink></li>
-          <li class="nav-item"><RouterLink class="nav-link" to="/reviews">Đánh giá</RouterLink></li>
-          <li class="nav-item"><RouterLink class="nav-link" to="/contact">Liên hệ</RouterLink></li>
+          <li class="nav-item">
+            <RouterLink class="nav-link" to="/menu">Thực đơn</RouterLink>
+          </li>
+          <li class="nav-item">
+            <RouterLink class="nav-link" to="/reviews">Đánh giá</RouterLink>
+          </li>
+          <li class="nav-item">
+            <RouterLink class="nav-link" to="/contact">Liên hệ</RouterLink>
+          </li>
         </ul>
 
         <div class="nav-actions">
           <button class="btn-reserve" @click="openBooking()">Đặt bàn ngay</button>
-          <RouterLink class="btn-ghost" to="/auth/login">
-            <button class="btn btn-outline-light ms-2">Logout</button>
-          </RouterLink>
+
+          <!-- PROFILE DROPDOWN -->
+          <div class="profile-wrapper" @click.stop="toggleDropdown">
+            <div class="profile-trigger">
+              <div class="avatar">{{ avatarText }}</div>
+              <span class="user-name">{{ fullName }}</span>
+              <span class="arrow">▼</span>
+            </div>
+
+            <div v-if="showDropdown" class="profile-dropdown">
+              <RouterLink to="/profile" class="dropdown-item" @click="closeDropdown">
+                Profile
+              </RouterLink>
+
+              <RouterLink class="btn-ghost dropdown-item" to="/auth/login" @click="closeDropdown">
+                Logout
+              </RouterLink>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -34,9 +56,72 @@
 </template>
 
 <script setup lang="ts">
+import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { useBookingStore } from '@/composables/bookingStore'
+import { getProfile } from '@/services/customerApi' // ✅ THÊM
 
 const { open: openBooking } = useBookingStore()
+const router = useRouter()
+
+const showDropdown = ref(false)
+const fullName = ref('User')
+
+// ========================
+// AVATAR TEXT
+// ========================
+const avatarText = computed(() => {
+  return fullName.value ? fullName.value.charAt(0).toUpperCase() : 'U'
+})
+
+// ========================
+// TOGGLE DROPDOWN
+// ========================
+const toggleDropdown = () => {
+  showDropdown.value = !showDropdown.value
+}
+
+const closeDropdown = () => {
+  showDropdown.value = false
+}
+
+// ========================
+// LOAD USER INFO (FIX)
+// ========================
+const loadUser = async () => {
+  try {
+    const data = await getProfile()
+    fullName.value = data.fullName || 'User'
+
+    // ✅ cache lại (optional)
+    localStorage.setItem('fullName', data.fullName)
+  } catch (err) {
+    console.error('Load profile lỗi:', err)
+
+    // fallback
+    const cached = localStorage.getItem('fullName')
+    if (cached) fullName.value = cached
+  }
+}
+
+onMounted(() => {
+  loadUser() // ✅ gọi API
+  document.addEventListener('click', handleClickOutside)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleClickOutside)
+})
+
+// ========================
+// CLICK OUTSIDE
+// ========================
+const handleClickOutside = (e: MouseEvent) => {
+  const el = document.querySelector('.profile-wrapper')
+  if (el && !el.contains(e.target as Node)) {
+    showDropdown.value = false
+  }
+}
 </script>
 
 <style scoped>
@@ -72,7 +157,6 @@ const { open: openBooking } = useBookingStore()
 .brand-mark {
   font-family: 'Playfair Display', serif;
   font-size: 24px;
-  letter-spacing: 1px;
 }
 
 .brand-sub {
@@ -85,8 +169,6 @@ const { open: openBooking } = useBookingStore()
 .nav-list {
   display: flex;
   gap: 18px;
-  margin: 0;
-  padding: 0;
   list-style: none;
 }
 
@@ -94,13 +176,6 @@ const { open: openBooking } = useBookingStore()
   color: rgba(255, 255, 255, 0.85);
   font-weight: 600;
   text-decoration: none;
-  transition: color 0.2s ease;
-}
-
-.btn-link {
-  background: none;
-  border: none;
-  padding: 0;
 }
 
 .nav-link:hover {
@@ -110,10 +185,75 @@ const { open: openBooking } = useBookingStore()
 .nav-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
   margin-left: 20px;
 }
 
+/* ===== PROFILE ===== */
+.profile-wrapper {
+  position: relative;
+  cursor: pointer;
+}
+
+.profile-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #fff;
+  font-weight: 600;
+}
+
+.avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #f2b565;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #3a1f12;
+  font-weight: bold;
+}
+
+.user-name {
+  font-size: 14px;
+}
+
+.arrow {
+  font-size: 10px;
+}
+
+/* ===== DROPDOWN ===== */
+.dropdown-menu {
+  position: absolute;
+  right: 0;
+  top: 120%;
+  background: #fff;
+  border-radius: 10px;
+  min-width: 150px;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.18);
+  overflow: hidden;
+  animation: fadeIn 0.15s ease;
+  z-index: 9999;
+}
+
+.dropdown-item {
+  padding: 10px 14px;
+  cursor: pointer;
+  color: #333;
+  text-decoration: none;
+  display: block;
+}
+
+.dropdown-item:hover {
+  background: #f5f5f5;
+}
+
+.logout {
+  color: red;
+}
+
+/* ===== BUTTON ===== */
 .btn-reserve {
   border: none;
   background: linear-gradient(135deg, #f7c782 0%, #f2b565 100%);
@@ -121,45 +261,35 @@ const { open: openBooking } = useBookingStore()
   padding: 10px 22px;
   border-radius: 999px;
   font-weight: 700;
-  letter-spacing: 0.2px;
-  text-decoration: none;
-  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.18);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  cursor: pointer;
 }
 
-.btn-reserve:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 14px 24px rgba(0, 0, 0, 0.22);
+.nav-collapse {
+  overflow: visible !important;
 }
 
-.btn-ghost {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  text-decoration: none;
+.profile-dropdown {
+  position: absolute;
+  right: 0;
+  top: 120%;
+  background: #fff;
+  border-radius: 10px;
+  min-width: 150px;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.18);
+  overflow: hidden;
+  animation: fadeIn 0.15s ease;
+  z-index: 9999;
 }
 
-.nav-toggle {
-  border: 1px solid rgba(255, 255, 255, 0.4);
-}
-
-.nav-toggle .navbar-toggler-icon {
-  filter: invert(1);
-}
-
-@media (max-width: 991px) {
-  .nav-collapse {
-    padding-top: 12px;
+/* ===== ANIMATION ===== */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
   }
-
-  .nav-actions {
-    margin: 12px 0 8px;
-    justify-content: flex-start;
-  }
-
-  .nav-list {
-    flex-direction: column;
-    gap: 10px;
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 </style>

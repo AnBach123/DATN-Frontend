@@ -1,5 +1,10 @@
 <template>
   <div class="container">
+    <!-- ALERT -->
+    <div class="mb-4">
+      <OvertimeAlertPanel />
+      <NoShowNotificationPanel />
+    </div>
     <div class="table-wrapper">
       <!-- HEADER -->
       <div class="header">
@@ -55,6 +60,8 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { getKitchenGrouped, serveItem, cancelItem } from '@/services/kitchenApi'
+import OvertimeAlertPanel from './OvertimeAlertPanel.vue'
+import NoShowNotificationPanel from './NoShowNotificationPanel.vue'
 
 interface Item {
   id: number
