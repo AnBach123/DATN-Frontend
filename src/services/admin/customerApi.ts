@@ -1,5 +1,4 @@
 import axiosInstance from '@/services/axiosInstance';
-import axios from 'axios';
 
 const API_URL = 'http://localhost:8080/api/customers';
 
@@ -22,16 +21,8 @@ export const customerApi = {
     return axiosInstance.get('/api/customers', { params })
   },
 
- updateStatus(id: number, isActive: boolean) {
-    return axios.put(
-      `${API_URL}/${id}/status`,
-      { isActive }, 
-      {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`
-        }
-      }
-    );
+  updateStatus(id: number, isActive: boolean) {
+    return axiosInstance.put(`/api/customers/${id}/status`, { isActive });
   }
 };
 export interface Customer {

@@ -54,7 +54,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { getProfile, updateProfile } from '@/services/customerApi'
+import { getProfile, updateProfile } from '@/services/customer/profileApi'
 import axios from 'axios'
 
 const loading = ref(true)

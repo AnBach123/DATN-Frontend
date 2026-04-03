@@ -59,7 +59,7 @@
 import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useBookingStore } from '@/composables/bookingStore'
-import { getProfile } from '@/services/customerApi' // ✅ THÊM
+import { getProfile } from '@/services/customer/profileApi' // ✅ THÊM
 
 const { open: openBooking } = useBookingStore()
 const router = useRouter()
