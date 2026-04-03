@@ -174,7 +174,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import axiosInstance from '@/services/axiosInstance'
+import * as productApi from '@/services/admin/productApi'
 
 const products = ref<any[]>([])
 const loading = ref(false)
@@ -209,8 +209,7 @@ const handleSearch = () => {
 const loadProducts = async () => {
   loading.value = true
   try {
-    const res = await axiosInstance.get('/api/products')
-    products.value = res.data.data
+    products.value = await productApi.getAllProducts()
   } finally {
     loading.value = false
   }
@@ -219,14 +218,11 @@ const loadProducts = async () => {
 const searchProducts = async () => {
   loading.value = true
   try {
-    const res = await axiosInstance.get('/api/products/search', {
-      params: {
-        name: filters.value.name || undefined,
-        category: filters.value.category || undefined,
-        status: filters.value.status || undefined
-      }
+    products.value = await productApi.searchProducts({
+      name: filters.value.name || undefined,
+      category: filters.value.category || undefined,
+      status: filters.value.status || undefined
     })
-    products.value = res.data.data
   } finally {
     loading.value = false
   }
@@ -240,14 +236,7 @@ const sortBy = async (field: string) => {
     sortDirection.value = 'asc'
   }
 
-  const res = await axiosInstance.get('/api/products/sort', {
-    params: {
-      field: sortField.value,
-      direction: sortDirection.value
-    }
-  })
-
-  products.value = res.data.data
+  products.value = await productApi.sortProducts(sortField.value, sortDirection.value)
 }
 
 const clearFilters = () => {
@@ -323,9 +312,9 @@ const getStatusText = (status: string) => ({
 
 const handleSubmit = async () => {
   if (isEdit.value) {
-    await axiosInstance.put(`/api/products/${editingId.value}`, newProduct.value)
+    await productApi.updateProduct(editingId.value!, newProduct.value)
   } else {
-    await axiosInstance.post('/api/products', newProduct.value)
+    await productApi.createProduct(newProduct.value)
   }
 
   closeAddModal()
