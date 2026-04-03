@@ -49,7 +49,7 @@ const menuItems = [
   { path: '/admin/combos', label: 'Quản lý combo', icon: '🎁' },
   { path: '/admin/vouchers', label: 'Quản lý voucher', icon: '🎫' },
   { path: '/admin/tables', label: 'Quản lý bàn', icon: '🪑' },
-  { path: '/admin/reservations', label: 'Quản lý đặt bàn', icon: '📅' },
+  // { path: '/admin/reservations', label: 'Quản lý đặt bàn', icon: '📅' },
   { path: '/admin/invoices', label: 'Quản lý hóa đơn', icon: '📄' },
   { path: '/admin/employees', label: 'Quản lý nhân viên', icon: '👨‍💼' },
   { path: '/admin/reports', label: 'Báo cáo', icon: '📊' },
