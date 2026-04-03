@@ -25,6 +25,7 @@ import DiningTableView from '@/views/admin/DiningTableView.vue'
 import ProfileView from '@/views/customer/ProfileView.vue'
 import VoucherView from '@/views/admin/VoucherView.vue'
 import CustomerView from '@/views/admin/CustomerView.vue'
+import ProductView from '@/views/admin/ProductView.vue'
 
 // Route guard helper
 function checkRole(allowedRoles: string[]) {
@@ -126,6 +127,11 @@ const router = createRouter({
       path: 'employees',
       name: 'admin-employees',
       component: EmployeeView,
+    },
+    {
+      path: 'products',
+      name: 'admin-products',
+      component: ProductView,
     },
      {
       path: 'customers',
