@@ -83,6 +83,36 @@
             </tbody>
           </table>
         </div>
+
+        <!-- PAGINATION FOR PRODUCT VOUCHERS -->
+        <div class="pagination-section" v-if="productTotalPages > 1">
+          <button
+            @click="goToProductPage(productCurrentPage - 1)"
+            :disabled="productCurrentPage === 0"
+            class="pagination-btn"
+          >
+            ‹ Trước
+          </button>
+          
+          <div class="page-numbers">
+            <button
+              v-for="page in productVisiblePages"
+              :key="page"
+              @click="goToProductPage(page - 1)"
+              :class="['page-btn', { active: page - 1 === productCurrentPage }]"
+            >
+              {{ page }}
+            </button>
+          </div>
+
+          <button
+            @click="goToProductPage(productCurrentPage + 1)"
+            :disabled="productCurrentPage >= productTotalPages - 1"
+            class="pagination-btn"
+          >
+            Sau ›
+          </button>
+        </div>
       </div>
 
       <!-- CUSTOMER VOUCHER TAB -->
@@ -143,6 +173,36 @@
               </tr>
             </tbody>
           </table>
+        </div>
+
+        <!-- PAGINATION FOR CUSTOMER VOUCHERS -->
+        <div class="pagination-section" v-if="customerTotalPages > 1">
+          <button
+            @click="goToCustomerPage(customerCurrentPage - 1)"
+            :disabled="customerCurrentPage === 0"
+            class="pagination-btn"
+          >
+            ‹ Trước
+          </button>
+          
+          <div class="page-numbers">
+            <button
+              v-for="page in customerVisiblePages"
+              :key="page"
+              @click="goToCustomerPage(page - 1)"
+              :class="['page-btn', { active: page - 1 === customerCurrentPage }]"
+            >
+              {{ page }}
+            </button>
+          </div>
+
+          <button
+            @click="goToCustomerPage(customerCurrentPage + 1)"
+            :disabled="customerCurrentPage >= customerTotalPages - 1"
+            class="pagination-btn"
+          >
+            Sau ›
+          </button>
         </div>
       </div>
     </div>
@@ -455,7 +515,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import VoucherService from '@/services/voucherService'
 import axiosInstance from '@/services/axiosInstance'
 
@@ -463,12 +523,16 @@ const activeTab = ref('product')
 
 // Product Voucher State
 const productVouchers = ref<any[]>([])
+const allProductVouchers = ref<any[]>([])
 const loadingProduct = ref(false)
 const productFilters = ref({ keyword: '', status: '' })
 const showAddModal = ref(false)
 const showProductDetailModal = ref(false)
 const selectedProductVoucher = ref<any | null>(null)
 const products = ref<any[]>([])
+
+const productCurrentPage = ref(0)
+const productPageSize = ref(10)
 
 const productForm = ref({
   id: null as number | null,
@@ -484,6 +548,7 @@ const productForm = ref({
 
 // Customer Voucher State
 const customerVouchers = ref<any[]>([])
+const allCustomerVouchers = ref<any[]>([])
 const loadingCustomer = ref(false)
 const customerFilters = ref({ keyword: '', status: '' })
 const showCustomerDetailModal = ref(false)
@@ -492,6 +557,9 @@ const selectedCustomerVoucher = ref<any | null>(null)
 const personalVouchers = ref<any[]>([])
 const customers = ref<any[]>([])
 const voucherCreationMode = ref<'template' | 'direct'>('template') // New: track creation mode
+
+const customerCurrentPage = ref(0)
+const customerPageSize = ref(10)
 
 // Customer search
 const customerSearchKeyword = ref('')
@@ -547,14 +615,9 @@ const loadProductVouchers = async () => {
   try {
     loadingProduct.value = true
     const response = await VoucherService.getAllProductVouchers()
-    productVouchers.value = response.data.data || []
-    
-    // Debug: Check data structure
-    if (productVouchers.value.length > 0) {
-      console.log('Sample voucher:', productVouchers.value[0])
-      console.log('isActive type:', typeof productVouchers.value[0].isActive)
-      console.log('isActive value:', productVouchers.value[0].isActive)
-    }
+    allProductVouchers.value = response.data.data || []
+    productCurrentPage.value = 0
+    productVouchers.value = paginateProductData(allProductVouchers.value)
   } catch (error) {
     console.error('Failed to load product vouchers:', error)
   } finally {
@@ -566,8 +629,16 @@ const loadProductVouchers = async () => {
 let productTimeout: any = null
 const searchProductVouchers = () => {
   clearTimeout(productTimeout)
-  productTimeout = setTimeout(() => {
-    const filtered = (productVouchers.value || []).filter((v: any) => {
+  productTimeout = setTimeout(async () => {
+    if (!productFilters.value.keyword && !productFilters.value.status) {
+      await loadProductVouchers()
+      return
+    }
+    
+    const response = await VoucherService.getAllProductVouchers()
+    const allData = response.data.data || []
+    
+    const filtered = allData.filter((v: any) => {
       const matchKeyword = !productFilters.value.keyword ||
         v.voucherCode?.toLowerCase().includes(productFilters.value.keyword.toLowerCase()) ||
         v.voucherName?.toLowerCase().includes(productFilters.value.keyword.toLowerCase())
@@ -577,10 +648,10 @@ const searchProductVouchers = () => {
       
       return matchKeyword && matchStatus
     })
-    productVouchers.value = filtered
-    if (!productFilters.value.keyword && !productFilters.value.status) {
-      loadProductVouchers()
-    }
+    
+    allProductVouchers.value = filtered
+    productCurrentPage.value = 0
+    productVouchers.value = paginateProductData(filtered)
   }, 400)
 }
 
@@ -589,7 +660,9 @@ const loadCustomerVouchers = async () => {
   try {
     loadingCustomer.value = true
     const response = await VoucherService.getAllCustomerVouchers()
-    customerVouchers.value = response.data.data || []
+    allCustomerVouchers.value = response.data.data || []
+    customerCurrentPage.value = 0
+    customerVouchers.value = paginateCustomerData(allCustomerVouchers.value)
   } catch (error) {
     console.error('Failed to load customer vouchers:', error)
   } finally {
@@ -601,8 +674,16 @@ const loadCustomerVouchers = async () => {
 let customerTimeout: any = null
 const searchCustomerVouchers = () => {
   clearTimeout(customerTimeout)
-  customerTimeout = setTimeout(() => {
-    const filtered = (customerVouchers.value || []).filter((v: any) => {
+  customerTimeout = setTimeout(async () => {
+    if (!customerFilters.value.keyword && !customerFilters.value.status) {
+      await loadCustomerVouchers()
+      return
+    }
+    
+    const response = await VoucherService.getAllCustomerVouchers()
+    const allData = response.data.data || []
+    
+    const filtered = allData.filter((v: any) => {
       const matchKeyword = !customerFilters.value.keyword ||
         v.voucherCode?.toLowerCase().includes(customerFilters.value.keyword.toLowerCase()) ||
         v.customerFullName?.toLowerCase().includes(customerFilters.value.keyword.toLowerCase())
@@ -612,10 +693,10 @@ const searchCustomerVouchers = () => {
       
       return matchKeyword && matchStatus
     })
-    customerVouchers.value = filtered
-    if (!customerFilters.value.keyword && !customerFilters.value.status) {
-      loadCustomerVouchers()
-    }
+    
+    allCustomerVouchers.value = filtered
+    customerCurrentPage.value = 0
+    customerVouchers.value = paginateCustomerData(filtered)
   }, 400)
 }
 
@@ -1055,6 +1136,70 @@ const getProductStatusClass = (isActive: any) => {
   }
   return isActive ? 'status-active' : 'status-inactive'
 }
+
+// Pagination helpers
+const paginateProductData = (data: any[]) => {
+  const start = productCurrentPage.value * productPageSize.value
+  const end = start + productPageSize.value
+  return data.slice(start, end)
+}
+
+const paginateCustomerData = (data: any[]) => {
+  const start = customerCurrentPage.value * customerPageSize.value
+  const end = start + customerPageSize.value
+  return data.slice(start, end)
+}
+
+const productTotalPages = computed(() => Math.ceil(allProductVouchers.value.length / productPageSize.value))
+const customerTotalPages = computed(() => Math.ceil(allCustomerVouchers.value.length / customerPageSize.value))
+
+const goToProductPage = (page: number) => {
+  if (page >= 0 && page < productTotalPages.value) {
+    productCurrentPage.value = page
+    productVouchers.value = paginateProductData(allProductVouchers.value)
+  }
+}
+
+const goToCustomerPage = (page: number) => {
+  if (page >= 0 && page < customerTotalPages.value) {
+    customerCurrentPage.value = page
+    customerVouchers.value = paginateCustomerData(allCustomerVouchers.value)
+  }
+}
+
+const productVisiblePages = computed(() => {
+  const pages: number[] = []
+  const maxVisible = 5
+  let start = Math.max(1, productCurrentPage.value - Math.floor(maxVisible / 2) + 1)
+  let end = Math.min(productTotalPages.value, start + maxVisible - 1)
+  
+  if (end - start < maxVisible - 1) {
+    start = Math.max(1, end - maxVisible + 1)
+  }
+  
+  for (let i = start; i <= end; i++) {
+    pages.push(i)
+  }
+  
+  return pages
+})
+
+const customerVisiblePages = computed(() => {
+  const pages: number[] = []
+  const maxVisible = 5
+  let start = Math.max(1, customerCurrentPage.value - Math.floor(maxVisible / 2) + 1)
+  let end = Math.min(customerTotalPages.value, start + maxVisible - 1)
+  
+  if (end - start < maxVisible - 1) {
+    start = Math.max(1, end - maxVisible + 1)
+  }
+  
+  for (let i = start; i <= end; i++) {
+    pages.push(i)
+  }
+  
+  return pages
+})
 
 onMounted(() => {
   loadProducts()
@@ -1630,5 +1775,65 @@ input:disabled {
   font-size: 11px;
   font-weight: 600;
   margin-left: 8px;
+}
+
+/* PAGINATION */
+.pagination-section {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.pagination-btn {
+  padding: 8px 16px;
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
+  background: white;
+  color: #4a5568;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  border-color: #667eea;
+  color: #667eea;
+}
+
+.pagination-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.page-numbers {
+  display: flex;
+  gap: 8px;
+}
+
+.page-btn {
+  width: 40px;
+  height: 40px;
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
+  background: white;
+  color: #4a5568;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.page-btn:hover {
+  border-color: #667eea;
+  color: #667eea;
+}
+
+.page-btn.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-color: #667eea;
+  color: white;
 }
 </style>

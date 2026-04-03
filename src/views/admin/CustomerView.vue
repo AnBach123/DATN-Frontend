@@ -100,6 +100,36 @@
       </table>
     </div>
 
+    <!-- PAGINATION -->
+    <div class="pagination-section" v-if="totalPages > 1">
+      <button
+        @click="goToPage(currentPage - 1)"
+        :disabled="currentPage === 0"
+        class="pagination-btn"
+      >
+        ‹ Trước
+      </button>
+      
+      <div class="page-numbers">
+        <button
+          v-for="page in visiblePages"
+          :key="page"
+          @click="goToPage(page - 1)"
+          :class="['page-btn', { active: page - 1 === currentPage }]"
+        >
+          {{ page }}
+        </button>
+      </div>
+
+      <button
+        @click="goToPage(currentPage + 1)"
+        :disabled="currentPage >= totalPages - 1"
+        class="pagination-btn"
+      >
+        Sau ›
+      </button>
+    </div>
+
     <!-- MODAL -->
     <div v-if="showModal" class="modal-overlay" @click="closeModal">
       <div class="modal-content" @click.stop>
@@ -180,10 +210,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { customerApi } from '@/services/admin/customerApi'
 
 const list = ref<any[]>([])
+const allCustomers = ref<any[]>([])
 const loading = ref(false)
 
 const search = ref('')
@@ -191,6 +222,9 @@ const statusFilter = ref('')
 
 const sortBy = ref('id')
 const direction = ref('asc')
+
+const currentPage = ref(0)
+const pageSize = ref(10)
 
 const showModal = ref(false)
 const selected = ref<any>(null)
@@ -215,7 +249,9 @@ const fetchData = async () => {
       startDate: startDate.value || undefined,
       endDate: endDate.value || undefined
     })
-    list.value = res.data
+    allCustomers.value = res.data
+    currentPage.value = 0
+    list.value = paginateData(allCustomers.value)
   } finally {
     loading.value = false
   }
@@ -237,8 +273,42 @@ const sort = async (field: string) => {
   }
 
   const res = await customerApi.sortCustomers(sortBy.value, direction.value)
-  list.value = res.data
+  allCustomers.value = res.data
+  currentPage.value = 0
+  list.value = paginateData(allCustomers.value)
 }
+
+const paginateData = (data: any[]) => {
+  const start = currentPage.value * pageSize.value
+  const end = start + pageSize.value
+  return data.slice(start, end)
+}
+
+const totalPages = computed(() => Math.ceil(allCustomers.value.length / pageSize.value))
+
+const goToPage = (page: number) => {
+  if (page >= 0 && page < totalPages.value) {
+    currentPage.value = page
+    list.value = paginateData(allCustomers.value)
+  }
+}
+
+const visiblePages = computed(() => {
+  const pages: number[] = []
+  const maxVisible = 5
+  let start = Math.max(1, currentPage.value - Math.floor(maxVisible / 2) + 1)
+  let end = Math.min(totalPages.value, start + maxVisible - 1)
+  
+  if (end - start < maxVisible - 1) {
+    start = Math.max(1, end - maxVisible + 1)
+  }
+  
+  for (let i = start; i <= end; i++) {
+    pages.push(i)
+  }
+  
+  return pages
+})
 
 const icon = (f: string) =>
   sortBy.value === f ? (direction.value === 'asc' ? '↑' : '↓') : ''

@@ -102,6 +102,36 @@
       </table>
     </div>
 
+    <!-- PAGINATION -->
+    <div class="pagination-section" v-if="totalPages > 1">
+      <button
+        @click="goToPage(currentPage - 1)"
+        :disabled="currentPage === 0"
+        class="pagination-btn"
+      >
+        ‹ Trước
+      </button>
+      
+      <div class="page-numbers">
+        <button
+          v-for="page in visiblePages"
+          :key="page"
+          @click="goToPage(page - 1)"
+          :class="['page-btn', { active: page - 1 === currentPage }]"
+        >
+          {{ page }}
+        </button>
+      </div>
+
+      <button
+        @click="goToPage(currentPage + 1)"
+        :disabled="currentPage >= totalPages - 1"
+        class="pagination-btn"
+      >
+        Sau ›
+      </button>
+    </div>
+
     <!--MODAL -->
     <div v-if="showAddModal" class="modal-overlay" @click="closeAddModal">
       <div class="modal-content" @click.stop>
@@ -173,7 +203,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import * as productApi from '@/services/admin/productApi'
 
 const products = ref<any[]>([])
@@ -181,6 +211,10 @@ const loading = ref(false)
 
 const sortField = ref('')
 const sortDirection = ref('asc')
+
+const currentPage = ref(0)
+const pageSize = ref(10)
+const totalItems = ref(0)
 
 const filters = ref({
   name: '',
@@ -209,7 +243,9 @@ const handleSearch = () => {
 const loadProducts = async () => {
   loading.value = true
   try {
-    products.value = await productApi.getAllProducts()
+    const allProducts = await productApi.getAllProducts()
+    totalItems.value = allProducts.length
+    products.value = paginateData(allProducts)
   } finally {
     loading.value = false
   }
@@ -218,11 +254,14 @@ const loadProducts = async () => {
 const searchProducts = async () => {
   loading.value = true
   try {
-    products.value = await productApi.searchProducts({
+    const results = await productApi.searchProducts({
       name: filters.value.name || undefined,
       category: filters.value.category || undefined,
       status: filters.value.status || undefined
     })
+    totalItems.value = results.length
+    currentPage.value = 0
+    products.value = paginateData(results)
   } finally {
     loading.value = false
   }
@@ -236,8 +275,43 @@ const sortBy = async (field: string) => {
     sortDirection.value = 'asc'
   }
 
-  products.value = await productApi.sortProducts(sortField.value, sortDirection.value)
+  const sorted = await productApi.sortProducts(sortField.value, sortDirection.value)
+  totalItems.value = sorted.length
+  currentPage.value = 0
+  products.value = paginateData(sorted)
 }
+
+const paginateData = (data: any[]) => {
+  const start = currentPage.value * pageSize.value
+  const end = start + pageSize.value
+  return data.slice(start, end)
+}
+
+const totalPages = computed(() => Math.ceil(totalItems.value / pageSize.value))
+
+const goToPage = (page: number) => {
+  if (page >= 0 && page < totalPages.value) {
+    currentPage.value = page
+    loadProducts()
+  }
+}
+
+const visiblePages = computed(() => {
+  const pages: number[] = []
+  const maxVisible = 5
+  let start = Math.max(1, currentPage.value - Math.floor(maxVisible / 2) + 1)
+  let end = Math.min(totalPages.value, start + maxVisible - 1)
+  
+  if (end - start < maxVisible - 1) {
+    start = Math.max(1, end - maxVisible + 1)
+  }
+  
+  for (let i = start; i <= end; i++) {
+    pages.push(i)
+  }
+  
+  return pages
+})
 
 const clearFilters = () => {
   filters.value = { name: '', category: '', status: '' }
@@ -534,5 +608,65 @@ onMounted(loadProducts)
     transform: translateY(0);
     opacity: 1;
   }
+}
+
+/* PAGINATION */
+.pagination-section {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.pagination-btn {
+  padding: 8px 16px;
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
+  background: white;
+  color: #4a5568;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  border-color: #667eea;
+  color: #667eea;
+}
+
+.pagination-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.page-numbers {
+  display: flex;
+  gap: 8px;
+}
+
+.page-btn {
+  width: 40px;
+  height: 40px;
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
+  background: white;
+  color: #4a5568;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.page-btn:hover {
+  border-color: #667eea;
+  color: #667eea;
+}
+
+.page-btn.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-color: #667eea;
+  color: white;
 }
 </style>
