@@ -4,8 +4,24 @@
       <h2>Check-in Đặt bàn Online</h2>
     </div>
 
-    <!-- Search Section -->
-    <div class="filters-section">
+    <!-- Tab Navigation -->
+    <div class="tab-navigation">
+      <button 
+        :class="['tab-btn', { active: activeTab === 'reserved' }]"
+        @click="activeTab = 'reserved'"
+      >
+        Đã xác nhận ({{ allReservations.length }})
+      </button>
+      <button 
+        :class="['tab-btn', { active: activeTab === 'pending' }]"
+        @click="activeTab = 'pending'"
+      >
+        Chờ xác nhận ({{ pendingReservations.length }})
+      </button>
+    </div>
+
+    <!-- Search Section (only for reserved tab) -->
+    <div v-if="activeTab === 'reserved'" class="filters-section">
       <div class="filter-row">
         <input
           v-model="searchPhone"
@@ -27,7 +43,7 @@
     </div>
 
     <!-- Search Results Section -->
-    <div v-if="searched" class="table-container mb-4">
+    <div v-if="searched && activeTab === 'reserved'" class="table-container mb-4">
       <div class="table-header">
         <h5>Kết quả tìm kiếm ({{ reservations.length }})</h5>
       </div>
@@ -91,10 +107,65 @@
       </table>
     </div>
 
-    <!-- All Reservations Section -->
-    <div class="table-container">
+    <!-- Pending Confirmation Table -->
+    <div v-if="activeTab === 'pending'" class="table-container mb-4">
       <div class="table-header">
-        <h5>Tất cả đặt bàn ({{ allReservations.length }})</h5>
+        <h5>Đặt bàn chờ xác nhận ({{ pendingReservations.length }})</h5>
+      </div>
+
+      <div v-if="pendingReservations.length === 0" class="empty-state">
+        Không có đặt bàn nào đang chờ xác nhận
+      </div>
+
+      <table v-else class="reservation-table">
+        <thead>
+          <tr>
+            <th>Số điện thoại</th>
+            <th>Tên khách hàng</th>
+            <th>Thời gian đặt</th>
+            <th>Số khách</th>
+            <th>Thao tác</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr 
+            v-for="reservation in pendingReservations" 
+            :key="reservation.invoiceId"
+            class="clickable-row pending-row"
+          >
+            <td @click="showDetail(reservation)"><strong class="phone-number">{{ reservation.phoneNumber }}</strong></td>
+            <td @click="showDetail(reservation)">{{ reservation.fullName }}</td>
+            <td @click="showDetail(reservation)">{{ formatDateTime(reservation.reservedAt) }}</td>
+            <td @click="showDetail(reservation)">{{ reservation.guestCount }} người</td>
+            <td>
+              <div class="action-buttons">
+                <button 
+                  class="action-btn confirm-btn"
+                  @click.stop="showConfirmModal(reservation)"
+                  :disabled="actionLoading[reservation.invoiceId]"
+                >
+                  <span v-if="actionLoading[reservation.invoiceId]" class="spinner-border spinner-border-sm me-1"></span>
+                  Xác nhận
+                </button>
+                <button
+                  class="action-btn cancel-btn"
+                  @click.stop="handleCancel(reservation)"
+                  :disabled="actionLoading[reservation.invoiceId]"
+                >
+                  <span v-if="actionLoading[reservation.invoiceId]" class="spinner-border spinner-border-sm me-1"></span>
+                  Hủy
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- All Reservations Section (only for reserved tab) -->
+    <div v-if="activeTab === 'reserved'" class="table-container">
+      <div class="table-header">
+        <h5>Tất cả đặt bàn đã xác nhận ({{ allReservations.length }})</h5>
       </div>
 
       <div v-if="allReservations.length === 0" class="empty-state">
@@ -206,7 +277,7 @@
                 </div>
               </div>
             </div>
-            <div class="detail-row full-width">
+            <div v-if="selectedReservation.tables && selectedReservation.tables.length > 0" class="detail-row full-width">
               <span class="detail-label">Bàn đã xếp</span>
               <div class="table-list">
                 <div 
@@ -222,24 +293,53 @@
                 </div>
               </div>
             </div>
+            <div v-if="selectedReservation.invoiceStatus === 'PENDING_CONFIRMATION'" class="detail-row full-width">
+              <div class="pending-status-notice">
+                <div class="notice-icon">⏳</div>
+                <div class="notice-text">
+                  <strong>Đang chờ xác nhận</strong>
+                  <p>Đặt bàn này chưa được xếp bàn. Vui lòng gọi xác nhận với khách hàng.</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
         <div class="detail-footer">
           <button class="btn-secondary" @click="closeDetail">Đóng</button>
           <button 
-            class="action-btn checkin-btn"
-            @click="selectedReservation && handleCheckIn(selectedReservation)"
-            :disabled="!selectedReservation || actionLoading[selectedReservation.invoiceId]"
+            v-if="selectedReservation && selectedReservation.invoiceStatus === 'PENDING_CONFIRMATION'"
+            class="action-btn confirm-btn"
+            @click="showConfirmModal(selectedReservation)"
+            :disabled="actionLoading[selectedReservation.invoiceId]"
           >
-            <span v-if="selectedReservation && actionLoading[selectedReservation.invoiceId]" class="spinner-border spinner-border-sm me-1"></span>
+            <span v-if="actionLoading[selectedReservation.invoiceId]" class="spinner-border spinner-border-sm me-1"></span>
+            Xác nhận
+          </button>
+          <button 
+            v-if="selectedReservation && selectedReservation.invoiceStatus === 'RESERVED'"
+            class="action-btn change-table-btn"
+            @click="showTableChangeModalForReservation(selectedReservation)"
+            :disabled="actionLoading[selectedReservation.invoiceId]"
+          >
+            <span v-if="actionLoading[selectedReservation.invoiceId]" class="spinner-border spinner-border-sm me-1"></span>
+            Chuyển bàn khác
+          </button>
+          <button 
+            v-if="selectedReservation && selectedReservation.invoiceStatus === 'RESERVED'"
+            class="action-btn checkin-btn"
+            @click="handleCheckIn(selectedReservation)"
+            :disabled="actionLoading[selectedReservation.invoiceId]"
+          >
+            <span v-if="actionLoading[selectedReservation.invoiceId]" class="spinner-border spinner-border-sm me-1"></span>
             Check-in
           </button>
           <button
+            v-if="selectedReservation && (selectedReservation.invoiceStatus === 'PENDING_CONFIRMATION' || selectedReservation.invoiceStatus === 'RESERVED')"
             class="action-btn cancel-btn"
-            @click="selectedReservation && handleCancel(selectedReservation)"
-            :disabled="!selectedReservation || actionLoading[selectedReservation.invoiceId]"
+            @click="handleCancel(selectedReservation)"
+            :disabled="actionLoading[selectedReservation.invoiceId]"
           >
-            <span v-if="selectedReservation && actionLoading[selectedReservation.invoiceId]" class="spinner-border spinner-border-sm me-1"></span>
+            <span v-if="actionLoading[selectedReservation.invoiceId]" class="spinner-border spinner-border-sm me-1"></span>
             Hủy đặt bàn
           </button>
         </div>
@@ -260,19 +360,86 @@
         </div>
       </div>
     </div>
+
+    <!-- Table Change Modal -->
+    <div v-if="showTableChangeModal" class="detail-modal" @click.self="closeTableChangeModal">
+      <div class="table-change-card">
+        <div class="detail-header">
+          <h5>Chọn bàn thay thế</h5>
+          <button class="btn-close" @click="closeTableChangeModal"></button>
+        </div>
+        
+        <div class="table-change-body">
+          <div v-if="loadingAlternatives" class="loading-state">
+            <span class="spinner-border spinner-border-lg"></span>
+            <p>Đang tìm bàn trống...</p>
+          </div>
+
+          <div v-else-if="alternativeTables.length === 0" class="empty-state">
+            Không có bàn trống phù hợp
+          </div>
+
+          <div v-else class="tables-by-area">
+            <div 
+              v-for="(tables, area) in tablesByArea" 
+              :key="area"
+              class="area-group"
+            >
+              <div class="area-header">
+                <div class="area-title">Khu vực {{ area }}</div>
+                <div class="area-capacity">Tổng: {{ getAreaTotalCapacity(tables) }} chỗ</div>
+              </div>
+              <div class="area-tables">
+                <div 
+                  v-for="table in tables" 
+                  :key="table.id"
+                  :class="['table-card', { 
+                    selected: selectedTableIds.includes(table.id),
+                    'current-table': selectedReservation?.tables?.some(t => t.id === table.id)
+                  }]"
+                  @click="toggleTableSelection(table.id)"
+                >
+                  <div class="table-id">#{{ table.id }}</div>
+                  <div class="table-info">
+                    <div class="table-name">{{ table.tableName }}</div>
+                    <div class="table-capacity">{{ table.seatingCapacity }} chỗ</div>
+                    <div v-if="selectedReservation?.tables?.some(t => t.id === table.id)" class="current-badge">
+                      Đang xếp
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="detail-footer">
+          <button class="btn-secondary" @click="closeTableChangeModal">Hủy</button>
+          <button 
+            class="action-btn confirm-btn"
+            @click="confirmTableChange"
+            :disabled="selectedTableIds.length === 0 || loadingAlternatives"
+          >
+            Xác nhận chuyển bàn
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, onUnmounted } from 'vue';
-import { reservationService, type ReservationInfo } from '@/services/reservationService';
+import { ref, reactive, computed, onMounted, onUnmounted } from 'vue';
+import { reservationService, type ReservationInfo, type TableInfo } from '@/services/reservationService';
 import { ReservationWebSocket } from '@/services/websocket/ReservationWebSocket';
 
+const activeTab = ref<'reserved' | 'pending'>('reserved');
 const searchPhone = ref('');
 const loading = ref(false);
 const searched = ref(false);
 const reservations = ref<ReservationInfo[]>([]);
 const allReservations = ref<ReservationInfo[]>([]);
+const pendingReservations = ref<ReservationInfo[]>([]);
 const actionLoading = reactive<Record<number, boolean>>({});
 
 const showDetailModal = ref(false);
@@ -280,10 +447,17 @@ const selectedReservation = ref<ReservationInfo | null>(null);
 const showCancelConfirm = ref(false);
 const reservationToCancel = ref<ReservationInfo | null>(null);
 
+// Table change modal states
+const showTableChangeModal = ref(false);
+const alternativeTables = ref<TableInfo[]>([]);
+const selectedTableIds = ref<number[]>([]);
+const loadingAlternatives = ref(false);
+
 let wsClient: ReservationWebSocket | null = null;
 
 onMounted(() => {
   loadAllReservations();
+  loadPendingReservations();
   
   // Connect WebSocket
   const token = localStorage.getItem('accessToken');
@@ -303,6 +477,7 @@ onUnmounted(() => {
 const handleTableStatusUpdate = () => {
   // Reload all reservations when table status changes
   loadAllReservations();
+  loadPendingReservations();
 };
 
 const loadAllReservations = async () => {
@@ -310,6 +485,14 @@ const loadAllReservations = async () => {
     allReservations.value = await reservationService.getAllReservedReservations();
   } catch (error: any) {
     console.error('Load all reservations error:', error);
+  }
+};
+
+const loadPendingReservations = async () => {
+  try {
+    pendingReservations.value = await reservationService.getPendingConfirmationReservations();
+  } catch (error: any) {
+    console.error('Load pending reservations error:', error);
   }
 };
 
@@ -345,6 +528,31 @@ const handleSearch = async () => {
   }
 };
 
+const showConfirmModal = async (reservation: ReservationInfo) => {
+  if (!confirm(`Xác nhận đặt bàn ${reservation.reservationCode}? Hệ thống sẽ tự động xếp bàn tốt nhất.`)) {
+    return;
+  }
+
+  actionLoading[reservation.invoiceId] = true;
+  
+  try {
+    await reservationService.confirmReservation(reservation.reservationCode);
+    alert('Đã xác nhận đặt bàn thành công!');
+    
+    // Close modal if open
+    closeDetail();
+    
+    // Reload data
+    await loadAllReservations();
+    await loadPendingReservations();
+  } catch (error: any) {
+    console.error('Confirm error:', error);
+    alert(error.response?.data?.message || 'Lỗi khi xác nhận đặt bàn');
+  } finally {
+    actionLoading[reservation.invoiceId] = false;
+  }
+};
+
 const handleCheckIn = async (reservation: ReservationInfo) => {
   if (!confirm(`Xác nhận check-in cho đặt bàn ${reservation.reservationCode}?`)) {
     return;
@@ -361,6 +569,7 @@ const handleCheckIn = async (reservation: ReservationInfo) => {
     
     // Reload immediately
     await loadAllReservations();
+    await loadPendingReservations();
     
     // Also refresh search if active
     if (searched.value) {
@@ -395,6 +604,7 @@ const confirmCancel = async () => {
     
     // Reload immediately
     await loadAllReservations();
+    await loadPendingReservations();
     
     // Also refresh search if active
     if (searched.value) {
@@ -431,6 +641,110 @@ const parseFoodNote = (note: string): string[] => {
   return note.split(',')
     .map(item => item.trim())
     .filter(item => item.length > 0);
+};
+
+const showTableChangeModalForReservation = async (reservation: ReservationInfo) => {
+  if (!reservation || reservation.invoiceStatus !== 'RESERVED') {
+    alert('Chỉ có thể đổi bàn cho đặt bàn đã xác nhận');
+    return;
+  }
+
+  loadingAlternatives.value = true;
+  showTableChangeModal.value = true;
+  alternativeTables.value = [];
+  selectedTableIds.value = [];
+
+  try {
+    const tables = await reservationService.getAlternativeTables(reservation.reservationCode);
+    alternativeTables.value = tables;
+    
+    // Pre-select current tables
+    if (reservation.tables && reservation.tables.length > 0) {
+      selectedTableIds.value = reservation.tables.map(t => t.id);
+    }
+    
+    if (tables.length === 0) {
+      alert('Không có bàn trống phù hợp');
+      showTableChangeModal.value = false;
+    }
+  } catch (error: any) {
+    console.error('Load alternatives error:', error);
+    alert(error.response?.data?.message || 'Lỗi khi tải danh sách bàn trống');
+    showTableChangeModal.value = false;
+  } finally {
+    loadingAlternatives.value = false;
+  }
+};
+
+const closeTableChangeModal = () => {
+  showTableChangeModal.value = false;
+  alternativeTables.value = [];
+  selectedTableIds.value = [];
+};
+
+const toggleTableSelection = (tableId: number) => {
+  const index = selectedTableIds.value.indexOf(tableId);
+  if (index > -1) {
+    selectedTableIds.value.splice(index, 1);
+  } else {
+    selectedTableIds.value.push(tableId);
+  }
+};
+
+const confirmTableChange = async () => {
+  if (!selectedReservation.value || selectedTableIds.value.length === 0) {
+    alert('Vui lòng chọn ít nhất một bàn');
+    return;
+  }
+
+  const invoiceId = selectedReservation.value.invoiceId;
+  actionLoading[invoiceId] = true;
+  
+  try {
+    await reservationService.reassignTables(selectedReservation.value.reservationCode, selectedTableIds.value);
+    
+    // Close modals first
+    closeTableChangeModal();
+    closeDetail();
+    
+    // Reload data
+    await Promise.all([
+      loadAllReservations(),
+      loadPendingReservations(),
+      searched.value ? handleSearch() : Promise.resolve()
+    ]);
+    
+    alert('Đã chuyển bàn thành công!');
+  } catch (error: any) {
+    console.error('Reassign tables error:', error);
+    alert(error.response?.data?.message || 'Lỗi khi chuyển bàn');
+  } finally {
+    actionLoading[invoiceId] = false;
+  }
+};
+
+const getTotalCapacity = (tables: TableInfo[]): number => {
+  return tables.reduce((sum, table) => sum + table.seatingCapacity, 0);
+};
+
+// Computed property to group tables by area
+const tablesByArea = computed(() => {
+  const grouped: Record<string, TableInfo[]> = {};
+  
+  alternativeTables.value.forEach(table => {
+    const area = (table as any).area || 'Không xác định';
+    if (!grouped[area]) {
+      grouped[area] = [];
+    }
+    grouped[area].push(table);
+  });
+  
+  return grouped;
+});
+
+// Function to calculate total capacity for an area
+const getAreaTotalCapacity = (tables: TableInfo[]): number => {
+  return tables.reduce((sum, table) => sum + table.seatingCapacity, 0);
 };
 
 </script>
@@ -953,4 +1267,571 @@ const parseFoodNote = (note: string): string[] => {
   cursor: not-allowed;
   transform: none;
 }
+
+/* Tab Navigation */
+.tab-navigation {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 14px 24px;
+  background: white;
+  color: #64748b;
+  font-weight: 700;
+  font-size: 16px;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.tab-btn:hover {
+  border-color: #667eea;
+  color: #667eea;
+}
+
+.tab-btn.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-color: #667eea;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+/* Pending Row Highlight */
+.pending-row {
+  background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%) !important;
+}
+
+.pending-row:hover {
+  background: linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%) !important;
+}
+
+/* Confirm Button */
+.confirm-btn {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.85) 0%, rgba(37, 99, 235, 0.85) 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);
+}
+
+.confirm-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.95) 0%, rgba(37, 99, 235, 0.95) 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35);
+}
+
+/* Area Selection Modal */
+.area-modal-card {
+  width: 100%;
+  max-width: 500px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  animation: slideUp 0.3s ease;
+}
+
+.area-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 32px;
+  border-bottom: 1px solid #e5e7eb;
+  background: white;
+}
+
+.area-modal-header h5 {
+  margin: 0;
+  font-weight: 800;
+  font-size: 20px;
+  color: #111827;
+}
+
+.area-modal-body {
+  padding: 24px 32px;
+  background: #fafbfc;
+}
+
+.area-instruction {
+  font-size: 15px;
+  color: #6b7280;
+  font-weight: 500;
+  margin: 0 0 20px 0;
+  line-height: 1.6;
+}
+
+.area-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.area-btn {
+  padding: 20px;
+  background: white;
+  color: #64748b;
+  font-weight: 700;
+  font-size: 18px;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.area-btn:hover {
+  border-color: #667eea;
+  color: #667eea;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+}
+
+.area-btn.selected {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-color: #667eea;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.error-message {
+  padding: 12px 16px;
+  background: #fee2e2;
+  border-left: 4px solid #ef4444;
+  border-radius: 8px;
+  color: #991b1b;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.area-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 20px 32px;
+  border-top: 1px solid #e5e7eb;
+  background: white;
+}
+
+.area-modal-footer .btn-secondary {
+  padding: 12px 24px;
+  background: white;
+  color: #6b7280;
+  font-weight: 700;
+  font-size: 15px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.area-modal-footer .btn-secondary:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+  transform: translateY(-1px);
+}
+
+.area-modal-footer .btn-primary {
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-weight: 700;
+  font-size: 15px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.area-modal-footer .btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.area-modal-footer .btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Pending Status Notice in Detail Modal */
+.pending-status-notice {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+  border-left: 4px solid #f97316;
+  border-radius: 12px;
+}
+
+.pending-status-notice .notice-icon {
+  font-size: 28px;
+  flex-shrink: 0;
+}
+
+.pending-status-notice .notice-text {
+  flex: 1;
+}
+
+.pending-status-notice .notice-text strong {
+  display: block;
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 4px;
+}
+
+.pending-status-notice .notice-text p {
+  font-size: 14px;
+  font-weight: 500;
+  color: #6b7280;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Change Table Button */
+.change-table-btn {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.85) 0%, rgba(124, 58, 237, 0.85) 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.25);
+}
+
+.change-table-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.95) 0%, rgba(124, 58, 237, 0.95) 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.35);
+}
+
+/* Table Change Modal */
+.table-change-card {
+  width: 100%;
+  max-width: 700px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  animation: slideUp 0.3s ease;
+}
+
+.table-change-body {
+  padding: 24px 32px;
+  max-height: 60vh;
+  overflow-y: auto;
+  background: #fafbfc;
+}
+
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  gap: 16px;
+}
+
+.loading-state .spinner-border-lg {
+  width: 3rem;
+  height: 3rem;
+  border-width: 0.3em;
+}
+
+.loading-state p {
+  font-size: 15px;
+  color: #6b7280;
+  font-weight: 600;
+  margin: 0;
+}
+
+.alternatives-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.alternative-option {
+  padding: 20px;
+  background: white;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.alternative-option:hover {
+  border-color: #8b5cf6;
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.15);
+  transform: translateY(-2px);
+}
+
+.alternative-option.selected {
+  border-color: #8b5cf6;
+  background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.25);
+}
+
+.option-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.option-radio {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.option-radio input[type="radio"] {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  accent-color: #8b5cf6;
+}
+
+.option-radio label {
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+  cursor: pointer;
+  margin: 0;
+}
+
+.option-capacity {
+  font-size: 14px;
+  font-weight: 600;
+  color: #6b7280;
+  padding: 6px 12px;
+  background: #f1f5f9;
+  border-radius: 8px;
+}
+
+.option-tables {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.table-badge {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+  border: 2px solid #818cf8;
+  border-radius: 10px;
+}
+
+.table-badge .table-id {
+  font-size: 18px;
+  font-weight: 800;
+  color: #6366f1;
+  min-width: 35px;
+}
+
+.table-badge .table-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.table-badge .table-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.table-badge .table-capacity {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+/* Tables by area styles */
+.tables-by-area {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.area-group {
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  border: 2px solid #e2e8f0;
+}
+
+.area-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.area-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #111827;
+}
+
+.area-capacity {
+  font-size: 14px;
+  font-weight: 600;
+  color: #6b7280;
+  padding: 6px 12px;
+  background: #f1f5f9;
+  border-radius: 8px;
+}
+
+.area-tables {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.table-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 2px solid #cbd5e1;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.table-card:hover {
+  border-color: #8b5cf6;
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.15);
+  transform: translateY(-2px);
+}
+
+.table-card.selected {
+  border-color: #8b5cf6;
+  background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.25);
+}
+
+.table-card.current-table {
+  border-color: #10b981;
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+}
+
+.table-card.current-table.selected {
+  border-color: #8b5cf6;
+  background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+}
+
+.table-card .table-id {
+  font-size: 18px;
+  font-weight: 800;
+  color: #6366f1;
+  min-width: 35px;
+}
+
+.table-card.current-table .table-id {
+  color: #10b981;
+}
+
+.table-card.current-table.selected .table-id {
+  color: #8b5cf6;
+}
+
+.table-card .table-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.table-card .table-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.table-card .table-capacity {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.current-badge {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 2px 8px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Tab navigation styles */
+.tab-navigation {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+  background: white;
+  padding: 8px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 12px 24px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.tab-btn:hover {
+  background: #f1f5f9;
+  color: #334155;
+}
+
+.tab-btn.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.confirm-btn {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.85) 0%, rgba(124, 58, 237, 0.85) 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.25);
+}
+
+.confirm-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.95) 0%, rgba(124, 58, 237, 0.95) 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.35);
+}
+
+.change-table-btn {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.85) 0%, rgba(37, 99, 235, 0.85) 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);
+}
+
+.change-table-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.95) 0%, rgba(37, 99, 235, 0.95) 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35);
+}
+
 </style>

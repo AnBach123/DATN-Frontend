@@ -5,6 +5,8 @@ export interface TableInfo {
   tableCode: string;
   tableName: string;
   seatingCapacity: number;
+  area?: string;
+  floor?: number;
 }
 
 export interface ReservationInfo {
@@ -48,5 +50,33 @@ export const reservationService = {
   async getAllReservedReservations(): Promise<ReservationInfo[]> {
     const response = await axiosInstance.get('/api/reservation/all');
     return response.data.data;
+  },
+
+  async getPendingConfirmationReservations(): Promise<ReservationInfo[]> {
+    const response = await axiosInstance.get('/api/reservation/pending');
+    return response.data.data;
+  },
+
+  async confirmReservation(reservationCode: string): Promise<any> {
+    const response = await axiosInstance.post(
+      `/api/reservation/${reservationCode}/confirm`,
+      {}
+    );
+    return response.data;
+  },
+
+  async getAlternativeTables(reservationCode: string): Promise<TableInfo[]> {
+    const response = await axiosInstance.get(
+      `/api/reservation/${reservationCode}/alternative-tables`
+    );
+    return response.data.data;
+  },
+
+  async reassignTables(reservationCode: string, tableIds: number[]): Promise<any> {
+    const response = await axiosInstance.post(
+      `/api/reservation/${reservationCode}/reassign-tables`,
+      { tableIds }
+    );
+    return response.data;
   }
 };

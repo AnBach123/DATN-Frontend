@@ -1,292 +1,239 @@
 <template>
-  <div class="success-wrapper">
+  <div class="success-container">
     <div class="success-card">
       <div class="success-icon">✓</div>
-      <h2>Quý khách đã gửi yêu cầu đặt bàn thành công</h2>
-      <p class="sub">
-        Hệ thống sẽ ghi nhận thông tin và hiển thị chi tiết bên dưới.
-      </p>
-
-      <div class="divider"></div>
-
-      <div v-if="data" class="info-grid">
-        <div class="row">
-          <span class="label">Mã đặt bàn</span>
-          <span class="value">{{ data.reservationCode }}</span>
+      <h2 class="success-title">Yêu cầu đặt bàn đã được ghi nhận!</h2>
+      
+      <div class="info-section">
+        <div class="info-row">
+          <span class="label">Mã đặt bàn:</span>
+          <span class="value code">{{ reservationCode }}</span>
         </div>
-        <div class="row">
-          <span class="label">Tên khách</span>
-          <span class="value">{{ data.fullName }}</span>
+        <div class="info-row">
+          <span class="label">Tên khách hàng:</span>
+          <span class="value">{{ fullName }}</span>
         </div>
-        <div class="row">
-          <span class="label">Số điện thoại</span>
-          <span class="value">{{ data.phoneNumber }}</span>
+        <div class="info-row">
+          <span class="label">Số điện thoại:</span>
+          <span class="value">{{ phoneNumber }}</span>
         </div>
-        <div class="row">
-          <span class="label">Tổng khách</span>
-          <span class="value">{{ data.guestCount }} khách</span>
+        <div class="info-row">
+          <span class="label">Số lượng khách:</span>
+          <span class="value">{{ guestCount }} người</span>
         </div>
-        <div class="row">
-          <span class="label">Ngày & giờ đến</span>
-          <span class="value">{{ formatDateTime(data.reservedAt) }}</span>
-        </div>
-        <div class="row">
-          <span class="label">Ưu đãi</span>
-          <span class="value">{{ data.promotionType }}</span>
-        </div>
-        <div class="row" v-if="data.note">
-          <span class="label">Ghi chú khách</span>
-          <span class="value">{{ data.note }}</span>
-        </div>
-        <div class="row">
-          <span class="label">Bàn đã xếp</span>
-          <span class="value">{{ tableText }}</span>
+        <div class="info-row">
+          <span class="label">Thời gian đến:</span>
+          <span class="value">{{ formatDateTime(reservedAt) }}</span>
         </div>
       </div>
 
-      <div v-else class="empty-state">
-        Không có thông tin đặt bàn. Vui lòng đặt bàn lại.
+      <div class="pending-notice">
+        <div class="notice-icon">📞</div>
+        <div class="notice-content">
+          <h3>Lễ tân sẽ gọi xác nhận trong 2-3 phút</h3>
+          <p>Vui lòng giữ máy để nhận cuộc gọi xác nhận từ nhà hàng. Chúng tôi sẽ xác nhận khu vực bàn phù hợp với yêu cầu của quý khách.</p>
+        </div>
       </div>
 
-      <div v-if="statusMsg" :class="['status', statusType]">
-        {{ statusMsg }}
-      </div>
-
-      <div class="actions" v-if="data">
-        <button class="btn primary" @click="goHome">Trở về trang chủ</button>
-        <button class="btn outline" :disabled="sending" @click="sendEmail">
-          {{ sending ? 'Đang gửi...' : 'Gửi thông tin về email' }}
-        </button>
-      </div>
-
-      <div class="actions" v-else>
-        <button class="btn primary" @click="goReservation">Đặt bàn lại</button>
+      <div class="action-buttons">
+        <button class="btn-secondary" @click="goHome">Về trang chủ</button>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { sendReservationEmail } from '@/services/reservationApi'
-
-type TableInfo = {
-  id: number
-  tableCode: string
-  tableName: string
-  seatingCapacity: number
-  area?: string
-  floor?: number
-}
-
-type ReservationResult = {
-  reservationCode: string
-  reservedAt: string
-  guestCount: number
-  fullName: string
-  phoneNumber: string
-  promotionType: string
-  note?: string
-  foodNote?: string
-  tables: TableInfo[]
-}
 
 const router = useRouter()
-const data = ref<ReservationResult | null>(null)
-const statusMsg = ref('')
-const statusType = ref<'success' | 'error'>('success')
-const sending = ref(false)
+
+const reservationCode = ref('')
+const fullName = ref('')
+const phoneNumber = ref('')
+const guestCount = ref(0)
+const reservedAt = ref('')
 
 onMounted(() => {
-  const raw = sessionStorage.getItem('reservationSuccess')
-  if (raw) {
-    data.value = JSON.parse(raw)
+  const data = sessionStorage.getItem('reservationSuccess')
+  if (data) {
+    const reservation = JSON.parse(data)
+    reservationCode.value = reservation.reservationCode || ''
+    fullName.value = reservation.fullName || ''
+    phoneNumber.value = reservation.phoneNumber || ''
+    guestCount.value = reservation.guestCount || 0
+    reservedAt.value = reservation.reservedAt || ''
+    
+    // Clear session storage after reading
+    sessionStorage.removeItem('reservationSuccess')
+  } else {
+    // No data, redirect to home
+    router.push('/')
   }
 })
 
-const tableText = computed(() => {
-  if (!data.value?.tables?.length) return 'Chưa có'
-  
-  // Group tables by area and floor
-  const grouped = data.value.tables.reduce((acc, t) => {
-    const key = `${t.area || '?'}-${t.floor || '?'}`
-    if (!acc[key]) {
-      acc[key] = { area: t.area, floor: t.floor, tables: [] }
-    }
-    acc[key].tables.push(t)
-    return acc
-  }, {} as Record<string, { area?: string; floor?: number; tables: TableInfo[] }>)
-  
-  // Format output
-  return Object.values(grouped)
-    .map(group => {
-      const tableNames = group.tables.map(t => t.tableName).join(', ')
-      const totalSeats = group.tables.reduce((sum, t) => sum + t.seatingCapacity, 0)
-      const floorText = group.floor ? `Tầng ${group.floor}` : ''
-      const areaText = group.area ? `Khu ${group.area}` : ''
-      const location = [floorText, areaText].filter(Boolean).join(', ')
-      return `${tableNames} (${totalSeats} chỗ${location ? ` - ${location}` : ''})`
-    })
-    .join(' | ')
-})
-
-const formatDateTime = (value: string) => {
-  if (!value) return ''
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return value
+const formatDateTime = (dateStr: string): string => {
+  if (!dateStr) return ''
+  const date = new Date(dateStr)
   return date.toLocaleString('vi-VN', {
-    hour12: false,
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
     hour: '2-digit',
-    minute: '2-digit',
+    minute: '2-digit'
   })
 }
 
-const goHome = () => router.push('/home')
-const goReservation = () => router.push('/reservation')
-
-const sendEmail = async () => {
-  if (!data.value?.reservationCode) return
-  statusMsg.value = ''
-  sending.value = true
-  try {
-    await sendReservationEmail(data.value.reservationCode)
-    statusType.value = 'success'
-    statusMsg.value = 'Đã gửi email thành công'
-  } catch (e: any) {
-    statusType.value = 'error'
-    statusMsg.value = e?.response?.data?.message || 'Gửi email thất bại'
-  } finally {
-    sending.value = false
-  }
+const goHome = () => {
+  router.push('/')
 }
 </script>
 
 <style scoped>
-.success-wrapper {
+.success-container {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: radial-gradient(circle at top, #b1120a 0%, #8e0e0a 50%, #6d0b0b 100%);
-  padding: 60px 16px;
+  padding: 24px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
 .success-card {
-  width: min(560px, 95vw);
-  background: #ffffff;
+  width: 100%;
+  max-width: 600px;
+  background: white;
   border-radius: 24px;
-  padding: 32px 28px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
-  text-align: center;
-  border-top: 6px solid #f0b66a;
+  padding: 48px 32px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.5s ease;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .success-icon {
-  width: 72px;
-  height: 72px;
-  margin: 0 auto 16px;
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 24px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
   border-radius: 50%;
-  border: 4px solid #1d7a4b;
-  color: #1d7a4b;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 36px;
-  font-weight: 700;
+  font-size: 48px;
+  color: white;
+  font-weight: bold;
 }
 
-h2 {
-  margin: 0 0 8px;
-  font-size: 22px;
-  font-weight: 700;
-  color: #2a1f1a;
+.success-title {
+  text-align: center;
+  font-size: 28px;
+  font-weight: 800;
+  color: #111827;
+  margin: 0 0 32px 0;
 }
 
-.sub {
-  margin: 0;
-  color: #6b5f57;
-  font-size: 14px;
+.info-section {
+  background: #f9fafb;
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 24px;
 }
 
-.divider {
-  height: 1px;
-  background: #e9dccd;
-  margin: 18px 0;
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #e5e7eb;
 }
 
-.info-grid {
-  text-align: left;
-  display: grid;
-  gap: 8px;
-}
-
-.row {
-  display: grid;
-  grid-template-columns: 1fr 1.6fr;
-  gap: 8px;
-  font-size: 14px;
+.info-row:last-child {
+  border-bottom: none;
 }
 
 .label {
-  color: #6b5f57;
+  font-size: 15px;
+  font-weight: 600;
+  color: #6b7280;
 }
 
 .value {
-  color: #2a1f1a;
-  font-weight: 600;
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
 }
 
-.actions {
-  margin-top: 22px;
+.value.code {
+  font-family: 'Courier New', monospace;
+  background: #eef2ff;
+  padding: 4px 12px;
+  border-radius: 8px;
+  color: #667eea;
+}
+
+.pending-notice {
+  background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+  border-left: 4px solid #f97316;
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 32px;
   display: flex;
-  flex-direction: column;
-  gap: 10px;
+  gap: 16px;
+  align-items: flex-start;
 }
 
-.btn {
-  border: none;
-  padding: 12px 16px;
-  border-radius: 999px;
-  font-weight: 600;
+.notice-icon {
+  font-size: 32px;
+  flex-shrink: 0;
+}
+
+.notice-content h3 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 8px 0;
+}
+
+.notice-content p {
+  font-size: 15px;
+  font-weight: 500;
+  color: #6b7280;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.action-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+.btn-secondary {
+  padding: 14px 32px;
+  background: white;
+  color: #667eea;
+  font-weight: 700;
+  font-size: 16px;
+  border: 2px solid #667eea;
+  border-radius: 12px;
   cursor: pointer;
+  transition: all 0.3s;
 }
 
-.btn.primary {
-  background: #d47a1f;
-  color: #fff;
-}
-
-.btn.outline {
-  background: transparent;
-  border: 2px solid #d47a1f;
-  color: #d47a1f;
-}
-
-.btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.status {
-  margin-top: 12px;
-  font-size: 13px;
-}
-
-.status.success {
-  color: #1d7a4b;
-}
-
-.status.error {
-  color: #c0392b;
-}
-
-.empty-state {
-  color: #6b5f57;
-  font-size: 14px;
-  margin: 12px 0 8px;
+.btn-secondary:hover {
+  background: #667eea;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
 }
 </style>

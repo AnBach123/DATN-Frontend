@@ -134,6 +134,79 @@
             </div>
           </div>
 
+          <div class="detail-section" v-if="selectedInvoice.customerName || selectedInvoice.customerPhone || selectedInvoice.customerEmail">
+            <h3>Thông tin khách hàng</h3>
+            <div class="detail-grid">
+              <div class="detail-item" v-if="selectedInvoice.customerName">
+                <span class="label">Tên khách hàng:</span>
+                <span class="value">{{ selectedInvoice.customerName }}</span>
+              </div>
+              <div class="detail-item" v-if="selectedInvoice.customerPhone">
+                <span class="label">Số điện thoại:</span>
+                <span class="value">{{ selectedInvoice.customerPhone }}</span>
+              </div>
+              <div class="detail-item" v-if="selectedInvoice.customerEmail">
+                <span class="label">Email:</span>
+                <span class="value">{{ selectedInvoice.customerEmail }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="detail-section" v-if="invoiceDetail && invoiceDetail.items && invoiceDetail.items.length > 0">
+            <h3>Danh sách món</h3>
+            <div v-if="loadingDetail" class="loading-items">Đang tải...</div>
+            <div v-else class="items-table-container">
+              <table class="items-table">
+                <thead>
+                  <tr>
+                    <th>Tên món</th>
+                    <th>SL</th>
+                    <th>Đơn giá</th>
+                    <th>Thành tiền</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="item in invoiceDetail.items" :key="item.id">
+                    <td class="item-name">{{ item.name }}</td>
+                    <td class="item-quantity">{{ item.quantity }}</td>
+                    <td class="item-price">{{ formatCurrency(item.unitPrice) }}</td>
+                    <td class="item-total">{{ formatCurrency(item.lineTotal) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="detail-section">
+            <h3>Chi tiết thanh toán</h3>
+            <div class="payment-details">
+              <div class="payment-row">
+                <span class="payment-label">Tạm tính:</span>
+                <span class="payment-value">{{ formatCurrency(selectedInvoice.subtotal) }}</span>
+              </div>
+              <div class="payment-row discount-row">
+                <span class="payment-label">Giảm giá:</span>
+                <span class="payment-value">-{{ formatCurrency(selectedInvoice.discount) }}</span>
+              </div>
+              <div class="payment-row">
+                <span class="payment-label">Phí dịch vụ:</span>
+                <span class="payment-value">{{ formatCurrency(selectedInvoice.serviceFee) }}</span>
+              </div>
+              <div class="payment-row">
+                <span class="payment-label">Thuế:</span>
+                <span class="payment-value">{{ formatCurrency(selectedInvoice.tax) }}</span>
+              </div>
+              <div class="payment-row total-row">
+                <span class="payment-label">Tổng cộng:</span>
+                <span class="payment-value">{{ formatCurrency(selectedInvoice.finalAmount) }}</span>
+              </div>
+              <div class="payment-row" v-if="selectedInvoice.paymentMethod">
+                <span class="payment-label">Phương thức thanh toán:</span>
+                <span class="payment-value">{{ getPaymentMethodText(selectedInvoice.paymentMethod) }}</span>
+              </div>
+            </div>
+          </div>
+
         </div>
       </div>
     </div>
@@ -911,5 +984,64 @@ onMounted(() => {
   font-weight: 600;
   color: #2d3748;
   text-align: right;
+}
+
+.loading-items {
+  text-align: center;
+  padding: 20px;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.payment-details {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-radius: 12px;
+  padding: 24px;
+}
+
+.payment-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.payment-row:last-child {
+  border-bottom: none;
+}
+
+.payment-label {
+  font-size: 15px;
+  color: #475569;
+  font-weight: 600;
+}
+
+.payment-value {
+  font-size: 15px;
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.discount-row .payment-value {
+  color: #f43f5e;
+}
+
+.total-row {
+  margin-top: 10px;
+  padding-top: 18px;
+  border-top: 2px solid #cbd5e0;
+}
+
+.total-row .payment-label {
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.total-row .payment-value {
+  font-size: 20px;
+  font-weight: 800;
+  color: #667eea;
 }
 </style>
