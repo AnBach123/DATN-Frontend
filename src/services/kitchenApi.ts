@@ -32,7 +32,10 @@ export interface KitchenItem {
 export interface KitchenTable {
   tableId: number
   tableName: string
-  totalItems: number // 🔥 thêm
+  customerName: string
+  guestCount: number
+  totalAmount: number
+  totalItems: number
   items: KitchenItem[]
 }
 

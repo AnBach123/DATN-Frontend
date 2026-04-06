@@ -9,9 +9,6 @@
     <!-- HEADER -->
     <div class="header">
       <h2>Quản lý món theo bàn</h2>
-      <button class="refresh-btn" @click="fetchData">
-        <span>Reload</span>
-      </button>
     </div>
 
     <!-- CARDS GRID -->
@@ -131,8 +128,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { getKitchenGrouped, serveItem, cancelItem } from '@/services/kitchenApi'
+import { DashboardWebSocket } from '@/services/websocket/DashboardWebSocket'
 import OvertimeAlertPanel from './OvertimeAlertPanel.vue'
 import NoShowNotificationPanel from './NoShowNotificationPanel.vue'
 import Swal from 'sweetalert2'
@@ -155,6 +153,9 @@ interface Table {
 
 const tables = ref<Table[]>([])
 const selectedTable = ref<Table | null>(null)
+
+// WebSocket instance
+let wsClient: DashboardWebSocket | null = null
 
 async function fetchData() {
   try {
@@ -315,7 +316,45 @@ function formatCurrency(amount: number) {
   }).format(amount || 0)
 }
 
-onMounted(fetchData)
+onMounted(() => {
+  fetchData()
+  
+  // Initialize WebSocket
+  const token = localStorage.getItem('token') || ''
+  console.log('🔑 StaffViewOrder - Token for WebSocket:', token ? 'Found' : 'Not found (dev mode)')
+  
+  const wsUrl = import.meta.env.VITE_WS_URL || 'http://localhost:8080/ws'
+  console.log('🌐 StaffViewOrder WebSocket URL:', wsUrl)
+  
+  wsClient = new DashboardWebSocket(wsUrl)
+  
+  // Subscribe to kitchen updates BEFORE connecting
+  wsClient.subscribeKitchenUpdates((update) => {
+    console.log('📢 Kitchen update received in StaffViewOrder:', update)
+    // Refresh data when there's an update
+    fetchData().then(() => {
+      // Update selectedTable if modal is open
+      if (selectedTable.value) {
+        const updated = tables.value.find((t) => t.tableId === selectedTable.value!.tableId)
+        if (updated) {
+          selectedTable.value = updated
+        }
+      }
+    })
+  })
+  
+  // Connect to WebSocket
+  console.log('🔌 Connecting to WebSocket...')
+  wsClient.connect(token)
+})
+
+onUnmounted(() => {
+  // Disconnect WebSocket
+  if (wsClient) {
+    wsClient.disconnect()
+    wsClient = null
+  }
+})
 </script>
 
 <style scoped>
@@ -346,31 +385,6 @@ onMounted(fetchData)
   font-size: 1.75rem;
   font-weight: 800;
   color: #1e293b;
-}
-
-.refresh-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  color: white;
-  border: none;
-  padding: 12px 24px;
-  border-radius: 12px;
-  cursor: pointer;
-  font-weight: 600;
-  font-size: 0.95rem;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-}
-
-.refresh-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-}
-
-.refresh-btn .icon {
-  font-size: 1.1rem;
 }
 
 /* CARDS GRID */

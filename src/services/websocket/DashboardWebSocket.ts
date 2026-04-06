@@ -22,11 +22,20 @@ export interface DashboardStatsUpdate {
   timestamp: string;
 }
 
+export interface KitchenUpdate {
+  action: string;
+  itemId?: number;
+  itemName?: string;
+  itemCount?: number;
+  timestamp: string;
+}
+
 export type ConnectionState = 'connected' | 'connecting' | 'disconnected';
 
 export type TableStatusCallback = (update: TableStatusUpdate) => void;
 export type InvoiceUpdateCallback = (update: InvoiceUpdate) => void;
 export type StatsUpdateCallback = (update: DashboardStatsUpdate) => void;
+export type KitchenUpdateCallback = (update: KitchenUpdate) => void;
 
 export class DashboardWebSocket {
   private client: Client | null = null;
@@ -41,6 +50,7 @@ export class DashboardWebSocket {
   private tableStatusCallback: TableStatusCallback | null = null;
   private invoiceUpdateCallback: InvoiceUpdateCallback | null = null;
   private statsUpdateCallback: StatsUpdateCallback | null = null;
+  private kitchenUpdateCallback: KitchenUpdateCallback | null = null;
 
   constructor(wsUrl: string = 'http://localhost:8080/ws') {
     this.wsUrl = wsUrl;
@@ -51,17 +61,16 @@ export class DashboardWebSocket {
       return; // Silent return - already connected
     }
 
-    if (!token) {
-      return; // Silent return - no token
-    }
-
-    // Store token for reconnect
-    this.token = token;
+    // Store token for reconnect (empty string is valid for dev mode)
+    this.token = token || '';
     
     this.connectionState = 'connecting';
 
     // Pass token via query parameter (industry standard for SockJS)
-    const socketUrl = `${this.wsUrl}?token=${encodeURIComponent(token)}`;
+    // Empty token is allowed when security is disabled (dev mode)
+    const socketUrl = this.token 
+      ? `${this.wsUrl}?token=${encodeURIComponent(this.token)}`
+      : this.wsUrl;
     
     this.client = new Client({
       webSocketFactory: () => new SockJS(socketUrl) as WebSocket,
@@ -82,6 +91,9 @@ export class DashboardWebSocket {
         }
         if (this.statsUpdateCallback) {
           this.subscribeStatsUpdates(this.statsUpdateCallback);
+        }
+        if (this.kitchenUpdateCallback) {
+          this.subscribeKitchenUpdates(this.kitchenUpdateCallback);
         }
       },
       
@@ -204,6 +216,29 @@ export class DashboardWebSocket {
     }
   }
 
+  subscribeKitchenUpdates(callback: KitchenUpdateCallback): void {
+    this.kitchenUpdateCallback = callback;
+    
+    if (!this.client || this.connectionState !== 'connected') {
+      return; // Silent return - will auto-subscribe when connected
+    }
+
+    try {
+      const subscription = this.client.subscribe('/topic/kitchen-updates', (message) => {
+        try {
+          const update: KitchenUpdate = JSON.parse(message.body);
+          callback(update);
+        } catch (error) {
+          console.error('Error parsing kitchen update message:', error);
+        }
+      });
+      
+      this.subscriptions.set('kitchen-updates', subscription);
+    } catch (error) {
+      console.error('Error subscribing to kitchen updates:', error);
+    }
+  }
+
   getConnectionState(): ConnectionState {
     return this.connectionState;
   }
@@ -219,7 +254,7 @@ export class DashboardWebSocket {
     
     this.reconnectTimer = window.setTimeout(() => {
       this.connectionState = 'disconnected';
-      this.connect(this.token || undefined);
+      this.connect(this.token || '');
     }, delay);
   }
 }

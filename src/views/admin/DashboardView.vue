@@ -679,7 +679,7 @@ onMounted(() => {
   
   // Now connect (callbacks will auto-subscribe when connection is established)
   console.log('🔌 Initiating WebSocket connection...')
-  dashboardWs.connect(token || undefined)
+  dashboardWs.connect(token || '')
 })
 
 onUnmounted(() => {

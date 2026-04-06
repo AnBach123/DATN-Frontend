@@ -85,6 +85,7 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getInProgressInvoices, type InvoiceGroup } from '@/services/staffOrderApi'
+import { DashboardWebSocket } from '@/services/websocket/DashboardWebSocket'
 
 const router = useRouter()
 const staffName = 'Staff'
@@ -94,6 +95,9 @@ const currentTime = ref(Date.now())
 let intervalId: number | null = null
 const showActionModal = ref(false)
 const selectedInvoice = ref<InvoiceGroup | null>(null)
+
+// WebSocket instance
+let wsClient: DashboardWebSocket | null = null
 
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('vi-VN', {
@@ -171,11 +175,44 @@ onMounted(() => {
   intervalId = window.setInterval(() => {
     currentTime.value = Date.now()
   }, 1000)
+
+  // Initialize WebSocket
+  const token = localStorage.getItem('token') || ''
+  console.log('🔑 Token from localStorage:', token ? 'Found' : 'Not found (dev mode)')
+  
+  const wsUrl = import.meta.env.VITE_WS_URL || 'http://localhost:8080/ws'
+  console.log('🌐 WebSocket URL:', wsUrl)
+  
+  wsClient = new DashboardWebSocket(wsUrl)
+  
+  // Subscribe to invoice updates BEFORE connecting
+  wsClient.subscribeInvoiceUpdates((update) => {
+    console.log('📢 Invoice update received:', update)
+    // Refresh invoice list when there's an update
+    fetchInvoices()
+  })
+  
+  // Subscribe to table status updates BEFORE connecting
+  wsClient.subscribeTableStatus((update) => {
+    console.log('📢 Table status update received:', update)
+    // Refresh invoice list when table status changes
+    fetchInvoices()
+  })
+  
+  // Connect to WebSocket (will auto-subscribe after connection)
+  console.log('🔌 Connecting to WebSocket...')
+  wsClient.connect(token)
 })
 
 onUnmounted(() => {
   if (intervalId !== null) {
     clearInterval(intervalId)
+  }
+  
+  // Disconnect WebSocket
+  if (wsClient) {
+    wsClient.disconnect()
+    wsClient = null
   }
 })
 </script>

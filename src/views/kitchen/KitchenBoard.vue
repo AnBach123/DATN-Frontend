@@ -4,7 +4,6 @@
     <div class="header">
       <h2>Bếp - Quản lý món</h2>
       <div class="header-actions">
-        <button class="refresh-btn" @click="fetchKitchen">Reload</button>
         <button class="logout-btn" @click="logout">Đăng xuất</button>
       </div>
     </div>
@@ -75,8 +74,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { getKitchenGrouped, startCooking, doneCooking } from '@/services/kitchenApi'
+import { DashboardWebSocket } from '@/services/websocket/DashboardWebSocket'
 import router from '@/router'
 
 interface KitchenItem {
@@ -93,6 +93,9 @@ interface KitchenTable {
 }
 
 const tables = ref<KitchenTable[]>([])
+
+// WebSocket instance
+let wsClient: DashboardWebSocket | null = null
 
 // Computed: Bàn có món ORDERED (chưa làm)
 const orderedTables = computed((): KitchenTable[] => {
@@ -146,7 +149,37 @@ function logout() {
   router.push('/auth/login')
 }
 
-onMounted(fetchKitchen)
+onMounted(() => {
+  fetchKitchen()
+  
+  // Initialize WebSocket
+  const token = localStorage.getItem('token') || ''
+  console.log('🔑 Kitchen - Token for WebSocket:', token ? 'Found' : 'Not found (dev mode)')
+  
+  const wsUrl = import.meta.env.VITE_WS_URL || 'http://localhost:8080/ws'
+  console.log('🌐 Kitchen WebSocket URL:', wsUrl)
+  
+  wsClient = new DashboardWebSocket(wsUrl)
+  
+  // Subscribe to kitchen updates BEFORE connecting
+  wsClient.subscribeKitchenUpdates((update) => {
+    console.log('📢 Kitchen update received:', update)
+    // Refresh kitchen data when there's an update
+    fetchKitchen()
+  })
+  
+  // Connect to WebSocket
+  console.log('🔌 Connecting to WebSocket...')
+  wsClient.connect(token)
+})
+
+onUnmounted(() => {
+  // Disconnect WebSocket
+  if (wsClient) {
+    wsClient.disconnect()
+    wsClient = null
+  }
+})
 </script>
 
 <style scoped>
@@ -180,7 +213,6 @@ onMounted(fetchKitchen)
   gap: 8px;
 }
 
-.refresh-btn,
 .logout-btn {
   padding: 8px 16px;
   border: none;
@@ -189,18 +221,6 @@ onMounted(fetchKitchen)
   font-weight: 500;
   font-size: 0.875rem;
   transition: all 0.2s;
-}
-
-.refresh-btn {
-  background: #0d6efd;
-  color: white;
-}
-
-.refresh-btn:hover {
-  background: #0b5ed7;
-}
-
-.logout-btn {
   background: #dc3545;
   color: white;
 }
@@ -426,13 +446,8 @@ onMounted(fetchKitchen)
     align-items: stretch;
   }
 
-  .header-actions {
-    width: 100%;
-  }
-
-  .refresh-btn,
   .logout-btn {
-    flex: 1;
+    width: 100%;
   }
 
   .tables-grid {
