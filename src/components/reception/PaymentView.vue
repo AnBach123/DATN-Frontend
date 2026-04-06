@@ -150,6 +150,22 @@
         <div class="card pos-card h-100">
           <div class="card-body">
             <h5 class="section-title">Danh sách món ăn & combo</h5>
+            
+            <!-- Warning for unserved items -->
+            <div v-if="hasUnservedItems" class="alert alert-warning mb-3" role="alert">
+              <div class="d-flex align-items-center">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="margin-right: 10px; flex-shrink: 0;">
+                  <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+                </svg>
+                <div>
+                  <strong>⚠️ Chưa thể thanh toán</strong>
+                  <div class="small mt-1">
+                    Còn {{ unservedItems.length }} món chưa được phục vụ. Vui lòng đợi nhân viên phục vụ hoàn tất.
+                  </div>
+                </div>
+              </div>
+            </div>
+            
             <div class="table-responsive">
               <table class="table align-middle">
                 <thead>
@@ -157,6 +173,7 @@
                     <th>STT</th>
                     <th>Tên món</th>
                     <th>Loại</th>
+                    <th>Trạng thái</th>
                     <th class="text-center">Số lượng</th>
                     <th class="text-end">Đơn giá</th>
                     <th class="text-end">Giảm giá</th>
@@ -179,6 +196,24 @@
                         :class="item.type === 'PRODUCT' ? 'bg-primary-light' : 'bg-success-light'"
                       >
                         {{ item.type === 'PRODUCT' ? 'Món' : 'Combo' }}
+                      </span>
+                    </td>
+                    <td>
+                      <span
+                        class="badge"
+                        :class="{
+                          'bg-secondary': item.status === 'ORDERED',
+                          'bg-info': item.status === 'IN_PROGRESS',
+                          'bg-warning': item.status === 'DONE',
+                          'bg-success': item.status === 'SERVED'
+                        }"
+                      >
+                        {{ 
+                          item.status === 'ORDERED' ? 'Đã đặt' :
+                          item.status === 'IN_PROGRESS' ? 'Đang làm' :
+                          item.status === 'DONE' ? 'Hoàn thành' :
+                          item.status === 'SERVED' ? 'Đã phục vụ' : 'N/A'
+                        }}
                       </span>
                     </td>
                     <td class="text-center">{{ item.quantity }}</td>
@@ -277,8 +312,9 @@
               <div v-else-if="paymentMethod === 'TRANSFER'" class="mt-2">
                 <button 
                   class="btn btn-momo w-100" 
-                  :disabled="loadingMomo || isProcessingPayment"
+                  :disabled="loadingMomo || isProcessingPayment || hasUnservedItems"
                   @click="generateMoMoQR"
+                  :title="hasUnservedItems ? 'Còn món chưa được phục vụ' : ''"
                 >
                   <span v-if="loadingMomo">Đang tạo mã QR...</span>
                   <span v-else>
@@ -306,8 +342,9 @@
         <button 
           v-if="paymentMethod === 'CASH'" 
           class="btn btn-primary px-4" 
-          :disabled="checkingOut || isProcessingPayment" 
+          :disabled="checkingOut || isProcessingPayment || hasUnservedItems" 
           @click="checkout"
+          :title="hasUnservedItems ? 'Còn món chưa được phục vụ' : ''"
         >
           {{ checkingOut ? 'Đang thanh toán...' : 'Thanh toán' }}
         </button>
@@ -480,6 +517,7 @@ type Payment = {
     voucherCode?: string
     productId?: number
     comboId?: number
+    status?: string  // Add status field
   }[]
   vouchers: {
     id: number
@@ -773,6 +811,14 @@ const tableText = computed(() => {
   return payment.value.tables.map((t) => `${t.tableName} (ID ${t.id})`).join(', ')
 })
 
+// Check if there are unserved items
+const unservedItems = computed(() => {
+  if (!payment.value) return []
+  return (payment.value.items || []).filter(item => item.status && item.status !== 'SERVED')
+})
+
+const hasUnservedItems = computed(() => unservedItems.value.length > 0)
+
 const loadPayment = async () => {
   errorMsg.value = ''
   if (!tableIdInput.value || tableIdInput.value < 1) {
@@ -989,27 +1035,175 @@ const updateItemQuantity = async (itemId: number, quantity: number) => {
 const removeItem = async (itemId: number) => {
   if (!payment.value) return
   
-  // Prevent multiple simultaneous removals
-  if (removingItem.value === itemId) {
-    return
-  }
+  // Find the item to check quantity
+  const item = payment.value.items.find(i => i.id === itemId)
+  if (!item) return
   
-  removingItem.value = itemId
-  try {
-    await deletePaymentItem(itemId)
-    await loadPayment()
-  } catch (error: any) {
-    Swal.fire({
-      toast: true,
-      position: 'top-end',
-      icon: 'error',
-      title: error.response?.data?.message || 'Không xoá được món',
-      showConfirmButton: false,
-      timer: 3000,
-      timerProgressBar: true,
+  // If quantity > 1, show modal to choose partial or full cancellation
+  if (item.quantity > 1) {
+    const result = await Swal.fire({
+      icon: 'question',
+      title: 'Hủy món',
+      html: `
+        <div style="text-align: left; margin-top: 15px;">
+          <p><strong>Món:</strong> ${item.name}</p>
+          <p><strong>Số lượng hiện tại:</strong> ${item.quantity}</p>
+          <p style="margin-top: 20px;">Bạn muốn hủy bao nhiêu?</p>
+        </div>
+      `,
+      input: 'number',
+      inputLabel: 'Số lượng muốn hủy',
+      inputValue: 1,
+      inputAttributes: {
+        min: '1',
+        max: item.quantity.toString(),
+        step: '1'
+      },
+      showCancelButton: true,
+      confirmButtonText: 'Hủy món',
+      cancelButtonText: 'Đóng',
+      confirmButtonColor: '#dc3545',
+      cancelButtonColor: '#6c757d',
+      showDenyButton: true,
+      denyButtonText: 'Hủy toàn bộ',
+      denyButtonColor: '#dc3545',
+      inputValidator: (value) => {
+        const num = parseInt(value)
+        if (!value || isNaN(num)) {
+          return 'Vui lòng nhập số lượng hợp lệ'
+        }
+        if (num < 1) {
+          return 'Số lượng phải lớn hơn 0'
+        }
+        if (num > item.quantity) {
+          return `Số lượng không được vượt quá ${item.quantity}`
+        }
+        return null
+      }
     })
-  } finally {
-    removingItem.value = null
+    
+    if (result.isConfirmed) {
+      // Partial cancellation - reduce quantity
+      const cancelQuantity = parseInt(result.value)
+      const newQuantity = item.quantity - cancelQuantity
+      
+      // Prevent multiple simultaneous updates
+      if (updatingItem.value === itemId) {
+        return
+      }
+      
+      updatingItem.value = itemId
+      try {
+        await updatePaymentItem(itemId, newQuantity)
+        await loadPayment()
+        
+        Swal.fire({
+          toast: true,
+          position: 'top-end',
+          icon: 'success',
+          title: `Đã hủy ${cancelQuantity} ${item.name}`,
+          showConfirmButton: false,
+          timer: 2000,
+          timerProgressBar: true,
+        })
+      } catch (error: any) {
+        Swal.fire({
+          toast: true,
+          position: 'top-end',
+          icon: 'error',
+          title: error.response?.data?.message || 'Không hủy được món',
+          showConfirmButton: false,
+          timer: 3000,
+          timerProgressBar: true,
+        })
+      } finally {
+        updatingItem.value = null
+      }
+    } else if (result.isDenied) {
+      // Full cancellation - delete item
+      if (removingItem.value === itemId) {
+        return
+      }
+      
+      removingItem.value = itemId
+      try {
+        await deletePaymentItem(itemId)
+        await loadPayment()
+        
+        Swal.fire({
+          toast: true,
+          position: 'top-end',
+          icon: 'success',
+          title: `Đã hủy toàn bộ ${item.name}`,
+          showConfirmButton: false,
+          timer: 2000,
+          timerProgressBar: true,
+        })
+      } catch (error: any) {
+        Swal.fire({
+          toast: true,
+          position: 'top-end',
+          icon: 'error',
+          title: error.response?.data?.message || 'Không xoá được món',
+          showConfirmButton: false,
+          timer: 3000,
+          timerProgressBar: true,
+        })
+      } finally {
+        removingItem.value = null
+      }
+    }
+  } else {
+    // Quantity = 1, delete directly with confirmation
+    const confirmResult = await Swal.fire({
+      icon: 'warning',
+      title: 'Xác nhận hủy món',
+      html: `
+        <div style="text-align: left; margin-top: 15px;">
+          <p>Bạn có chắc muốn hủy món <strong>${item.name}</strong>?</p>
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: 'Hủy món',
+      cancelButtonText: 'Đóng',
+      confirmButtonColor: '#dc3545',
+      cancelButtonColor: '#6c757d',
+    })
+    
+    if (!confirmResult.isConfirmed) return
+    
+    // Prevent multiple simultaneous removals
+    if (removingItem.value === itemId) {
+      return
+    }
+    
+    removingItem.value = itemId
+    try {
+      await deletePaymentItem(itemId)
+      await loadPayment()
+      
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: `Đã hủy ${item.name}`,
+        showConfirmButton: false,
+        timer: 2000,
+        timerProgressBar: true,
+      })
+    } catch (error: any) {
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'error',
+        title: error.response?.data?.message || 'Không xoá được món',
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true,
+      })
+    } finally {
+      removingItem.value = null
+    }
   }
 }
 
@@ -1026,6 +1220,26 @@ const checkout = async () => {
       showConfirmButton: false,
       timer: 2000,
       timerProgressBar: true,
+    })
+    return
+  }
+  
+  // Validate unserved items
+  if (hasUnservedItems.value) {
+    const unservedNames = unservedItems.value.map(item => item.name).join(', ')
+    Swal.fire({
+      icon: 'warning',
+      title: 'Chưa thể thanh toán',
+      html: `
+        <div style="text-align: left; margin-top: 15px;">
+          <p>Còn <strong>${unservedItems.value.length} món</strong> chưa được phục vụ:</p>
+          <p style="color: #dc3545; margin-top: 10px;">${unservedNames}</p>
+          <p style="font-size: 14px; color: #666; margin-top: 15px;">
+            Vui lòng đợi nhân viên phục vụ hoàn tất trước khi thanh toán.
+          </p>
+        </div>
+      `,
+      confirmButtonText: 'Đóng',
     })
     return
   }

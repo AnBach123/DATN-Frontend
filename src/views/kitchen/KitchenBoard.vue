@@ -1,68 +1,73 @@
 <template>
   <div class="kitchen-container">
     <!-- HEADER -->
-    <div class="header-section">
-      <div>
-        <h2>ByHat</h2>
+    <div class="header">
+      <h2>Bếp - Quản lý món</h2>
+      <div class="header-actions">
+        <button class="refresh-btn" @click="fetchKitchen">Reload</button>
+        <button class="logout-btn" @click="logout">Đăng xuất</button>
       </div>
-
-      <!-- <button class="refresh-btn" @click="fetchKitchen">🔄 Reload</button> -->
-      <button class="logout-btn" @click="logout">Đăng xuất</button>
     </div>
 
-    <!-- GRID 2 COLUMN -->
-    <div class="grid-container">
-      <!-- ORDERED -->
-      <div class="panel">
-        <div class="panel-header ordered">DANH SÁCH ORDER</div>
-
-        <div class="list">
-          <!-- HEADER -->
-          <div class="row header">
-            <div class="col name">Tên món</div>
-            <div class="col qty">SL</div>
-            <div class="col table">Bàn</div>
-            <div class="col action">Hành động</div>
-          </div>
-
-          <!-- DATA -->
-          <div v-for="item in orderedItems" :key="item.id" class="row">
-            <div class="col name">{{ item.itemName }}</div>
-            <div class="col qty">{{ item.quantity }}</div>
-            <div class="col table">{{ item.tableName }}</div>
-
-            <div class="col action">
-              <button class="btn primary" @click="handleStart(item.id)">Thực hiện</button>
+    <!-- 2 COLUMNS LAYOUT -->
+    <div class="columns-layout">
+      <!-- LEFT COLUMN: ORDERED (Chưa làm) - Grid cards by table -->
+      <div class="column">
+        <div class="column-header ordered">
+          <h3>Chưa làm</h3>
+          <span class="count">{{ orderedTables.length }} bàn</span>
+        </div>
+        <div class="column-body">
+          <div v-if="orderedTables.length > 0" class="tables-grid">
+            <div v-for="table in orderedTables" :key="table.tableId" class="table-grid-card">
+              <div class="grid-card-header ordered-header">
+                <span class="table-name">{{ table.tableName }}</span>
+                <span class="item-count">{{ table.items.length }} món</span>
+              </div>
+              <div class="grid-card-body">
+                <div v-for="item in table.items" :key="item.id" class="grid-item">
+                  <div class="grid-item-name">{{ item.itemName }}</div>
+                  <div class="grid-item-footer">
+                    <span class="grid-item-qty">SL: {{ item.quantity }}</span>
+                    <button class="btn-grid btn-start" @click="handleStart(item.id)">
+                      Thực hiện
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-
-          <div v-if="orderedItems.length === 0" class="empty">Không có món</div>
+          <div v-else class="empty">Không có bàn nào</div>
         </div>
       </div>
 
-      <!-- IN_PROGRESS -->
-      <div class="panel">
-        <div class="panel-header progress">ĐANG THỰC HIỆN</div>
-
-        <div class="list">
-          <div class="row header">
-            <div class="col name">Tên món</div>
-            <div class="col qty">SL</div>
-            <div class="col table">Bàn</div>
-            <div class="col action">Hành động</div>
-          </div>
-
-          <div v-for="item in inProgressItems" :key="item.id" class="row">
-            <div class="col name">{{ item.itemName }}</div>
-            <div class="col qty">{{ item.quantity }}</div>
-            <div class="col table">{{ item.tableName }}</div>
-
-            <div class="col action">
-              <button class="btn success" @click="handleDone(item.id)">Hoàn thành</button>
+      <!-- RIGHT COLUMN: IN_PROGRESS (Đang làm) - Grid cards -->
+      <div class="column">
+        <div class="column-header in-progress">
+          <h3>Đang làm</h3>
+          <span class="count">{{ inProgressTables.length }} bàn</span>
+        </div>
+        <div class="column-body">
+          <div v-if="inProgressTables.length > 0" class="tables-grid">
+            <div v-for="table in inProgressTables" :key="table.tableId" class="table-grid-card">
+              <div class="grid-card-header in-progress">
+                <span class="table-name">{{ table.tableName }}</span>
+                <span class="item-count">{{ table.items.length }} món</span>
+              </div>
+              <div class="grid-card-body">
+                <div v-for="item in table.items" :key="item.id" class="grid-item">
+                  <div class="grid-item-name">{{ item.itemName }}</div>
+                  <div class="grid-item-footer">
+                    <span class="grid-item-qty">SL: {{ item.quantity }}</span>
+                    <button class="btn-grid btn-done" @click="handleDone(item.id)">
+                      Hoàn thành
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-
-          <div v-if="inProgressItems.length === 0" class="empty">Không có món</div>
+          <div v-else class="empty">Không có bàn nào</div>
         </div>
       </div>
     </div>
@@ -79,230 +84,359 @@ interface KitchenItem {
   itemName: string
   quantity: number
   status: string
+}
+
+interface KitchenTable {
+  tableId: number
   tableName: string
+  items: KitchenItem[]
 }
 
-const items = ref<KitchenItem[]>([])
+const tables = ref<KitchenTable[]>([])
 
-/* ================= FETCH ================= */
+// Computed: Bàn có món ORDERED (chưa làm)
+const orderedTables = computed((): KitchenTable[] => {
+  return tables.value
+    .map((table) => ({
+      ...table,
+      items: table.items.filter((item) => item.status === 'ORDERED'),
+    }))
+    .filter((table) => table.items.length > 0)
+})
+
+// Computed: Bàn có món IN_PROGRESS (đang làm)
+const inProgressTables = computed((): KitchenTable[] => {
+  return tables.value
+    .map((table) => ({
+      ...table,
+      items: table.items.filter((item) => item.status === 'IN_PROGRESS'),
+    }))
+    .filter((table) => table.items.length > 0)
+})
+
 async function fetchKitchen() {
-  const data = await getKitchenGrouped()
-
-  // flatten từ table -> items
-  const flat: KitchenItem[] = []
-
-  data.forEach((table: any) => {
-    table.items.forEach((i: any) => {
-      flat.push({
-        ...i,
-        tableName: table.tableName,
-      })
-    })
-  })
-
-  items.value = flat
+  try {
+    const data = await getKitchenGrouped()
+    tables.value = data
+  } catch (e) {
+    console.error(e)
+  }
 }
-
-/* ================= FILTER ================= */
-
-const orderedItems = computed(() => items.value.filter((i) => i.status === 'ORDERED'))
-
-const inProgressItems = computed(() => items.value.filter((i) => i.status === 'IN_PROGRESS'))
-
-/* ================= ACTION ================= */
 
 async function handleStart(id: number) {
-  await startCooking(id)
-  fetchKitchen()
+  try {
+    await startCooking(id)
+    await fetchKitchen()
+  } catch (e) {
+    console.error(e)
+  }
 }
 
 async function handleDone(id: number) {
-  await doneCooking(id)
-  fetchKitchen()
+  try {
+    await doneCooking(id)
+    await fetchKitchen()
+  } catch (e) {
+    console.error(e)
+  }
 }
-
-/* ================= INIT ================= */
-onMounted(fetchKitchen)
 
 function logout() {
   localStorage.clear()
   router.push('/auth/login')
 }
+
+onMounted(fetchKitchen)
 </script>
 
 <style scoped>
 .kitchen-container {
-  padding: 24px;
+  padding: 16px;
   min-height: 100vh;
-  background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
+  background: #f8f9fa;
 }
 
 /* HEADER */
-.header-section {
+.header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  padding: 16px 20px;
+  margin-bottom: 16px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.header-section h2 {
+.header h2 {
   margin: 0;
-  color: #2d3748;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #212529;
 }
 
-/* GRID */
-.grid-container {
+.header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.refresh-btn,
+.logout-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.875rem;
+  transition: all 0.2s;
+}
+
+.refresh-btn {
+  background: #0d6efd;
+  color: white;
+}
+
+.refresh-btn:hover {
+  background: #0b5ed7;
+}
+
+.logout-btn {
+  background: #dc3545;
+  color: white;
+}
+
+.logout-btn:hover {
+  background: #bb2d3b;
+}
+
+/* 2 COLUMNS LAYOUT */
+.columns-layout {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 20px;
+  gap: 16px;
+  align-items: start;
 }
 
-/* PANEL */
-.panel {
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 16px;
-  padding: 16px;
-  backdrop-filter: blur(10px);
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+/* COLUMN */
+.column {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
 }
 
-/* HEADER PANEL */
-.panel-header {
-  height: 44px; /* 🔥 FIX chiều cao cố định */
-  display: flex; /* 🔥 quan trọng */
-  align-items: center; /* center dọc */
-  justify-content: center; /* center ngang */
-
-  font-size: 16px;
-  font-weight: 700;
-  color: white;
-
-  border-radius: 12px;
-}
-
-.panel-header.ordered {
-  background: linear-gradient(135deg, #ed8936, #dd6b20);
-  text-align: center;
-  letter-spacing: 0.5px;
-}
-
-.panel-header.progress {
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  text-align: center;
-  letter-spacing: 0.5px;
-}
-
-/* LIST */
-.list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-/* ROW */
-.row {
+.column-header {
+  padding: 12px 16px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px;
+  color: white;
+  font-weight: 500;
+}
+
+.column-header.ordered {
+  background: #fd7e14;
+}
+
+.column-header.in-progress {
+  background: #0d6efd;
+}
+
+.column-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.count {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 2px 10px;
   border-radius: 12px;
-  transition: 0.2s;
+  font-size: 0.8rem;
+  font-weight: 600;
 }
 
-.row:hover {
-  background: rgba(102, 126, 234, 0.08);
+.column-body {
+  padding: 12px;
+  max-height: calc(100vh - 180px);
+  overflow-y: auto;
 }
 
-.row {
+/* TABLES GRID (Both columns - grid cards) */
+.tables-grid {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr 1.5fr;
-  align-items: center;
-  padding: 10px;
-  border-radius: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
 }
 
-.row.header {
-  font-weight: 700;
-  background: rgba(102, 126, 234, 0.1);
+.table-grid-card {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  overflow: hidden;
+  transition: all 0.2s;
 }
 
-.col {
-  flex: 1;
-  display: flex; /* 🔥 thêm */
-  align-items: center; /* 🔥 fix lệch dọc */
-  font-size: 1em;
+.table-grid-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.col.name {
-  font-weight: 600;
-  color: #2d3748;
-  justify-content: flex-start;
-}
-
-.col.qty,
-.col.table {
-  justify-content: center; /* 🔥 thay text-align */
-}
-
-.col.action {
-  justify-content: flex-end; /* 🔥 thay text-align */
-}
-
-/* INFO */
-.name {
-  font-weight: 600;
-  color: #2d3748;
-}
-
-.meta {
-  font-size: 12px;
-  color: #718096;
-}
-
-/* ACTION */
-.actions {
+.grid-card-header {
+  color: white;
+  padding: 10px 12px;
   display: flex;
-  gap: 6px;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
 }
 
-/* BUTTON */
-.btn {
+.grid-card-header.ordered-header {
+  background: #fd7e14;
+}
+
+.grid-card-header.in-progress {
+  background: #0d6efd;
+}
+
+.grid-card-header .table-name {
+  font-weight: 600;
+}
+
+.grid-card-header .item-count {
+  background: rgba(255, 255, 255, 0.25);
+  padding: 2px 8px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.grid-card-body {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.grid-item {
+  background: white;
+  border: 1px solid #e9ecef;
+  border-radius: 4px;
+  padding: 8px;
+}
+
+.grid-item-name {
+  font-weight: 500;
+  font-size: 0.875rem;
+  color: #212529;
+  margin-bottom: 6px;
+}
+
+.grid-item-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.grid-item-qty {
+  font-size: 0.8rem;
+  color: #6c757d;
+  font-weight: 500;
+}
+
+.btn-grid {
+  padding: 4px 10px;
   border: none;
-  border-radius: 10px;
-  padding: 6px 12px;
-  font-size: 12px;
+  border-radius: 4px;
+  font-weight: 500;
+  font-size: 0.75rem;
   cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
 }
 
-.btn.primary {
-  background: #667eea;
+.btn-grid:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.btn-grid.btn-start {
+  background: #fd7e14;
   color: white;
 }
 
-.btn.success {
-  background: #38a169;
+.btn-grid.btn-start:hover {
+  background: #e8590c;
+}
+
+.btn-grid.btn-done {
+  background: #198754;
   color: white;
 }
 
-.btn.danger {
-  background: #e53e3e;
-  color: white;
+.btn-grid.btn-done:hover {
+  background: #157347;
 }
 
-/* EMPTY */
+/* EMPTY STATE */
 .empty {
   text-align: center;
-  color: #718096;
-  padding: 10px;
+  padding: 40px 20px;
+  color: #6c757d;
+  font-size: 0.875rem;
 }
 
-/* REFRESH */
-.logout-btn {
-  background: #667eea;
-  color: white;
-  border: none;
-  padding: 10px 14px;
-  border-radius: 10px;
-  cursor: pointer;
+/* SCROLLBAR */
+.column-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.column-body::-webkit-scrollbar-track {
+  background: #f8f9fa;
+}
+
+.column-body::-webkit-scrollbar-thumb {
+  background: #dee2e6;
+  border-radius: 3px;
+}
+
+.column-body::-webkit-scrollbar-thumb:hover {
+  background: #adb5bd;
+}
+
+/* RESPONSIVE */
+@media (max-width: 1024px) {
+  .columns-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .column-body {
+    max-height: 500px;
+  }
+
+  .tables-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    gap: 8px;
+    align-items: stretch;
+  }
+
+  .header-actions {
+    width: 100%;
+  }
+
+  .refresh-btn,
+  .logout-btn {
+    flex: 1;
+  }
+
+  .tables-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>
