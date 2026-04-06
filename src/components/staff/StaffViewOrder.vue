@@ -380,19 +380,22 @@ onMounted(fetchData)
   gap: 24px;
 }
 
-/* TABLE CARD */
+/* TABLE CARD - Synced with invoice-card */
 .table-card {
   background: white;
-  border-radius: 16px;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 2px solid transparent;
   overflow: hidden;
-  transition: all 0.3s ease;
 }
 
 .table-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-color: #4299e1;
 }
 
 /* CARD HEADER */
@@ -403,6 +406,7 @@ onMounted(fetchData)
   padding: 20px 24px;
   background: linear-gradient(135deg, #667eea, #764ba2);
   color: white;
+  margin: -20px -20px 16px -20px;
 }
 
 .table-icon {
@@ -419,7 +423,7 @@ onMounted(fetchData)
 
 /* CARD BODY */
 .card-body {
-  padding: 24px;
+  padding: 0;
 }
 
 .info-row {

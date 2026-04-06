@@ -5,8 +5,8 @@
       <div class="logo">🍽️ ByHat Staff</div>
 
       <div class="nav-links">
-        <router-link to="/staff/order" class="nav-item" active-class="active">
-          Order món
+        <router-link to="/staff/tables" class="nav-item" active-class="active">
+          Chọn bàn
         </router-link>
 
         <router-link to="/staff/view-orders" class="nav-item" active-class="active">

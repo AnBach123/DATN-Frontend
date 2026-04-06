@@ -10,6 +10,7 @@ import ReceptionMainLayout from '@/layout/ReceptionMainLayout.vue'
 import OnlineCheckInView from '@/views/reception/OnlineCheckInView.vue'
 import WalkInCheckInView from '@/views/reception/WalkInCheckInView.vue'
 import StaffOrder from '@/components/staff/StaffOrder.vue'
+import StaffTableSelection from '@/views/staff/StaffTableSelection.vue'
 import PaymentListView from '@/views/reception/PaymentListView.vue'
 import InvoiceHistoryView from '@/views/reception/InvoiceHistoryView.vue'
 import MockBankTransfer from '@/views/MockBankTransfer.vue'
@@ -21,6 +22,7 @@ import EmployeeView from '@/views/admin/EmployeeView.vue'
 import KitchenBoard from '@/views/kitchen/KitchenBoard.vue'
 import StaffMainLayout from '@/layout/StaffMainLayout.vue'
 import StaffViewOrder from '@/components/staff/StaffViewOrder.vue'
+import StaffViewItems from '@/views/staff/StaffViewItems.vue'
 import DiningTableView from '@/views/admin/DiningTableView.vue'
 import ProfileView from '@/views/customer/ProfileView.vue'
 import VoucherView from '@/views/admin/VoucherView.vue'
@@ -154,7 +156,10 @@ const router = createRouter({
       component: StaffMainLayout,
       beforeEnter: checkRole(['STAFF']),
       children: [
-        { path: 'order', name: 'staff-order', component: StaffOrder },
+        { path: '', redirect: '/staff/tables' },
+        { path: 'tables', name: 'staff-table-selection', component: StaffTableSelection },
+        { path: 'order/:invoiceId', name: 'staff-order', component: StaffOrder },
+        { path: 'view-items/:invoiceId', name: 'staff-view-items', component: StaffViewItems },
         { path: 'view-orders', name: 'staff-view-orders', component: StaffViewOrder },
       ],
     },

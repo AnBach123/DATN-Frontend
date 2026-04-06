@@ -7,22 +7,32 @@
     </div>
 
     <div class="container-fluid p-4">
+      <!-- BACK BUTTON -->
+      <button class="btn-back-top" @click="goBack">← Chọn bàn khác</button>
+
+      <!-- TABLE INFO BANNER - CENTERED -->
+      <div v-if="invoiceInfo" class="table-info-banner">
+        <div class="banner-content">
+          <span class="info-label">Khách hàng:</span>
+          <span class="info-value">{{ invoiceInfo.customerName }}</span>
+          <span class="divider">|</span>
+          <span class="info-label">Khu vực:</span>
+          <span class="info-value">{{ invoiceInfo.tables[0]?.area || 'N/A' }}</span>
+          <span class="divider">|</span>
+          <span class="info-label">Bàn:</span>
+          <span class="info-value">{{ tableNames }}</span>
+          <span class="divider">|</span>
+          <span class="info-label">Tầng:</span>
+          <span class="info-value">{{ invoiceInfo.tables[0]?.floor }}</span>
+        </div>
+      </div>
+
       <!-- HEADER -->
       <div class="header-section">
         <div>
           <h2>Order món</h2>
-          <p>
-            Nhân viên: <strong>{{ staffName }}</strong>
-          </p>
+          <p>Nhân viên: <strong>{{ staffName }}</strong></p>
         </div>
-
-        <input
-          v-model="tableId"
-          type="text"
-          class="table-input"
-          placeholder="Nhập mã bàn"
-          @input="normalizeTableId"
-        />
       </div>
 
       <!-- MAIN -->
@@ -32,6 +42,46 @@
           <div class="panel-header blue">Sản phẩm</div>
 
           <input v-model="productSearch" class="search-input" placeholder="Tìm sản phẩm..." />
+
+          <!-- CATEGORY FILTER -->
+          <div class="category-filter">
+            <button 
+              :class="['filter-btn', { active: selectedCategory === null }]" 
+              @click="selectedCategory = null"
+            >
+              Tất cả
+            </button>
+            <button 
+              :class="['filter-btn', { active: selectedCategory === 'RAW_FOOD' }]" 
+              @click="selectedCategory = 'RAW_FOOD'"
+            >
+              Sống
+            </button>
+            <button 
+              :class="['filter-btn', { active: selectedCategory === 'COOKED_FOOD' }]" 
+              @click="selectedCategory = 'COOKED_FOOD'"
+            >
+              Chín
+            </button>
+            <button 
+              :class="['filter-btn', { active: selectedCategory === 'HOT_POT_BROTH' }]" 
+              @click="selectedCategory = 'HOT_POT_BROTH'"
+            >
+              Nước lẩu
+            </button>
+            <button 
+              :class="['filter-btn', { active: selectedCategory === 'DRINK' }]" 
+              @click="selectedCategory = 'DRINK'"
+            >
+              Đồ uống
+            </button>
+            <button 
+              :class="['filter-btn', { active: selectedCategory === 'DESSERT' }]" 
+              @click="selectedCategory = 'DESSERT'"
+            >
+              Tráng miệng
+            </button>
+          </div>
 
           <div class="scroll">
             <div v-for="p in filteredProducts" :key="p.id" class="item-card">
@@ -88,7 +138,7 @@
               <strong>{{ formatPrice(subtotal) }}</strong>
             </div>
 
-            <button class="btn order-btn" :disabled="!tableId || cart.length === 0" @click="order">
+            <button class="btn order-btn" :disabled="cart.length === 0" @click="order">
               Order
             </button>
           </div>
@@ -99,25 +149,37 @@
 </template>
 <script lang="ts" setup>
 import { ref, computed, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
 import { getProducts } from '@/services/productApi'
 import { getAllProductCombos } from '@/services/productComboApi'
-import { addItemsToTable, type OrderItemRequest } from '@/services/staffOrderApi'
+import { addItemsToInvoice, type OrderItemRequest, type InvoiceGroup } from '@/services/staffOrderApi'
 import OvertimeAlertPanel from './OvertimeAlertPanel.vue'
 import NoShowNotificationPanel from './NoShowNotificationPanel.vue'
+import { getInProgressInvoices } from '@/services/staffOrderApi'
+
+const route = useRoute()
+const router = useRouter()
 
 /* STAFF */
 
 const staffName = 'Staff'
 
-/* TABLE */
+/* INVOICE */
 
-const tableId = ref<string>('')
+const invoiceId = ref<number>(0)
+const invoiceInfo = ref<InvoiceGroup | null>(null)
+
+const tableNames = computed(() => {
+  if (!invoiceInfo.value) return ''
+  return invoiceInfo.value.tables.map(t => t.tableName).join(', ')
+})
 
 /* SEARCH */
 
 const productSearch = ref('')
 const comboSearch = ref('')
+const selectedCategory = ref<string | null>(null)
 
 /* TYPES */
 
@@ -126,6 +188,7 @@ interface Product {
   productName: string
   unitPrice: number
   availabilityStatus: string
+  productCategory?: string
 }
 
 interface Combo {
@@ -171,18 +234,62 @@ async function fetchCombos() {
 
 /* LOAD DATA */
 
+async function loadInvoiceInfo() {
+  const paramInvoiceId = route.params.invoiceId
+  console.log('Route params:', route.params)
+  console.log('Param invoiceId:', paramInvoiceId, 'Type:', typeof paramInvoiceId)
+  
+  if (!paramInvoiceId) {
+    alert('Không có thông tin hóa đơn')
+    router.push({ name: 'staff-tables' })
+    return
+  }
+
+  try {
+    invoiceId.value = Number(paramInvoiceId)
+    console.log('Loading invoice info for:', invoiceId.value)
+    
+    // Get all in-progress invoices and find the matching one
+    const invoices = await getInProgressInvoices()
+    invoiceInfo.value = invoices.find(inv => inv.invoiceId === invoiceId.value) || null
+    
+    if (!invoiceInfo.value) {
+      alert('Không tìm thấy hóa đơn')
+      router.push({ name: 'staff-tables' })
+      return
+    }
+    
+    console.log('Invoice info loaded:', invoiceInfo.value)
+  } catch (error) {
+    console.error('Load invoice error', error)
+    alert('Không thể tải thông tin hóa đơn')
+    router.push({ name: 'staff-tables' })
+  }
+}
+
 onMounted(() => {
+  loadInvoiceInfo()
   fetchProducts()
   fetchCombos()
 })
 
+function goBack() {
+  router.push({ name: 'staff-tables' })
+}
+
 /* FILTER */
 
-const filteredProducts = computed(() =>
-  products.value.filter((p) =>
+const filteredProducts = computed(() => {
+  let result = products.value.filter((p) =>
     p.productName.toLowerCase().includes(productSearch.value.toLowerCase()),
-  ),
-)
+  )
+  
+  if (selectedCategory.value) {
+    result = result.filter((p) => p.productCategory === selectedCategory.value)
+  }
+  
+  return result
+})
 
 const filteredCombos = computed(() =>
   combos.value.filter((c) => c.comboName.toLowerCase().includes(comboSearch.value.toLowerCase())),
@@ -250,22 +357,11 @@ const subtotal = computed(() =>
   cart.value.reduce((sum, item) => sum + item.price * item.quantity, 0),
 )
 
-function normalizeTableId() {
-  let value = String(tableId.value || '')
-
-  // chỉ giữ số
-  value = value.replace(/\D/g, '')
-
-  // bỏ số 0 ở đầu
-  value = value.replace(/^0+/, '')
-
-  tableId.value = value
-}
 /* ORDER */
 
 async function order() {
-  if (!tableId.value) {
-    alert('Vui lòng nhập ID bàn')
+  if (!invoiceId.value) {
+    alert('Không có thông tin hóa đơn')
     return
   }
 
@@ -285,7 +381,7 @@ async function order() {
       }
     })
 
-    await addItemsToTable(Number(tableId.value) || 1, items)
+    await addItemsToInvoice(invoiceId.value, items)
 
     alert('Order thành công')
     cart.value = []
@@ -306,9 +402,65 @@ function formatPrice(price: number) {
 
 <style scoped>
 .order-container {
-  padding: 24px;
   min-height: 100vh;
-  background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
+  background: #f7f8fa;
+  padding: 20px;
+}
+
+/* BACK BUTTON TOP */
+.btn-back-top {
+  padding: 10px 20px;
+  margin-bottom: 16px;
+  border-radius: 12px;
+  border: none;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+  color: #718096;
+  font-weight: 500;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.btn-back-top:hover {
+  background: #f7fafc;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.12);
+}
+
+/* TABLE INFO BANNER */
+.table-info-banner {
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: center;
+}
+
+.banner-content {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 16px 32px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: none;
+}
+
+.info-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #718096;
+}
+
+.info-value {
+  font-size: 15px;
+  font-weight: 600;
+  color: #2d3748;
+}
+
+.divider {
+  color: #cbd5e0;
+  font-weight: 300;
+  font-size: 16px;
 }
 
 /* HEADER */
@@ -317,70 +469,119 @@ function formatPrice(price: number) {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 24px;
+  padding: 20px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .header-section h2 {
-  margin: 0;
-  color: #2d3748;
+  margin: 0 0 8px 0;
+  color: #1a202c;
+  font-size: 24px;
+  font-weight: 600;
 }
 
-.table-input {
-  padding: 10px 16px;
-  border-radius: 10px;
-  border: 2px solid #e2e8f0;
-  width: 200px;
+.header-section p {
+  margin: 0;
+  color: #718096;
+  font-size: 14px;
 }
 
 /* GRID */
 .grid-container {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
+  gap: 16px;
 }
 
 /* PANEL */
 .panel {
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 16px;
-  padding: 12px;
-  backdrop-filter: blur(10px);
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: none;
   display: flex;
   flex-direction: column;
+  height: 600px;
 }
 
 .panel-header {
-  padding: 10px;
-  border-radius: 10px;
+  padding: 12px 16px;
+  border-radius: 12px;
   color: white;
   font-weight: 600;
-  margin-bottom: 10px;
+  margin-bottom: 16px;
+  font-size: 15px;
+  text-align: center;
 }
 
 .panel-header.blue {
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: #4299e1;
 }
 
 .panel-header.green {
-  background: linear-gradient(135deg, #38a169, #2f855a);
+  background: #48bb78;
 }
 
 .panel-header.dark {
-  background: linear-gradient(135deg, #2d3748, #1a202c);
+  background: #4a5568;
 }
 
 /* INPUT */
 .search-input {
-  padding: 10px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: white;
+  margin-bottom: 12px;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #4299e1;
+  box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+}
+
+/* CATEGORY FILTER */
+.category-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.filter-btn {
+  padding: 6px 12px;
   border-radius: 10px;
-  border: 2px solid #e2e8f0;
-  margin-bottom: 10px;
+  border: 1px solid #e2e8f0;
+  background: white;
+  cursor: pointer;
+  font-size: 12px;
+  color: #718096;
+  transition: all 0.2s ease;
+  font-weight: 500;
+}
+
+.filter-btn:hover {
+  background: #edf2f7;
+  border-color: #cbd5e0;
+}
+
+.filter-btn.active {
+  background: #4299e1;
+  color: white;
+  border-color: #4299e1;
 }
 
 /* LIST */
 .scroll {
-  max-height: 50vh;
+  flex: 1;
   overflow-y: auto;
+  margin-bottom: 12px;
 }
 
 /* ITEM */
@@ -388,85 +589,145 @@ function formatPrice(price: number) {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px;
-  border-radius: 10px;
-  transition: 0.2s;
+  padding: 16px;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+  margin-bottom: 12px;
+  background: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 2px solid transparent;
 }
 
 .item-card:hover {
-  background: rgba(102, 126, 234, 0.08);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-color: #4299e1;
 }
 
 .item-name {
   font-weight: 600;
+  font-size: 15px;
+  color: #2d3748;
 }
 
 .item-price {
   font-size: 13px;
   color: #718096;
+  margin-top: 4px;
 }
 
 /* CART */
 .cart-item {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 10px;
+  align-items: center;
+  padding: 16px;
+  margin-bottom: 12px;
+  background: white;
+  border-radius: 12px;
+  font-size: 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 2px solid transparent;
+  color: #2d3748;
 }
 
 /* FOOTER */
 .footer {
   margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid #e2e8f0;
 }
 
 .total {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: #718096;
 }
 
 .total strong {
-  color: #667eea;
+  color: #2b6cb0;
+  font-size: 16px;
+  font-weight: 600;
 }
 
 /* BUTTON */
 .btn {
   border: none;
-  border-radius: 10px;
-  padding: 6px 12px;
+  border-radius: 8px;
+  padding: 8px 14px;
   cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  font-weight: 500;
 }
 
 .btn.primary {
-  background: #667eea;
+  background: #4299e1;
   color: white;
+}
+
+.btn.primary:hover {
+  background: #3182ce;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .btn.success {
-  background: #38a169;
+  background: #48bb78;
   color: white;
 }
 
+.btn.success:hover {
+  background: #38a169;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
 .btn.small {
-  margin-left: 5px;
+  margin-left: 6px;
   background: #edf2f7;
+  padding: 6px 12px;
+  font-size: 13px;
+  border-radius: 6px;
+  color: #4a5568;
+}
+
+.btn.small:hover {
+  background: #e2e8f0;
 }
 
 .order-btn {
   width: 100%;
-  padding: 10px;
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  padding: 12px;
+  background: #4299e1;
   color: white;
   font-weight: 600;
+  font-size: 15px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
 }
+
+.order-btn:hover {
+  background: #3182ce;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
 .order-btn:disabled {
-  background: #686868;
-  color: white;
+  background: #cbd5e0;
+  color: #a0aec0;
   cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
 }
 
 /* EMPTY */
 .empty {
   text-align: center;
   color: #718096;
+  padding: 60px 20px;
+  font-size: 14px;
 }
 </style>
