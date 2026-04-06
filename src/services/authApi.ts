@@ -42,6 +42,10 @@ export type LoginData = {
     accessToken: string
     tokenType: string
     email: string
+    role: string
+    userId: number
+    fullName: string
+    username: string
 }
 
 async function postJson<T>(url: string, payload: unknown): Promise<T> {
@@ -72,4 +76,18 @@ export function callVerifyOtp(payload: VerifyOtpPayload) {
 
 export function callLogin(payload: LoginPayload) {
     return postJson<ApiResponse<LoginData>>('/api/auth/login', payload)
+}
+
+/**
+ * Customer login - ONLY for customers using EMAIL
+ */
+export function callCustomerLogin(payload: LoginPayload) {
+    return postJson<ApiResponse<LoginData>>('/api/auth/login/customer', payload)
+}
+
+/**
+ * Employee login - ONLY for employees using USERNAME
+ */
+export function callEmployeeLogin(payload: LoginPayload) {
+    return postJson<ApiResponse<LoginData>>('/api/auth/login/employee', payload)
 }

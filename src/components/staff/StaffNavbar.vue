@@ -20,7 +20,10 @@
       <div class="user-menu">
         <button class="user-btn" @click="toggleUserMenu">
           <div class="avatar">{{ userInitials }}</div>
-          <span class="user-name">{{ user.name }}</span>
+          <div class="user-info">
+            <span class="user-name">{{ user.name }}</span>
+            <span class="user-role">{{ roleLabel }} • @{{ user.username }}</span>
+          </div>
           <span class="dropdown-icon">▼</span>
         </button>
 
@@ -40,6 +43,39 @@ const showUserMenu = ref(false)
 
 const user = ref({
   name: localStorage.getItem('fullName') || 'Nhân viên',
+  username: localStorage.getItem('username') || '',
+  role: localStorage.getItem('userRole') || 'STAFF',
+})
+
+// Watch for changes in localStorage (when user logs in)
+const updateUserInfo = () => {
+  user.value = {
+    name: localStorage.getItem('fullName') || 'Nhân viên',
+    username: localStorage.getItem('username') || '',
+    role: localStorage.getItem('userRole') || 'STAFF',
+  }
+}
+
+// Listen for storage events (when localStorage changes)
+onMounted(() => {
+  updateUserInfo()
+  window.addEventListener('storage', updateUserInfo)
+  document.addEventListener('click', handleClickOutside)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('storage', updateUserInfo)
+  document.removeEventListener('click', handleClickOutside)
+})
+
+const roleLabel = computed(() => {
+  const roles: Record<string, string> = {
+    STAFF: 'Nhân viên phục vụ',
+    RECEPTION: 'Lễ tân',
+    KITCHEN: 'Nhà bếp',
+    ADMIN: 'Quản trị viên',
+  }
+  return roles[user.value.role] || user.value.role
 })
 
 const userInitials = computed(() => {
@@ -68,14 +104,6 @@ function handleClickOutside(e: MouseEvent) {
     showUserMenu.value = false
   }
 }
-
-onMounted(() => {
-  document.addEventListener('click', handleClickOutside)
-})
-
-onUnmounted(() => {
-  document.removeEventListener('click', handleClickOutside)
-})
 </script>
 
 <style scoped>
@@ -170,12 +198,28 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   font-weight: 600;
+  flex-shrink: 0;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
 }
 
 .user-name {
   font-size: 14px;
   font-weight: 600;
   color: #2d3748;
+  line-height: 1.2;
+}
+
+.user-role {
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748b;
+  line-height: 1.2;
 }
 
 .dropdown-icon {

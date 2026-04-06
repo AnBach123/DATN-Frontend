@@ -146,9 +146,6 @@
               <label>Số điện thoại *</label><input v-model="form.phoneNumber" type="text" />
             </div>
             <div class="form-group">
-              <label>Email *</label><input v-model="form.email" type="email" />
-            </div>
-            <div class="form-group">
               <label>Giới tính</label>
               <select v-model="form.gender">
                 <option value="">-- Chọn giới tính --</option>
@@ -454,7 +451,6 @@ const submitForm = () => {
     !form.value.fullName ||
     !form.value.username ||
     !form.value.phoneNumber ||
-    !form.value.email ||
     !form.value.role
   ) {
     alert('Vui lòng nhập đầy đủ thông tin')
@@ -466,12 +462,15 @@ const submitForm = () => {
 
 const handleConfirm = async () => {
   showConfirm.value = false
-  const payload = { ...form.value, password: '123' }
   try {
     if (confirmAction.value === 'edit' && form.value.id) {
-      await EmployeeService.updateEmployee(form.value.id, payload)
+      // When updating, don't send password field to avoid overwriting
+      const { password, ...updatePayload } = form.value
+      await EmployeeService.updateEmployee(form.value.id, updatePayload)
       alert('Cập nhật thành công')
     } else if (confirmAction.value === 'add') {
+      // When creating, always set default password
+      const payload = { ...form.value, password: '123' }
       await EmployeeService.createEmployee(payload)
       alert('Thêm thành công')
     }
@@ -487,7 +486,6 @@ const openDetailConfirm = () => {
     !form.value.fullName ||
     !form.value.username ||
     !form.value.phoneNumber ||
-    !form.value.email ||
     !form.value.role
   ) {
     alert('Vui lòng nhập đầy đủ thông tin')
@@ -499,9 +497,10 @@ const openDetailConfirm = () => {
 const handleDetailConfirm = async () => {
   showDetailConfirm.value = false
   if (!form.value.id) return
-  const payload = { ...form.value, password: '123' }
   try {
-    await EmployeeService.updateEmployee(form.value.id, payload)
+    // When updating from detail modal, don't send password field
+    const { password, ...updatePayload } = form.value
+    await EmployeeService.updateEmployee(form.value.id, updatePayload)
     alert('Cập nhật thành công')
     closeDetailModal()
     await loadEmployees()

@@ -2,6 +2,7 @@ import HomeView from '@/components/home/HomeView.vue'
 import MenuView from '@/views/menu/MenuView.vue'
 import MainLayout from '@/layout/MainLayout.vue'
 import LoginView from '@/views/auth/LoginView.vue'
+import EmployeeLoginView from '@/views/auth/EmployeeLoginView.vue'
 import OtpVerifyView from '@/views/auth/OtpVerifyView.vue'
 import RegisterView from '@/views/auth/RegisterView.vue'
 import ReservationSuccessView from '@/views/reservation/ReservationSuccessView.vue'
@@ -65,8 +66,17 @@ const router = createRouter({
       },
     },
 
-    { path: '/auth/login', name: 'login', component: LoginView },
-    { path: '/auth/register', name: 'register', component: RegisterView },
+    { 
+      path: '/auth/login', 
+      name: 'login', 
+      component: LoginView
+    },
+    { path: '/auth/employee-login', name: 'employee-login', component: EmployeeLoginView },
+    { 
+      path: '/auth/register', 
+      name: 'register', 
+      component: RegisterView
+    },
     { path: '/auth/verify-otp', name: 'verify-otp', component: OtpVerifyView },
 
     {
