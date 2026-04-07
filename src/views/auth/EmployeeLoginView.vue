@@ -23,6 +23,10 @@ async function onSubmit() {
             password: password.value,
         })
 
+        // Clear all old data first to avoid stale information
+        localStorage.clear()
+        
+        // Save new login data
         localStorage.setItem('accessToken', res.data.accessToken)
         localStorage.setItem('tokenType', res.data.tokenType)
         localStorage.setItem('email', res.data.email)

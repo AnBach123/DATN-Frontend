@@ -184,6 +184,7 @@
           >
             <div class="table-name">{{ table.name }}</div>
             <div class="table-capacity">{{ table.capacity }} người</div>
+            <div v-if="table.staffName" class="table-staff">👤 {{ table.staffName }}</div>
           </div>
         </div>
         <div class="table-legend">
@@ -392,8 +393,12 @@ const loadSavedState = () => {
 // Save state to localStorage
 const saveState = () => {
   localStorage.setItem('dashboard_period', selectedPeriod.value)
-  localStorage.setItem('dashboard_start_date', dateRange.value.start)
-  localStorage.setItem('dashboard_end_date', dateRange.value.end)
+  if (dateRange.value.start) {
+    localStorage.setItem('dashboard_start_date', dateRange.value.start)
+  }
+  if (dateRange.value.end) {
+    localStorage.setItem('dashboard_end_date', dateRange.value.end)
+  }
 }
 
 const stats = ref<DashboardStats>({
@@ -425,6 +430,8 @@ const totalTablePages = computed(() => {
 const revenueLabel = computed(() => {
   const start = dateRange.value.start
   const end = dateRange.value.end
+  if (!start || !end) return 'Doanh thu'
+  
   const today = new Date().toISOString().split('T')[0]
   
   if (selectedPeriod.value === 'today' && start === today && end === today) {
@@ -448,6 +455,8 @@ const revenueLabel = computed(() => {
 const invoiceLabel = computed(() => {
   const start = dateRange.value.start
   const end = dateRange.value.end
+  if (!start || !end) return 'Hóa đơn'
+  
   const today = new Date().toISOString().split('T')[0]
   
   if (selectedPeriod.value === 'today' && start === today && end === today) {
@@ -470,6 +479,8 @@ const invoiceLabel = computed(() => {
 const customerLabel = computed(() => {
   const start = dateRange.value.start
   const end = dateRange.value.end
+  if (!start || !end) return 'Khách hàng'
+  
   const today = new Date().toISOString().split('T')[0]
   
   if (selectedPeriod.value === 'today' && start === today && end === today) {
@@ -582,6 +593,7 @@ const applyDateRange = () => {
 const formatDateRange = computed(() => {
   const start = dateRange.value.start
   const end = dateRange.value.end
+  if (!start || !end) return '0 ngày'
   
   // Calculate actual days from dateRange
   const startDate = new Date(start)
@@ -1293,6 +1305,20 @@ const closeModal = () => {
   font-weight: 600;
   position: relative;
   z-index: 1;
+}
+
+.table-staff {
+  font-size: 11px;
+  color: #475569;
+  font-weight: 600;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  position: relative;
+  z-index: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .table-legend {

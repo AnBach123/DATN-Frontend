@@ -289,7 +289,7 @@ const reservedCount = computed(() =>
 );
 
 const overtimeCount = computed(() => 
-  tables.value.filter(t => t.status === 'OVERTIME' || (t.minutesSinceCheckIn !== null && t.minutesSinceCheckIn > 90)).length
+  tables.value.filter(t => t.status === 'OVERTIME' || (t.minutesSinceCheckIn !== null && t.minutesSinceCheckIn !== undefined && t.minutesSinceCheckIn > 90)).length
 );
 
 const filteredTables = computed(() => {

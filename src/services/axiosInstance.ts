@@ -24,6 +24,13 @@ axiosInstance.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
+    
+    // Gửi username trong header để định danh nhân viên khi security bị tắt
+    const username = localStorage.getItem('username')
+    if (username) {
+      config.headers['X-Employee-Username'] = username
+    }
+    
     return config
   },
   (error) => {
@@ -66,6 +73,28 @@ axiosInstance.interceptors.response.use(
 
       alert('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.')
     }
+
+    // Handle 403 Forbidden - User không có quyền truy cập
+    if (error.response?.status === 403) {
+      alert('Bạn không có quyền truy cập chức năng này.')
+      
+      // Redirect về trang phù hợp với role
+      const userRole = localStorage.getItem('userRole')
+      if (userRole === 'STAFF') {
+        router.push('/staff')
+      } else if (userRole === 'RECEPTION') {
+        router.push('/reception')
+      } else if (userRole === 'ADMIN') {
+        router.push('/admin')
+      } else if (userRole === 'KITCHEN') {
+        router.push('/kitchen')
+      } else if (userRole === 'USER') {
+        router.push('/home')
+      } else {
+        router.push('/')
+      }
+    }
+
     return Promise.reject(error)
   },
 )

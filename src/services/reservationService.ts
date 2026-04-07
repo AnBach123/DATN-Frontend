@@ -21,6 +21,8 @@ export interface ReservationInfo {
   note: string;
   foodNote: string;
   tables: TableInfo[];
+  guestName?: string;
+  guestPhone?: string;
 }
 
 export const reservationService = {

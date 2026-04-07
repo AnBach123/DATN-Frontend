@@ -2,23 +2,45 @@
   <div class="table-selection-container">
     <div class="container-fluid p-4">
       <div class="header-section">
-        <h2>Chọn bàn phục vụ</h2>
-        <p>Nhân viên: <strong>{{ staffName }}</strong></p>
+        <div class="header-top">
+          <div class="header-info">
+            <h2>Chọn bàn phục vụ</h2>
+            <p>Nhân viên: <strong>{{ staffName }}</strong></p>
+          </div>
+          <div class="filter-toggle">
+            <label class="toggle-container">
+              <input type="checkbox" v-model="showOnlyMyTables" />
+              <span class="toggle-slider"></span>
+              <span class="toggle-label">
+                Chỉ hiển thị bàn của tôi
+                <span v-if="showOnlyMyTables" class="badge">{{ myTablesCount }}</span>
+              </span>
+            </label>
+          </div>
+        </div>
       </div>
 
       <div v-if="loading" class="text-center">Đang tải...</div>
 
-      <div v-else-if="invoices.length === 0" class="empty-state">
-        <p>Không có bàn nào đang phục vụ</p>
+      <div v-else-if="filteredInvoices.length === 0" class="empty-state">
+        <p v-if="showOnlyMyTables">Bạn chưa có bàn nào. Chọn bàn chưa có ai phục vụ để bắt đầu.</p>
+        <p v-else>Không có bàn nào đang phục vụ</p>
       </div>
 
       <div v-else class="invoice-grid">
         <div
-          v-for="invoice in invoices"
+          v-for="invoice in filteredInvoices"
           :key="invoice.invoiceId"
           class="invoice-card"
+          :class="getInvoiceCardClass(invoice)"
           @click="selectInvoice(invoice)"
         >
+          <!-- SERVING STAFF INFO - Moved to top as ribbon for others' tables -->
+          <div v-if="isInvoiceDisabled(invoice)" class="staff-ribbon">
+            <i class="fas fa-user"></i>
+            <span>{{ invoice.servingStaffName }}</span>
+          </div>
+
           <div class="invoice-header">
             <div class="customer-name">{{ invoice.customerName }}</div>
             <div class="guest-count">{{ invoice.guestCount }} khách</div>
@@ -39,6 +61,18 @@
               <span class="area-badge">Khu vực {{ invoice.tables[0]?.area }}</span>
               <span class="separator">•</span>
               <span class="floor-info">Tầng {{ invoice.tables[0]?.floor }}</span>
+            </div>
+          </div>
+
+          <!-- SERVING STAFF INFO - For my tables and unclaimed -->
+          <div v-if="!isInvoiceDisabled(invoice)" class="serving-staff-section">
+            <div v-if="invoice.servingStaffName" class="serving-staff claimed">
+              <i class="fas fa-user-check"></i>
+              <span>{{ invoice.servingStaffName }}</span>
+            </div>
+            <div v-else class="serving-staff unclaimed">
+              <i class="fas fa-user-slash"></i>
+              <span>Chưa có staff phục vụ</span>
             </div>
           </div>
 
@@ -82,7 +116,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getInProgressInvoices, type InvoiceGroup } from '@/services/staffOrderApi'
 import { DashboardWebSocket } from '@/services/websocket/DashboardWebSocket'
@@ -95,9 +129,68 @@ const currentTime = ref(Date.now())
 let intervalId: number | null = null
 const showActionModal = ref(false)
 const selectedInvoice = ref<InvoiceGroup | null>(null)
+const currentStaffId = ref<number | null>(null)
+const showOnlyMyTables = ref(false) // Toggle filter state
 
 // WebSocket instance
 let wsClient: DashboardWebSocket | null = null
+
+// Get current staff ID from localStorage (saved during login)
+function getCurrentStaffId(): number | null {
+  try {
+    // Try to get from localStorage first (works when security is disabled)
+    const userIdStr = localStorage.getItem('userId')
+    if (userIdStr) {
+      const userId = parseInt(userIdStr, 10)
+      if (!isNaN(userId)) {
+        console.log('Got staff ID from localStorage:', userId)
+        return userId
+      }
+    }
+    
+    // Fallback: try to get from JWT token (when security is enabled)
+    const token = localStorage.getItem('accessToken')
+    if (!token) {
+      console.warn('No userId in localStorage and no token found')
+      return null
+    }
+    
+    const parts = token.split('.')
+    if (parts.length !== 3 || !parts[1]) return null
+    
+    // Decode JWT token to get staff ID
+    const payload = JSON.parse(atob(parts[1]))
+    const staffId = payload.employeeId || payload.id || null
+    console.log('Got staff ID from JWT:', staffId)
+    return staffId
+  } catch (error) {
+    console.error('Failed to get staff ID:', error)
+    return null
+  }
+}
+
+function isInvoiceDisabled(invoice: InvoiceGroup): boolean {
+  // Disable if invoice is claimed by another staff
+  console.log(`🔍 isInvoiceDisabled check for Invoice #${invoice.invoiceId}:`, {
+    servingStaffId: invoice.servingStaffId,
+    currentStaffId: currentStaffId.value,
+    isDisabled: invoice.servingStaffId && currentStaffId.value && invoice.servingStaffId !== currentStaffId.value
+  })
+  
+  if (!invoice.servingStaffId) return false
+  if (!currentStaffId.value) return false
+  return invoice.servingStaffId !== currentStaffId.value
+}
+
+function getInvoiceCardClass(invoice: InvoiceGroup): string {
+  if (isInvoiceDisabled(invoice)) {
+    return 'invoice-disabled'
+  }
+  if (invoice.servingStaffId === currentStaffId.value) {
+    return 'invoice-owned'
+  }
+  return 'invoice-unclaimed'
+}
 
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('vi-VN', {
@@ -125,14 +218,54 @@ function getElapsedTime(checkedInAt: string): string {
   }
 }
 
+// Computed property for filtered and sorted invoices
+const filteredInvoices = computed(() => {
+  let filtered = invoices.value
+  
+  if (showOnlyMyTables.value) {
+    // Show only my tables + unclaimed tables (Option 3)
+    filtered = invoices.value.filter(inv => {
+      const isMyTable = inv.servingStaffId === currentStaffId.value
+      const isUnclaimed = !inv.servingStaffId
+      return isMyTable || isUnclaimed
+    })
+  }
+  
+  // Sort: My tables → Unclaimed → Others' tables
+  return filtered.sort((a, b) => {
+    const aIsMine = a.servingStaffId === currentStaffId.value
+    const bIsMine = b.servingStaffId === currentStaffId.value
+    const aIsUnclaimed = !a.servingStaffId
+    const bIsUnclaimed = !b.servingStaffId
+    
+    // Priority: Mine (1) > Unclaimed (2) > Others (3)
+    const getPriority = (isMine: boolean, isUnclaimed: boolean) => {
+      if (isMine) return 1
+      if (isUnclaimed) return 2
+      return 3
+    }
+    
+    const aPriority = getPriority(aIsMine, aIsUnclaimed)
+    const bPriority = getPriority(bIsMine, bIsUnclaimed)
+    
+    return aPriority - bPriority
+  })
+})
+
+// Count for display
+const myTablesCount = computed(() => {
+  return invoices.value.filter(inv => inv.servingStaffId === currentStaffId.value).length
+})
+
 async function fetchInvoices() {
   try {
     loading.value = true
-    console.log('Fetching in-progress invoices...')
+    console.log('🔍 Fetching in-progress invoices...')
     invoices.value = await getInProgressInvoices()
-    console.log('Invoices loaded:', invoices.value)
+    console.log('📋 Invoices loaded:', invoices.value.length)
+    console.log('👤 Current staff ID:', currentStaffId.value)
   } catch (error) {
-    console.error('Load invoices error', error)
+    console.error('❌ Load invoices error', error)
     alert('Không thể tải danh sách hóa đơn')
   } finally {
     loading.value = false
@@ -140,6 +273,12 @@ async function fetchInvoices() {
 }
 
 function selectInvoice(invoice: InvoiceGroup) {
+  // Prevent selection if invoice is disabled
+  if (isInvoiceDisabled(invoice)) {
+    alert(`Bàn này đang được phục vụ bởi ${invoice.servingStaffName}. Vui lòng chọn bàn khác.`)
+    return
+  }
+  
   console.log('Selecting invoice:', invoice)
   selectedInvoice.value = invoice
   showActionModal.value = true
@@ -169,6 +308,10 @@ function goToViewItems() {
 }
 
 onMounted(() => {
+  // Get current staff ID
+  currentStaffId.value = getCurrentStaffId()
+  console.log('Current staff ID:', currentStaffId.value)
+  
   fetchInvoices()
   
   // Update time every second
@@ -177,7 +320,7 @@ onMounted(() => {
   }, 1000)
 
   // Initialize WebSocket
-  const token = localStorage.getItem('token') || ''
+  const token = localStorage.getItem('accessToken') || ''
   console.log('🔑 Token from localStorage:', token ? 'Found' : 'Not found (dev mode)')
   
   const wsUrl = import.meta.env.VITE_WS_URL || 'http://localhost:8080/ws'
@@ -232,17 +375,111 @@ onUnmounted(() => {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.header-section h2 {
+.header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+
+.header-info h2 {
   margin: 0 0 8px 0;
   color: #1a202c;
   font-size: 24px;
   font-weight: 600;
 }
 
-.header-section p {
+.header-info p {
   margin: 0;
   color: #718096;
   font-size: 14px;
+}
+
+/* Toggle Filter */
+.filter-toggle {
+  display: flex;
+  align-items: center;
+}
+
+.toggle-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.toggle-container input[type="checkbox"] {
+  display: none;
+}
+
+.toggle-slider {
+  position: relative;
+  width: 48px;
+  height: 26px;
+  background: #cbd5e0;
+  border-radius: 13px;
+  transition: background 0.3s ease;
+}
+
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  background: white;
+  border-radius: 50%;
+  transition: transform 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.toggle-container input[type="checkbox"]:checked + .toggle-slider {
+  background: #667eea;
+}
+
+.toggle-container input[type="checkbox"]:checked + .toggle-slider::before {
+  transform: translateX(22px);
+}
+
+.toggle-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #2d3748;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 8px;
+  background: #667eea;
+  color: white;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+@media (max-width: 768px) {
+  .header-top {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .filter-toggle {
+    width: 100%;
+  }
+  
+  .toggle-container {
+    width: 100%;
+    justify-content: space-between;
+  }
 }
 
 .empty-state {
@@ -267,12 +504,77 @@ onUnmounted(() => {
   transition: all 0.2s ease;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   border: 2px solid transparent;
+  position: relative;
 }
 
 .invoice-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   border-color: #4299e1;
+}
+
+.invoice-card.invoice-disabled {
+  opacity: 0.75;
+  cursor: not-allowed;
+  background: #f7fafc;
+  border-color: #e2e8f0;
+}
+
+.invoice-card.invoice-disabled:hover {
+  transform: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border-color: #e2e8f0;
+}
+
+.invoice-card.invoice-disabled .invoice-header {
+  background: linear-gradient(135deg, #a0aec0, #718096);
+}
+
+/* Staff Ribbon for others' tables */
+.staff-ribbon {
+  position: absolute;
+  top: 12px;
+  right: -8px;
+  background: linear-gradient(135deg, #fc8181, #f56565);
+  color: white;
+  padding: 6px 16px 6px 12px;
+  border-radius: 4px 0 0 4px;
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 2px 8px rgba(245, 101, 101, 0.4);
+  z-index: 10;
+}
+
+.staff-ribbon::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 100%;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 0 8px 8px 0;
+  border-color: transparent #c53030 transparent transparent;
+}
+
+.staff-ribbon i {
+  font-size: 11px;
+}
+
+.invoice-card.invoice-owned {
+  border-color: #48bb78;
+  background: #f0fff4;
+}
+
+.invoice-card.invoice-unclaimed {
+  border-color: #cbd5e0;
+}
+
+.invoice-card.invoice-unclaimed {
+  border-color: #cbd5e0;
 }
 
 .invoice-header {
@@ -337,6 +639,37 @@ onUnmounted(() => {
 
 .floor-info {
   color: #718096;
+}
+
+.serving-staff-section {
+  margin-bottom: 12px;
+  padding: 10px;
+  background: #f7fafc;
+  border-radius: 8px;
+}
+
+.serving-staff {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.serving-staff.claimed {
+  color: #2f855a;
+}
+
+.serving-staff.claimed i {
+  color: #48bb78;
+}
+
+.serving-staff.unclaimed {
+  color: #718096;
+}
+
+.serving-staff.unclaimed i {
+  color: #a0aec0;
 }
 
 .time-section {

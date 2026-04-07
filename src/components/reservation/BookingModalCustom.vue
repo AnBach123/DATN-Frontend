@@ -1,33 +1,43 @@
 <template>
-  <div v-if="isOpen" class="booking-overlay" @click.self="close">
+  <div v-if="isCustomOpen" class="booking-overlay" @click.self="closeCustom">
     <div class="booking-panel">
       <div class="booking-header">
-        <h3>Đặt bàn</h3>
-        <button class="icon-btn" @click="close">×</button>
+        <h3>Đặt bàn với thông tin khác</h3>
+        <button class="icon-btn" @click="closeCustom">×</button>
       </div>
 
       <form @submit.prevent="submitReservation">
-        <!-- Thông tin liên hệ - Hiển thị text -->
-        <div class="info-display">
-          <div class="info-header">
-            <span class="info-title">Thông tin liên hệ</span>
+        <!-- Thông tin liên hệ - Có thể chỉnh sửa -->
+        <div class="info-section">
+          <div class="section-header">
+            <span class="section-title">Thông tin liên hệ</span>
             <a 
               href="#" 
-              class="custom-link"
-              @click.prevent="openCustomForm"
+              class="back-link"
+              @click.prevent="backToMainForm"
             >
-              Nhập thông tin khác
+              Dùng thông tin tài khoản
             </a>
           </div>
-          <div class="info-content">
-            <div class="info-item">
-              <span class="info-label">Họ và tên:</span>
-              <span class="info-value">{{ userInfo.fullName }}</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">Số điện thoại:</span>
-              <span class="info-value">{{ userInfo.phoneNumber }}</span>
-            </div>
+          <div class="form-group">
+            <label>Họ và tên</label>
+            <input 
+              v-model="fullName" 
+              type="text" 
+              placeholder="Nhập họ và tên"
+              required 
+            />
+          </div>
+          <div class="form-group">
+            <label>Số điện thoại</label>
+            <input 
+              v-model="phone" 
+              type="tel" 
+              placeholder="Nhập số điện thoại"
+              :class="{ 'error-input': phoneError }"
+              required 
+            />
+            <span v-if="phoneError" class="text-danger">Số điện thoại phải có 10 chữ số</span>
           </div>
         </div>
 
@@ -102,8 +112,10 @@ import { createReservation } from '@/services/reservationApi'
 import { useBookingStore } from '@/composables/bookingStore'
 
 const router = useRouter()
-const { isOpen, presetNote, close, openCustom } = useBookingStore()
+const { isCustomOpen, presetNote, closeCustom, open } = useBookingStore()
 
+const fullName = ref('')
+const phone = ref('')
 const date = ref('')
 const time = ref('')
 const guestCount = ref<number | null>(null)
@@ -111,6 +123,7 @@ const promotionType = ref('')
 const customerNote = ref('')
 const foodNote = ref('')
 const msg = ref('')
+const phoneError = ref(false)
 const loadingSubmit = ref(false)
 
 const today = new Date().toISOString().split('T')[0]
@@ -121,30 +134,16 @@ const promotions = [
   'Đầy tiền không cần ưu đãi',
 ]
 
-// Lấy thông tin user từ localStorage
+// Lấy thông tin user từ localStorage để lấy customer_id
 const userInfo = computed(() => {
   try {
-    // Thử lấy từ object 'user' trước
-    const userStr = localStorage.getItem('user')
-    if (userStr) {
-      const user = JSON.parse(userStr)
-      return {
-        fullName: user.fullName || '',
-        phoneNumber: user.phoneNumber || ''
-      }
-    }
-    
-    // Fallback: lấy từ các key riêng lẻ
+    const user = JSON.parse(localStorage.getItem('user') || '{}')
     return {
-      fullName: localStorage.getItem('fullName') || '',
-      phoneNumber: localStorage.getItem('phoneNumber') || ''
+      fullName: user.fullName || '',
+      phoneNumber: user.phoneNumber || ''
     }
   } catch {
-    // Fallback: lấy từ các key riêng lẻ
-    return {
-      fullName: localStorage.getItem('fullName') || '',
-      phoneNumber: localStorage.getItem('phoneNumber') || ''
-    }
+    return { fullName: '', phoneNumber: '' }
   }
 })
 
@@ -187,26 +186,37 @@ const timeSlots = computed(() => {
   return slots
 })
 
+const validatePhone = () => /^[0-9]{10}$/.test(phone.value)
+
 const buildReservedAt = () => {
   if (!date.value || !time.value) return ''
   return `${date.value}T${time.value}`
 }
 
-const openCustomForm = () => {
-  close()
-  openCustom(foodNote.value)
+const backToMainForm = () => {
+  closeCustom()
+  open(foodNote.value)
 }
 
-watch(isOpen, (val) => {
+watch(isCustomOpen, (val) => {
   if (!val) return
   msg.value = ''
+  phoneError.value = false
   loadingSubmit.value = false
   customerNote.value = ''
   foodNote.value = presetNote.value || ''
+  fullName.value = ''
+  phone.value = ''
 })
 
 const submitReservation = async () => {
   msg.value = ''
+
+  if (!validatePhone()) {
+    phoneError.value = true
+    return
+  }
+  phoneError.value = false
 
   if (!guestCount.value || !date.value || !time.value) {
     msg.value = 'Vui lòng chọn ngày, giờ và số khách'
@@ -229,8 +239,8 @@ const submitReservation = async () => {
       note: customerNote.value,
       foodNote: foodNote.value,
       promotionType: promotionType.value,
-      guestName: null,
-      guestPhone: null,
+      guestName: fullName.value,
+      guestPhone: phone.value,
     }
 
     const res = await createReservation(payload)
@@ -240,7 +250,7 @@ const submitReservation = async () => {
       return
     }
     sessionStorage.setItem('reservationSuccess', JSON.stringify(data))
-    close()
+    closeCustom()
     router.push('/reservation/success')
   } catch (e: unknown) {
     const error = e as { response?: { data?: { message?: string } } }
@@ -294,6 +304,10 @@ const submitReservation = async () => {
   padding: 10px 12px;
 }
 
+.form-group input.error-input {
+  border-color: #dc3545;
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -337,27 +351,27 @@ const submitReservation = async () => {
   color: #666;
 }
 
-.info-display {
+.info-section {
   background: #f8f9fa;
   padding: 16px;
   border-radius: 12px;
   margin-bottom: 16px;
 }
 
-.info-header {
+.section-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 12px;
 }
 
-.info-title {
+.section-title {
   font-weight: 600;
   font-size: 0.95rem;
   color: #2a1f1a;
 }
 
-.custom-link {
+.back-link {
   color: #f0b66a;
   font-size: 0.875rem;
   text-decoration: none;
@@ -365,32 +379,9 @@ const submitReservation = async () => {
   transition: color 0.2s;
 }
 
-.custom-link:hover {
+.back-link:hover {
   color: #d89d4f;
   text-decoration: underline;
-}
-
-.info-content {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.info-item {
-  display: flex;
-  gap: 8px;
-}
-
-.info-label {
-  font-weight: 500;
-  color: #6c757d;
-  min-width: 110px;
-}
-
-.info-value {
-  color: #2a1f1a;
-  font-weight: 600;
-  font-size: 1rem;
 }
 
 .account-info {

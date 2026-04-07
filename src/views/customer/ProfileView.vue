@@ -534,6 +534,17 @@ const handleUpdate = async () => {
     if (res.accessToken) localStorage.setItem('accessToken', res.accessToken)
 
     await loadProfile()
+    
+    // Cập nhật localStorage với thông tin mới để form đặt bàn hiển thị đúng
+    const updatedUser = {
+      fullName: form.value.fullName,
+      phoneNumber: form.value.phoneNumber,
+      email: form.value.email,
+      dateOfBirth: form.value.dateOfBirth
+    }
+    localStorage.setItem('user', JSON.stringify(updatedUser))
+    localStorage.setItem('fullName', form.value.fullName)
+    localStorage.setItem('phoneNumber', form.value.phoneNumber)
   } catch (err: unknown) {
     if (axios.isAxiosError(err)) {
       alert(err.response?.data?.message || 'Lỗi')

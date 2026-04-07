@@ -205,6 +205,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import * as productApi from '@/services/admin/productApi'
+import axiosInstance from '@/services/axiosInstance'
 
 const products = ref<any[]>([])
 const loading = ref(false)

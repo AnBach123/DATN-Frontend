@@ -69,8 +69,8 @@
             :key="reservation.invoiceId"
             class="clickable-row"
           >
-            <td @click="showDetail(reservation)"><strong class="phone-number">{{ reservation.phoneNumber }}</strong></td>
-            <td @click="showDetail(reservation)">{{ reservation.fullName }}</td>
+            <td @click="showDetail(reservation)"><strong class="phone-number">{{ reservation.guestPhone || reservation.phoneNumber }}</strong></td>
+            <td @click="showDetail(reservation)">{{ reservation.guestName || reservation.fullName }}</td>
             <td @click="showDetail(reservation)">{{ formatDateTime(reservation.reservedAt) }}</td>
             <td @click="showDetail(reservation)">{{ reservation.guestCount }} người</td>
             <td @click="showDetail(reservation)">
@@ -133,8 +133,8 @@
             :key="reservation.invoiceId"
             class="clickable-row pending-row"
           >
-            <td @click="showDetail(reservation)"><strong class="phone-number">{{ reservation.phoneNumber }}</strong></td>
-            <td @click="showDetail(reservation)">{{ reservation.fullName }}</td>
+            <td @click="showDetail(reservation)"><strong class="phone-number">{{ reservation.guestPhone || reservation.phoneNumber }}</strong></td>
+            <td @click="showDetail(reservation)">{{ reservation.guestName || reservation.fullName }}</td>
             <td @click="showDetail(reservation)">{{ formatDateTime(reservation.reservedAt) }}</td>
             <td @click="showDetail(reservation)">{{ reservation.guestCount }} người</td>
             <td>
@@ -189,8 +189,8 @@
             :key="reservation.invoiceId"
             class="clickable-row"
           >
-            <td @click="showDetail(reservation)"><strong class="phone-number">{{ reservation.phoneNumber }}</strong></td>
-            <td @click="showDetail(reservation)">{{ reservation.fullName }}</td>
+            <td @click="showDetail(reservation)"><strong class="phone-number">{{ reservation.guestPhone || reservation.phoneNumber }}</strong></td>
+            <td @click="showDetail(reservation)">{{ reservation.guestName || reservation.fullName }}</td>
             <td @click="showDetail(reservation)">{{ formatDateTime(reservation.reservedAt) }}</td>
             <td @click="showDetail(reservation)">{{ reservation.guestCount }} người</td>
             <td @click="showDetail(reservation)">
@@ -242,11 +242,11 @@
             </div>
             <div class="detail-row">
               <span class="detail-label">Tên khách</span>
-              <span class="detail-value">{{ selectedReservation.fullName }}</span>
+              <span class="detail-value">{{ selectedReservation.guestName || selectedReservation.fullName }}</span>
             </div>
             <div class="detail-row">
               <span class="detail-label">Số điện thoại</span>
-              <span class="detail-value">{{ selectedReservation.phoneNumber }}</span>
+              <span class="detail-value">{{ selectedReservation.guestPhone || selectedReservation.phoneNumber }}</span>
             </div>
             <div class="detail-row">
               <span class="detail-label">Tổng khách</span>

@@ -2,6 +2,7 @@
 import Navbar from '@/components/Navbar.vue'
 import Footer from '@/components/Footer.vue'
 import BookingModal from '@/components/reservation/BookingModal.vue'
+import BookingModalCustom from '@/components/reservation/BookingModalCustom.vue'
 </script>
 
 <template>
@@ -13,5 +14,6 @@ import BookingModal from '@/components/reservation/BookingModal.vue'
 <Footer/>
 
 <BookingModal/>
+<BookingModalCustom/>
 
 </template>
