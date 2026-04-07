@@ -169,11 +169,30 @@ const staffName = 'Staff'
 
 const invoiceId = ref<number>(0)
 const invoiceInfo = ref<InvoiceGroup | null>(null)
+const currentStaffId = ref<number | null>(null)
 
 const tableNames = computed(() => {
   if (!invoiceInfo.value) return ''
   return invoiceInfo.value.tables.map(t => t.tableName).join(', ')
 })
+
+// Get current staff ID from JWT token or localStorage
+function getCurrentStaffId(): number | null {
+  try {
+    const token = localStorage.getItem('token')
+    if (!token) return null
+    
+    const parts = token.split('.')
+    if (parts.length !== 3 || !parts[1]) return null
+    
+    // Decode JWT token to get staff ID
+    const payload = JSON.parse(atob(parts[1]))
+    return payload.employeeId || payload.id || null
+  } catch (error) {
+    console.error('Failed to get staff ID from token:', error)
+    return null
+  }
+}
 
 /* SEARCH */
 
@@ -260,6 +279,15 @@ async function loadInvoiceInfo() {
     }
     
     console.log('Invoice info loaded:', invoiceInfo.value)
+    
+    // Check permission: if invoice is claimed by another staff, redirect
+    if (invoiceInfo.value.servingStaffId && 
+        currentStaffId.value && 
+        invoiceInfo.value.servingStaffId !== currentStaffId.value) {
+      alert(`Bàn này đang được phục vụ bởi ${invoiceInfo.value.servingStaffName}. Vui lòng chọn bàn khác.`)
+      router.push({ name: 'staff-tables' })
+      return
+    }
   } catch (error) {
     console.error('Load invoice error', error)
     alert('Không thể tải thông tin hóa đơn')
@@ -268,6 +296,10 @@ async function loadInvoiceInfo() {
 }
 
 onMounted(() => {
+  // Get current staff ID first
+  currentStaffId.value = getCurrentStaffId()
+  console.log('Current staff ID:', currentStaffId.value)
+  
   loadInvoiceInfo()
   fetchProducts()
   fetchCombos()
@@ -386,10 +418,23 @@ async function order() {
     alert('Order thành công')
     cart.value = []
   } catch (error: any) {
-    console.error(error)
+    console.error('Order error:', error)
 
+    const status = error?.response?.status
     const errorMsg = error?.response?.data?.message || 'Order thất bại'
-    alert(errorMsg)
+    
+    if (status === 403) {
+      // Table claimed by another staff
+      alert(`Bàn này đang được staff khác phục vụ. Vui lòng chọn bàn khác.\n\n${errorMsg}`)
+      router.push({ name: 'staff-tables' })
+    } else if (status === 404) {
+      // Table or invoice not found
+      alert('Không tìm thấy bàn hoặc hóa đơn. Vui lòng quay lại.')
+      router.push({ name: 'staff-tables' })
+    } else {
+      // Other errors
+      alert(errorMsg)
+    }
   }
 }
 

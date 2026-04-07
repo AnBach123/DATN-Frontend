@@ -56,6 +56,8 @@ export interface TableStatus {
   status: string
   minutesSinceCheckIn?: number | null
   reservedAt?: string | null
+  customerName?: string | null
+  staffName?: string | null
 }
 
 export interface TableDetail {

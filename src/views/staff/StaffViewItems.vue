@@ -104,26 +104,57 @@ function goBack() {
   router.push({ name: 'staff-table-selection' })
 }
 
+// Get current staff ID from localStorage
+function getCurrentStaffId(): number | null {
+  try {
+    const userIdStr = localStorage.getItem('userId')
+    if (userIdStr) {
+      const userId = parseInt(userIdStr, 10)
+      if (!isNaN(userId)) {
+        return userId
+      }
+    }
+    return null
+  } catch (error) {
+    console.error('Failed to get staff ID:', error)
+    return null
+  }
+}
+
 async function fetchInvoiceData() {
   try {
     loading.value = true
     const invoiceId = Number(route.params.invoiceId)
+    const currentStaffId = getCurrentStaffId()
+    
+    console.log('🔍 Fetching invoice data for invoiceId:', invoiceId)
+    console.log('👤 Current staff ID:', currentStaffId)
     
     // Get invoice info
     const invoices = await getInProgressInvoices()
     const foundInvoice = invoices.find(inv => inv.invoiceId === invoiceId)
     
-    if (foundInvoice) {
-      invoice.value = foundInvoice
-      
-      // Get invoice items
-      items.value = await getInvoiceItems(invoiceId)
-    } else {
+    if (!foundInvoice) {
       alert('Không tìm thấy hóa đơn')
       goBack()
+      return
     }
+    
+    // Check if this invoice belongs to current staff
+    if (currentStaffId && foundInvoice.servingStaffId && foundInvoice.servingStaffId !== currentStaffId) {
+      console.warn('❌ Access denied: Invoice belongs to another staff')
+      alert(`Bàn này đang được phục vụ bởi ${foundInvoice.servingStaffName}. Bạn không có quyền xem.`)
+      goBack()
+      return
+    }
+    
+    invoice.value = foundInvoice
+    
+    // Get invoice items
+    items.value = await getInvoiceItems(invoiceId)
+    console.log('✅ Invoice data loaded successfully')
   } catch (error) {
-    console.error('Load invoice error', error)
+    console.error('❌ Load invoice error', error)
     alert('Không thể tải thông tin hóa đơn')
   } finally {
     loading.value = false
