@@ -2,10 +2,13 @@
   <nav class="site-nav navbar navbar-expand-lg">
     <div class="container-fluid nav-shell">
       <RouterLink class="brand" to="/home">
-        <span class="brand-mark">ByHat</span>
-        <span class="brand-sub">Hotpot Restaurant</span>
-      </RouterLink>
+  <img :src="logo" class="brand-logo" />
 
+  <div class="brand-text">
+    <span class="brand-mark">ByHat</span><br>
+    <span class="brand-sub">Hotpot Restaurant</span>
+  </div>
+</RouterLink>
       <button
         class="navbar-toggler nav-toggle"
         type="button"
@@ -17,15 +20,17 @@
 
       <div class="collapse navbar-collapse nav-collapse" id="navbarNav">
         <ul class="nav-list ms-auto">
+
+          <li class="nav-item">
+  <RouterLink class="nav-link" to="/home">Trang chủ</RouterLink>
+</li>
           <li class="nav-item">
             <RouterLink class="nav-link" to="/menu">Thực đơn</RouterLink>
           </li>
           <li class="nav-item">
-            <RouterLink class="nav-link" to="/reviews">Đánh giá</RouterLink>
+            <RouterLink class="nav-link" to="/review">Đánh giá</RouterLink>
           </li>
-          <li class="nav-item">
-            <RouterLink class="nav-link" to="/contact">Liên hệ</RouterLink>
-          </li>
+        
         </ul>
 
         <div class="nav-actions">
@@ -60,6 +65,7 @@ import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useBookingStore } from '@/composables/bookingStore'
 import { getProfile } from '@/services/customer/profileApi' // ✅ THÊM
+import logo from '@/assets/logo.png'
 
 const { open: openBooking } = useBookingStore()
 const router = useRouter()
@@ -149,18 +155,19 @@ const handleClickOutside = (e: MouseEvent) => {
 
 .brand {
   display: flex;
-  flex-direction: column;
+  align-items: center;   /* 👈 căn giữa dọc */
+  gap: 14px;             /* 👈 khoảng cách logo - chữ */
   text-decoration: none;
   color: #fff;
 }
 
 .brand-mark {
   font-family: 'Playfair Display', serif;
-  font-size: 24px;
+  font-size: 28px;
 }
 
 .brand-sub {
-  font-size: 11px;
+  font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 3px;
   color: #f0b66a;
@@ -291,5 +298,16 @@ const handleClickOutside = (e: MouseEvent) => {
     opacity: 1;
     transform: translateY(0);
   }
+}
+.brand-logo {
+  width: 80px;       
+  height: 80px;
+  object-fit: contain;
+  border-radius: 50%;
+  background: white;
+  padding: 6px;
+
+  /* 👇 thêm cho đẹp */
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.25);
 }
 </style>

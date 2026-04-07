@@ -1,8 +1,9 @@
 ﻿<script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { getProducts } from '@/services/productApi'
 import { getVoucherCombos, getVoucherProducts } from '@/services/voucherApi'
 import { useBookingStore } from '@/composables/bookingStore'
+import { getReviews, createReview } from '@/services/reviewApi'
 
 interface Product {
   productId: number
@@ -21,28 +22,60 @@ interface Voucher {
 const products = ref<Product[]>([])
 const vouchers = ref<Voucher[]>([])
 const loading = ref(true)
+const visibleCount = ref(3)
 
-const reviews = ref([
-  {
-    id: 1,
-    name: 'Nguyễn Thị Hồng',
-    avatar: 'https://randomuser.me/api/portraits/women/65.jpg',
-    content:
-      'Thịt tươi, nước lẩu đậm vị. Tomyum chua cay rất ngon. Nhân viên phục vụ nhanh và nhiệt tình.',
-  },
-  {
-    id: 2,
-    name: 'Trần Minh Quân',
-    avatar: 'https://randomuser.me/api/portraits/men/32.jpg',
-    content: 'Không gian đẹp, món ăn lên nhanh. Lẩu hải sản ở đây cực kỳ ngon.',
-  },
-  {
-    id: 3,
-    name: 'Lê Thu Trang',
-    avatar: 'https://randomuser.me/api/portraits/women/44.jpg',
-    content: 'Giá hợp lý, đồ ăn sạch sẽ. Mình sẽ quay lại cùng bạn bè.',
-  },
-])
+interface Review {
+  id: number
+  name: string
+  rating: number
+  content: string
+  avatar?: string
+  createdAt?: string
+  visitType?: string
+  tip?: string
+}
+
+const reviews = ref<Review[]>([])
+const showForm = ref(false)
+const submitting = ref(false)
+const avgRating = computed(() => {
+  if (!reviews.value.length) return 0
+  const total = reviews.value.reduce((sum, r) => sum + r.rating, 0)
+  return total / reviews.value.length
+})
+
+const form = ref({
+  name: '',
+  rating: 5,
+  content: ''
+})
+
+const loadReviews = async () => {
+  try {
+    const res = await getReviews()
+    reviews.value = res.data
+  } catch (e) {
+    console.error(e)
+  }
+}
+
+const submitReview = async () => {
+  submitting.value = true
+  try {
+    await createReview(form.value)
+
+    alert('Gửi thành công! Chờ duyệt')
+
+    form.value = { name: '', rating: 5, content: '' }
+    showForm.value = false
+
+    await loadReviews()
+  } catch (e: any) {
+    alert(e.response?.data)
+  } finally {
+    submitting.value = false
+  }
+}
 
 const { open: openBooking } = useBookingStore()
 
@@ -51,7 +84,7 @@ const loadProducts = async () => {
     const data = await getProducts()
     products.value = data.slice(0, 4)
   } catch (error) {
-    // Error handled silently
+    // silent
   } finally {
     loading.value = false
   }
@@ -63,25 +96,65 @@ const loadVouchers = async () => {
     const product = (await getVoucherProducts()) || []
     vouchers.value = [...combo, ...product].slice(0, 3)
   } catch (error) {
-    // Error handled silently
+    // silent
   }
 }
 
 const getImage = (item: Product) => {
-  if (!item.imageUrl) {
-    return 'https://picsum.photos/400/300'
-  }
-
-  if (item.imageUrl.startsWith('http')) {
-    return item.imageUrl
-  }
-
+  if (!item.imageUrl) return 'https://picsum.photos/400/300'
+  if (item.imageUrl.startsWith('http')) return item.imageUrl
   return 'http://localhost:8080' + item.imageUrl
+}
+
+const getAvatar = (review: Review) => {
+  if (review.avatar) return review.avatar
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(review.name)}&background=8B1E1E&color=fff`
+}
+
+const averageRating = computed(() => {
+  if (!reviews.value.length) return 0
+  const total = reviews.value.reduce((sum, r) => sum + r.rating, 0)
+  return (total / reviews.value.length).toFixed(1)
+})
+
+const totalReviews = computed(() => reviews.value.length)
+const visibleReviews = computed(() => {
+  return reviews.value.slice(0, visibleCount.value)
+})
+
+const loadMore = () => {
+  if (visibleCount.value >= reviews.value.length) {
+    // 👉 Thu gọn lại
+    visibleCount.value = 3
+  } else {
+    // 👉 Xem thêm
+    visibleCount.value += 3
+  }
+}
+
+const ratingCount = (star: number) => {
+  return reviews.value.filter(r => r.rating === star).length
+}
+
+const ratingPercent = (star: number) => {
+  if (!reviews.value.length) return 0
+  return (ratingCount(star) / reviews.value.length) * 100
+}
+
+const formatDate = (date?: string) => {
+  if (!date) return 'Gần đây'
+  return new Date(date).toLocaleDateString('vi-VN')
+}
+
+// nếu backend chưa có visitType thì fake demo nhẹ cho đẹp
+const getVisitType = (review: Review) => {
+  return review.visitType || ['Bạn bè', 'Cặp đôi', 'Gia đình', 'Một mình'][review.id % 4]
 }
 
 onMounted(() => {
   loadProducts()
   loadVouchers()
+  loadReviews()
 })
 </script>
 
@@ -172,32 +245,194 @@ onMounted(() => {
       </div>
     </section>
 
-    <section class="review-section">
-      <div class="container text-center">
-        <h2 class="review-title">Ý KIẾN KHÁCH HÀNG</h2>
+   <section class="review-section">
+  <div class="container">
+    <div class="review-header text-center">
+      <p class="review-badge">Khách hàng nói gì về ByHat</p>
+      <h2 class="review-main-title">ĐÁNH GIÁ TỪ THỰC KHÁCH</h2>
+      <p class="review-subtitle">
+        Trải nghiệm thật – cảm nhận thật – hương vị thật
+      </p>
+    </div>
 
-        <div class="review-rating">
-          <div class="star">⭐</div>
-          <div class="score">4.9 / 5</div>
-          <p>1200+ đánh giá tích cực</p>
+    <!-- REVIEW SUMMARY -->
+    <div class="review-summary-box">
+      <div class="summary-left">
+        <div class="summary-score">{{ averageRating }}</div>
+        <div class="summary-label">Xuất sắc</div>
+
+        <div class="summary-stars">
+          <span v-for="i in 5" :key="i">●</span>
         </div>
 
-        <div class="row g-4 mt-4">
-          <div class="col-lg-4 col-md-6" v-for="item in reviews" :key="item.id">
-            <div class="review-card">
-              <img :src="item.avatar" class="avatar" />
-              <h5 class="review-name">{{ item.name }}</h5>
-              <p class="review-text">{{ item.content }}</p>
-            </div>
+        <div class="summary-total">({{ totalReviews }}) đánh giá</div>
+      </div>
+
+      <div class="summary-middle">
+        <div class="rating-row" v-for="star in [5,4,3,2,1]" :key="star">
+          <span class="rating-text">{{ star }} sao</span>
+          <div class="rating-bar">
+            <div class="rating-fill" :style="{ width: ratingPercent(star) + '%' }"></div>
+          </div>
+          <span class="rating-count">{{ ratingCount(star) }}</span>
+        </div>
+      </div>
+
+      <div class="summary-right">
+  <div class="category-score">
+    <span>Phục vụ</span>
+    <div class="mini-bar">
+      <div class="mini-fill" :style="{ width: avgRating * 20 + '%' }"></div>
+    </div>
+    <b>{{ avgRating.toFixed(1) }}</b>
+  </div>
+
+  <div class="category-score">
+    <span>Đặt bàn</span>
+    <div class="mini-bar">
+      <div class="mini-fill" :style="{ width: avgRating * 20 + '%' }"></div>
+    </div>
+    <b>{{ avgRating.toFixed(1) }}</b>
+  </div>
+
+  <div class="category-score">
+    <span>Thời gian chờ</span>
+    <div class="mini-bar">
+      <div class="mini-fill" :style="{ width: avgRating * 20 + '%' }"></div>
+    </div>
+    <b>{{ avgRating.toFixed(1) }}</b>
+  </div>
+
+  <div class="category-score">
+    <span>Trải nghiệm</span>
+    <div class="mini-bar">
+      <div class="mini-fill" :style="{ width: avgRating * 20 + '%' }"></div>
+    </div>
+    <b>{{ avgRating.toFixed(1) }}</b>
+  </div>
+</div>
+    </div>
+
+    <!-- CTA -->
+    <div class="review-top-actions">
+      <div class="tip-pill">
+        💡 Mẹo của người trong cuộc: Đi nhóm đông để thử được nhiều món hơn
+      </div>
+
+      <router-link to="/review" class="write-review-btn">
+        ✍️ Viết đánh giá
+      </router-link>
+    </div>
+
+    <!-- REVIEW LIST -->
+    <div class="review-list">
+      <div class="review-item" v-for="item in visibleReviews" :key="item.id">
+        <div class="review-user">
+          <img :src="getAvatar(item)" alt="avatar" class="review-avatar" />
+
+          <div class="review-user-info">
+            <h5>{{ item.name }}</h5>
+            <p>1 đóng góp</p>
           </div>
         </div>
 
-        <div class="review-action">
-          <p>Hôm nay bạn thấy món nào ngon nhất? Cùng chia sẻ nhé!</p>
-          <button class="review-btn">VIẾT ĐÁNH GIÁ CỦA BẠN!</button>
+       <div class="review-stars-line">
+  <span 
+    v-for="i in 5" 
+    :key="i" 
+    class="star"
+    :class="{ active: i <= item.rating }"
+  >
+    ★
+  </span>
+</div>
+
+        <div class="review-meta">
+          {{ formatDate(item.createdAt) }} • {{ getVisitType(item) }}
+        </div>
+
+        <p class="review-content">
+          {{ item.content }}
+        </p>
+
+        <div class="review-tip" v-if="item.tip">
+          <span>💡 Mẹo của người trong cuộc:</span>
+          {{ item.tip }}
+        </div>
+
+        <div class="review-tags">
+          <div class="tag-score">
+            <span>Giá trị</span>
+            <div class="tag-dots">
+              <span 
+  v-for="i in 5" 
+  :key="'value' + i" 
+  class="star small"
+  :class="{ active: i <= item.rating }"
+>
+  ★
+</span>
+            </div>
+          </div>
+
+          <div class="tag-score">
+            <span>Dịch vụ</span>
+            <div class="tag-dots">
+             <span 
+  v-for="i in 5" 
+  :key="'value' + i" 
+  class="star small"
+  :class="{ active: i <= item.rating }"
+>
+  ★
+</span>
+            </div>
+          </div>
+
+          <div class="tag-score">
+            <span>Đồ ăn</span>
+            <div class="tag-dots">
+             <span 
+  v-for="i in 5" 
+  :key="'value' + i" 
+  class="star small"
+  :class="{ active: i <= item.rating }"
+>
+  ★
+</span>
+            </div>
+          </div>
+
+          <div class="tag-score">
+            <span>Không gian</span>
+            <div class="tag-dots">
+             <span 
+  v-for="i in 5" 
+  :key="'value' + i" 
+  class="star small"
+  :class="{ active: i <= item.rating }"
+>
+  ★
+</span>
+            </div>
+          </div>
         </div>
       </div>
-    </section>
+    </div>
+     <div class="text-center mt-4" v-if="reviews.length > 3">
+  <button class="btn-show-more" @click="loadMore">
+    {{ visibleCount >= reviews.length ? 'Thu gọn' : 'Xem thêm đánh giá' }}
+  </button>
+</div>
+
+    <div class="review-footer-action text-center">
+      <p>Hôm nay bạn thấy món nào ngon nhất? Cùng chia sẻ trải nghiệm nhé!</p>
+      <router-link to="/review" class="review-btn">
+        VIẾT ĐÁNH GIÁ CỦA BẠN
+      </router-link>
+    </div>
+  </div>
+</section>
   </div>
 </template>
 
@@ -396,5 +631,409 @@ onMounted(() => {
   background: white;
   transform: translateY(-1px);
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.18);
+}
+
+.review-section {
+  padding: 90px 0;
+  background: linear-gradient(180deg, rgba(255, 248, 243, 0.06), rgba(255, 255, 255, 0.03));
+}
+
+.review-header {
+  margin-bottom: 40px;
+}
+
+.review-badge {
+  display: inline-block;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: rgba(255, 244, 230, 0.14);
+  color: #ffe4c2;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 14px;
+  margin-bottom: 14px;
+}
+
+.review-main-title {
+  color: #fff;
+  font-family: 'Playfair Display', serif;
+  font-size: 38px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.review-subtitle {
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 16px;
+}
+
+/* SUMMARY */
+.review-summary-box {
+  display: grid;
+  grid-template-columns: 260px 1fr 1fr;
+  gap: 28px;
+  background: #fdf8f3;
+  border-radius: 28px;
+  padding: 36px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.18);
+  margin-bottom: 28px;
+}
+
+.summary-left {
+  text-align: center;
+  border-right: 1px solid rgba(0, 0, 0, 0.08);
+  padding-right: 20px;
+}
+
+.summary-score {
+  font-size: 68px;
+  font-weight: 800;
+  color: #153b28;
+  line-height: 1;
+}
+
+.summary-label {
+  font-size: 28px;
+  font-weight: 700;
+  color: #153b28;
+  margin-top: 6px;
+}
+
+.summary-stars {
+  margin: 18px 0 8px;
+  color: #ffc107;
+  font-size: 24px;
+  letter-spacing: 4px;
+  text-shadow: 0 2px 6px rgba(255, 193, 7, 0.5);
+}
+.summary-total {
+  color: #555;
+  font-size: 15px;
+}
+
+.summary-middle {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 14px;
+}
+
+.rating-row {
+  display: grid;
+  grid-template-columns: 56px 1fr 50px;
+  align-items: center;
+  gap: 12px;
+}
+
+.rating-text {
+  font-weight: 600;
+  color: #333;
+}
+
+.rating-bar {
+  height: 12px;
+  border-radius: 999px;
+  background: #e6e6e6;
+  overflow: hidden;
+}
+
+.rating-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ffd700, #ffb300);
+}
+
+.rating-count {
+  font-weight: 700;
+  color: #333;
+  text-align: right;
+}
+
+.summary-right {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px 28px;
+  align-content: center;
+}
+
+.category-score {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.category-score span {
+  font-weight: 700;
+  color: #183c2b;
+}
+
+.mini-bar {
+  height: 14px;
+  border-radius: 999px;
+  background: #ececec;
+  overflow: hidden;
+}
+
+.mini-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ffd700, #ffb300);
+}
+.category-score b {
+  color: #183c2b;
+  font-size: 16px;
+}
+
+/* TOP ACTION */
+.review-top-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 30px;
+  flex-wrap: wrap;
+}
+
+.tip-pill {
+  background: rgba(255, 248, 238, 0.95);
+  color: #3b2c1e;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  padding: 14px 18px;
+  border-radius: 999px;
+  font-weight: 600;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+}
+
+.write-review-btn {
+  background: #153b28;
+  color: #fff;
+  text-decoration: none;
+  padding: 14px 24px;
+  border-radius: 999px;
+  font-weight: 700;
+  transition: 0.25s;
+}
+
+.write-review-btn:hover {
+  transform: translateY(-2px);
+  background: #0f2d1f;
+  color: white;
+}
+
+/* REVIEW LIST */
+.review-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.review-item {
+  background: #fffdf9;
+  border-radius: 18px;
+  padding: 18px;
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.12);
+  transition: 0.3s;
+}
+
+.review-item:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.16);
+   border: 1px solid rgba(255, 193, 7, 0.3); 
+}
+
+.review-user {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.review-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #f1e5d6;
+}
+
+.review-user-info h5 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+  color: #153b28;
+}
+
+.review-user-info p {
+  margin: 2px 0 0;
+  color: #666;
+  font-size: 14px;
+}
+
+.review-stars-line {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.star {
+  font-size: 16px;
+  color: #dcdcdc;
+  transition: 0.2s;
+}
+
+.star.active {
+  color: #ffc107;
+  text-shadow: 0 2px 6px rgba(255, 193, 7, 0.6);
+}
+.review-meta {
+  color: #4e4e4e;
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.review-content {
+  font-size: 15px;
+  line-height: 1.6;
+  color: #2b2b2b;
+  margin-bottom: 20px;
+}
+
+.review-tip {
+  background: #f7f4ef;
+  border: 1px solid #d8d2c8;
+  border-radius: 16px;
+  padding: 16px 18px;
+  color: #333;
+  font-size: 15px;
+  margin-bottom: 24px;
+}
+
+.review-tip span {
+  font-weight: 800;
+  color: #153b28;
+  margin-right: 8px;
+}
+
+.review-tags {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+  margin-top: 12px;
+}
+
+.tag-score span {
+  font-size: 13px;
+}
+
+.tag-dots i,
+.star.small {
+  font-size: 13px;
+}
+
+.tag-dots {
+  display: flex;
+  gap: 6px;
+}
+
+.tag-dots i {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #d9d9d9;
+  display: inline-block;
+}
+
+.tag-dots i.active {
+  background: linear-gradient(135deg, #ffd700, #ffb300);
+}
+
+/* FOOTER */
+.review-footer-action {
+  margin-top: 40px;
+}
+
+.review-footer-action p {
+  color: #fff;
+  font-size: 17px;
+  margin-bottom: 14px;
+}
+
+.review-btn {
+  display: inline-block;
+  background: #f1e7d0;
+  color: #8b1111;
+  text-decoration: none;
+  padding: 12px 28px;
+  border-radius: 999px;
+  font-weight: 700;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.review-btn:hover {
+  background: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 12px 22px rgba(0, 0, 0, 0.16);
+  color: #8b1111;
+}
+
+/* RESPONSIVE */
+@media (max-width: 992px) {
+  .review-summary-box {
+    grid-template-columns: 1fr;
+  }
+
+  .summary-left {
+    border-right: none;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    padding-right: 0;
+    padding-bottom: 24px;
+  }
+
+  .summary-right {
+    grid-template-columns: 1fr;
+  }
+
+  .review-tags {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 576px) {
+  .review-main-title {
+    font-size: 28px;
+  }
+
+  .summary-score {
+    font-size: 54px;
+  }
+
+
+  .review-content {
+    font-size: 16px;
+  }
+
+  .review-tags {
+    grid-template-columns: 1fr;
+  }
+
+  .tip-pill {
+    border-radius: 18px;
+  }
+}
+.btn-show-more {
+  background: linear-gradient(135deg, #f7c782, #f2b565);
+  border: none;
+  padding: 10px 22px;
+  border-radius: 999px;
+  font-weight: 700;
+  color: #3a1f12;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.btn-show-more:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+}
+.review-item {
+  border: 1px solid rgba(0,0,0,0.05);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.08);
 }
 </style>

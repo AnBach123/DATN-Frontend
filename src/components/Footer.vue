@@ -2,7 +2,9 @@
   <footer class="site-footer">
     <div class="footer-inner">
       <div class="brand-block">
-        <div class="brand-circle">ByHat</div>
+       <div class="brand-circle">
+  <img :src="logo" class="footer-logo" />
+</div>
         <p class="brand-tagline">Tinh hoa lẩu Việt, ấm vị bên bạn</p>
       </div>
 
@@ -43,7 +45,9 @@
   </footer>
 </template>
 
-<script setup lang="ts"></script>
+<script setup lang="ts">
+import logo from '@/assets/logo.png'
+</script>
 
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&family=Playfair+Display:wght@600;700&display=swap');
@@ -79,13 +83,11 @@
   width: 90px;
   height: 90px;
   border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.6);
+  background: white; /* 👈 cho nổi logo */
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: 'Playfair Display', serif;
-  font-size: 18px;
-  letter-spacing: 1px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
 }
 
 .brand-tagline {
@@ -152,5 +154,10 @@
   .footer-inner {
     padding: 0 20px;
   }
+}
+.footer-logo {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
 }
 </style>

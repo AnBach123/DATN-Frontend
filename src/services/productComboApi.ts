@@ -10,6 +10,7 @@ export interface ProductComboResponse {
   isActive: boolean
   createdAt: string
   updatedAt: string
+  
 }
 
 /**
@@ -19,7 +20,7 @@ export const getAllProductCombos = async (): Promise<ProductComboResponse[]> => 
   try {
     const res = await axiosInstance.get(API_URL)
 
-    return res.data.data || []
+    return res.data?.data ?? res.data ?? []
   } catch (error) {
     console.error('Load combo lỗi:', error)
 

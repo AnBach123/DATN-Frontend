@@ -29,6 +29,8 @@ import ProfileView from '@/views/customer/ProfileView.vue'
 import VoucherView from '@/views/admin/VoucherView.vue'
 import CustomerView from '@/views/admin/CustomerView.vue'
 import ProductView from '@/views/admin/ProductView.vue'
+import ReviewPage from '@/views/reviews/ReviewPage.vue'
+import ReviewView from '@/views/admin/ReviewView.vue'
 
 // Route guard helper
 function checkRole(allowedRoles: string[]) {
@@ -87,6 +89,8 @@ const router = createRouter({
         { path: 'home', name: 'home', component: HomeView },
         { path: 'menu', name: 'menu', component: MenuView },
         { path: 'profile', name: 'profile', component: ProfileView },
+        
+      { path: 'review', name: 'review', component: ReviewPage }, 
       ],
     },
 
@@ -155,6 +159,11 @@ const router = createRouter({
       name: 'admin-vouchers',
       component: VoucherView,
     },
+    {
+  path: 'reviews',
+  name: 'admin-reviews',
+  component: ReviewView,
+},
     {
       path: '',
       redirect: '/admin/dashboard',

@@ -24,27 +24,58 @@
 
     <section class="menu-list container">
       <div v-if="loading" class="text-center text-white">Đang tải món ăn...</div>
-      <div v-else-if="filteredProducts.length === 0" class="text-center text-white">
-        Chưa có sản phẩm
-      </div>
-      <div v-else class="menu-grid">
-        <div class="menu-card" v-for="item in filteredProducts" :key="item.id">
-          <img
-            class="menu-img"
-            :src="getImage(item)"
-            @error="onImgError"
-            alt="food"
-          />
-          <div class="menu-info">
-            <h3>{{ item.productName }}</h3>
-            <p>{{ item.description || 'Món ăn đặc biệt của ByHat' }}</p>
-            <div class="menu-bottom">
-              <span class="price">{{ formatPrice(item.unitPrice) }}</span>
-              <button class="btn-add" @click="addItem(item)">+ Đặt</button>
-            </div>
-          </div>
+      <div v-else-if="filteredProducts.length === 0 && activeCategory !== 'COMBO'">
+  Chưa có sản phẩm
+</div>
+<!-- COMBO -->
+<div v-if="(activeCategory === 'COMBO' || activeCategory === 'ALL') && combos.length > 0">
+  <h2 class="section-title">Combo</h2>
+
+  <div class="menu-grid">
+    <div class="menu-card" v-for="c in combos" :key="c.id"
+     @click="openDetail(c, 'combo')">
+      <img
+  class="menu-img"
+  :src="c.imageUrl || 'https://picsum.photos/400/300'"
+  @error="onImgError"
+/>
+
+      <div class="menu-info">
+        <h3>{{ c.comboName }}</h3>
+
+        <div class="menu-bottom">
+          <span class="price">{{ formatPrice(c.comboPrice) }}</span>
+          <button class="btn-add" @click="addCombo(c)">+ Đặt</button>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- MÓN ĂN -->
+<div v-if="activeCategory !== 'COMBO' && filteredProducts.length > 0">
+  <h2 class="section-title">Món ăn</h2>
+
+ <div class="menu-grid product-grid">
+    <div class="menu-card" v-for="item in filteredProducts" :key="item.id"
+     @click="openDetail(item, 'product')">
+      <img
+        class="menu-img"
+        :src="getImage(item)"
+        @error="onImgError"
+      />
+
+      <div class="menu-info">
+        <h3>{{ item.productName }}</h3>
+
+        <div class="menu-bottom">
+          <span class="price">{{ formatPrice(item.unitPrice) }}</span>
+          <button class="btn-add" @click="addItem(item)">+ Đặt</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
     </section>
 
     <button class="mini-cart" v-if="totalQty > 0" @click="openCart = true">
@@ -99,12 +130,74 @@
       </div>
     </div>
   </div>
+  <div v-if="openDetailModal" class="cart-overlay" @click.self="openDetailModal = false">
+  <div class="detail-modal">
+
+    <!-- ẢNH -->
+    <img
+      class="detail-img"
+      :src="
+  detailType === 'combo'
+    ? (selectedItem.imageUrl || 'https://picsum.photos/600/300')
+    : getImage(selectedItem)
+"
+    />
+
+    <!-- CONTENT -->
+    <div class="detail-content">
+
+      <!-- HEADER -->
+      <div class="detail-header">
+        <h2>
+          {{ detailType === 'combo'
+            ? selectedItem.comboName
+            : selectedItem.productName }}
+        </h2>
+        <button class="icon-btn" @click="openDetailModal = false">×</button>
+      </div>
+
+      <!-- GIÁ -->
+      <div class="detail-price">
+        {{ detailType === 'combo'
+          ? formatPrice(selectedItem.comboPrice)
+          : formatPrice(selectedItem.unitPrice) }}
+      </div>
+
+      <!-- MÔ TẢ -->
+      <div class="detail-desc">
+        <p
+          v-for="line in (selectedItem.description || 'Chưa có mô tả').split('\n')"
+          :key="line"
+        >
+          {{ line }}
+        </p>
+      </div>
+
+      <!-- BUTTON -->
+      <div class="detail-footer">
+        <button
+          class="btn-primary"
+          @click="
+            detailType === 'combo'
+              ? addCombo(selectedItem)
+              : addItem(selectedItem)
+          "
+        >
+            + Đặt
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { getProducts } from '@/services/productApi'
 import { useBookingStore } from '@/composables/bookingStore'
+import { getAllProductCombos } from '@/services/productComboApi'
+import { getPrimaryComboImage } from '@/services/imageApi'
 
 interface Product {
   id: number
@@ -114,6 +207,15 @@ interface Product {
   imageUrl?: string | null
   productCategory?: string
 }
+interface Combo {
+  id: number
+  comboName: string
+  description?: string
+  comboPrice: number
+  imageUrl?: string | null
+}
+
+const combos = ref<Combo[]>([])
 
 const { open: openBookingModal } = useBookingStore()
 
@@ -121,9 +223,23 @@ const products = ref<Product[]>([])
 const loading = ref(true)
 
 const activeCategory = ref('ALL')
-const categories = ref([{ key: 'ALL', label: 'Tất cả' }])
+const categories = ref([
+  { key: 'ALL', label: 'Tất cả' },
+  { key: 'COMBO', label: 'Combo' }
+])
+
+const selectedItem = ref<any>(null)
+const detailType = ref<'product' | 'combo' | null>(null)
+const openDetailModal = ref(false)
+
+const openDetail = (item: any, type: 'product' | 'combo') => {
+  selectedItem.value = item
+  detailType.value = type
+  openDetailModal.value = true
+}
 
 const filteredProducts = computed(() => {
+  if (activeCategory.value === 'COMBO') return []
   if (activeCategory.value === 'ALL') return products.value
   return products.value.filter((p) => p.productCategory === activeCategory.value)
 })
@@ -150,6 +266,15 @@ const addItem = (product: Product) => {
   } else {
     cart.value[product.id] = { product, qty: 1 }
   }
+}
+const addCombo = (combo: Combo) => {
+  const fakeProduct = {
+    id: combo.id + 100000,
+    productName: combo.comboName,
+    unitPrice: combo.comboPrice,
+  }
+
+  addItem(fakeProduct as any)
 }
 
 const increase = (id: number) => {
@@ -182,8 +307,10 @@ const openBooking = () => {
   openCart.value = false
   openBookingModal(buildFoodNote())
 }
-
-const formatPrice = (value: number) => value.toLocaleString('vi-VN') + ' đ'
+const formatPrice = (value: number | null | undefined) => {
+  if (!value) return '0 đ'
+  return value.toLocaleString('vi-VN') + ' đ'
+}
 
 const CATEGORY_LABELS: Record<string, string> = {
   RAW_FOOD: 'Món sống',
@@ -209,9 +336,42 @@ const buildCategories = (items: Product[]) => {
     key,
     label: formatCategoryLabel(key),
   }))
-  categories.value = [{ key: 'ALL', label: 'Tất cả' }, ...mapped]
+  categories.value = [
+  { key: 'ALL', label: 'Tất cả' },
+  { key: 'COMBO', label: 'Combo' }, // 👈 THÊM DÒNG NÀY
+  ...mapped
+]
 }
 
+const loadComboImages = async (comboData:any[]) => {
+
+  return Promise.all(
+
+    comboData.map(async (c) => {
+
+      try{
+
+        const img = await getPrimaryComboImage(c.id)
+
+        return {
+          ...c,
+          imageUrl: img?.imageUrl
+        }
+
+      }catch{
+
+        return {
+          ...c,
+          imageUrl: null
+        }
+
+      }
+
+    })
+
+  )
+
+}
 const getImage = (item: Product) => {
   if (!item.imageUrl) return 'https://picsum.photos/400/300'
   if (item.imageUrl.startsWith('http')) return item.imageUrl
@@ -222,21 +382,28 @@ const onImgError = (e: Event) => {
   const target = e.target as HTMLImageElement
   target.src = 'https://picsum.photos/400/300'
 }
-
 onMounted(async () => {
   try {
-    const data = await getProducts()
-    products.value = data.map((p: any) => ({
-      id: p.id ?? p.productId,
-      productName: p.productName,
-      description: p.description,
-      unitPrice: p.unitPrice,
-      imageUrl: p.imageUrl,
-      productCategory: p.productCategory,
-    }))
+    const [productData, comboData] = await Promise.all([
+      getProducts(),
+      getAllProductCombos()
+
+      
+    ])
+
+combos.value = await loadComboImages(comboData)
+
+products.value = productData.map((p: any) => ({
+  id: p.id ?? p.productId,
+  productName: p.productName,
+  description: p.description,
+  unitPrice: p.unitPrice,
+  imageUrl: p.imageUrl,
+  productCategory: p.productCategory,
+}))
+      
     buildCategories(products.value)
   } catch (error) {
-    // Error handled silently
   } finally {
     loading.value = false
   }
@@ -359,6 +526,7 @@ onMounted(async () => {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 24px;
+   margin-bottom: 40px; 
 }
 
 .menu-card {
@@ -568,5 +736,164 @@ onMounted(async () => {
 
 .empty-cart {
   color: #6b5f57;
+}
+.section-title {
+  font-size: 28px;        /* to hơn */
+  font-weight: 800;       /* đậm hơn */
+  text-align: center;     /* căn giữa */
+  margin: 50px 0 24px;    /* cách trên dưới đẹp hơn */
+  color: #fff;            /* nổi trên nền đỏ */
+  letter-spacing: 1px;    /* nhìn sang hơn */
+}
+.section-title {
+  font-size: 30px;
+  font-weight: 800;
+  text-align: center;
+  margin: 60px 0 30px;
+  color: #f0b66a;              /* màu vàng nổi */
+  text-transform: uppercase;   /* chữ hoa */
+  position: relative;
+}
+
+.section-title::after {
+  content: "";
+  display: block;
+  width: 60px;
+  height: 3px;
+  background: #f0b66a;
+  margin: 10px auto 0;
+  border-radius: 2px;
+}
+
+/* GRID MÓN NHỎ LẠI */
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr); /* 👈 4 món mỗi hàng */
+  gap: 24px;
+}
+
+
+/* CARD MÓN DẠNG NGANG */
+.product-grid .menu-card {
+  aspect-ratio: 1 / 1;   /* 👈 giữ hình vuông */
+  display: flex;
+  flex-direction: column;
+}
+.product-grid .price {
+  font-size: 16px;
+}
+
+/* ẢNH NHỎ LẠI */
+.product-grid .menu-img {
+  width: 100%;
+  height: 65%;
+  object-fit: cover;
+}
+
+/* INFO GỌN LẠI */
+.product-grid .menu-info {
+  padding: 12px;
+  height: 35%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.product-grid .menu-info h3 {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+/* MÔ TẢ NHỎ */
+.product-grid .menu-info p {
+  font-size: 12px;
+  color: #666;
+}
+
+.product-grid .menu-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.product-grid .btn-add {
+  padding: 6px 12px;
+  font-size: 13px;
+}
+.desc {
+  white-space: pre-line;
+  line-height: 1.6;
+}
+/* MODAL BOX */
+.detail-modal {
+  width: min(600px, 95vw);
+  background: #fff;
+  border-radius: 20px;
+  overflow: hidden;
+  animation: fadeIn 0.25s ease;
+}
+
+/* ẢNH */
+.detail-img {
+  width: 100%;
+  height: 320px;   /* từ 220 → 320 */
+  object-fit: cover;
+}
+/* CONTENT */
+.detail-content {
+  padding: 16px;
+}
+
+/* HEADER */
+.detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* GIÁ */
+.detail-price {
+  color: #b1120a;
+  font-weight: 700;
+  font-size: 18px;
+  margin: 8px 0;
+}
+
+/* MÔ TẢ */
+.detail-desc {
+  margin-top: 10px;
+  white-space: pre-line;
+  line-height: 1.6;
+  color: #444;
+}
+
+/* BUTTON */
+.detail-footer {
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* ANIMATION */
+@keyframes fadeIn {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+@media (max-width: 1024px) {
+  .product-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .product-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 </style>
