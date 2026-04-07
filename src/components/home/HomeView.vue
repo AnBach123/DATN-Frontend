@@ -119,18 +119,8 @@ const averageRating = computed(() => {
 
 const totalReviews = computed(() => reviews.value.length)
 const visibleReviews = computed(() => {
-  return reviews.value.slice(0, visibleCount.value)
+  return reviews.value.slice(0, 3)
 })
-
-const loadMore = () => {
-  if (visibleCount.value >= reviews.value.length) {
-    // 👉 Thu gọn lại
-    visibleCount.value = 3
-  } else {
-    // 👉 Xem thêm
-    visibleCount.value += 3
-  }
-}
 
 const ratingCount = (star: number) => {
   return reviews.value.filter(r => r.rating === star).length
@@ -313,17 +303,6 @@ onMounted(() => {
 </div>
     </div>
 
-    <!-- CTA -->
-    <div class="review-top-actions">
-      <div class="tip-pill">
-        💡 Mẹo của người trong cuộc: Đi nhóm đông để thử được nhiều món hơn
-      </div>
-
-      <router-link to="/review" class="write-review-btn">
-        ✍️ Viết đánh giá
-      </router-link>
-    </div>
-
     <!-- REVIEW LIST -->
     <div class="review-list">
       <div class="review-item" v-for="item in visibleReviews" :key="item.id">
@@ -419,17 +398,17 @@ onMounted(() => {
         </div>
       </div>
     </div>
-     <div class="text-center mt-4" v-if="reviews.length > 3">
-  <button class="btn-show-more" @click="loadMore">
-    {{ visibleCount >= reviews.length ? 'Thu gọn' : 'Xem thêm đánh giá' }}
-  </button>
-</div>
 
     <div class="review-footer-action text-center">
       <p>Hôm nay bạn thấy món nào ngon nhất? Cùng chia sẻ trải nghiệm nhé!</p>
-      <router-link to="/review" class="review-btn">
-        VIẾT ĐÁNH GIÁ CỦA BẠN
-      </router-link>
+      <div class="action-buttons">
+        <router-link to="/review" class="review-btn">
+          VIẾT ĐÁNH GIÁ CỦA BẠN
+        </router-link>
+        <router-link to="/reviews" class="view-all-btn" v-if="reviews.length > 0">
+          XEM TẤT CẢ
+        </router-link>
+      </div>
     </div>
   </div>
 </section>
@@ -784,11 +763,9 @@ onMounted(() => {
 /* TOP ACTION */
 .review-top-actions {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
-  gap: 16px;
   margin-bottom: 30px;
-  flex-wrap: wrap;
 }
 
 .tip-pill {
@@ -799,22 +776,8 @@ onMounted(() => {
   border-radius: 999px;
   font-weight: 600;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
-}
-
-.write-review-btn {
-  background: #153b28;
-  color: #fff;
-  text-decoration: none;
-  padding: 14px 24px;
-  border-radius: 999px;
-  font-weight: 700;
-  transition: 0.25s;
-}
-
-.write-review-btn:hover {
-  transform: translateY(-2px);
-  background: #0f2d1f;
-  color: white;
+  max-width: 600px;
+  text-align: center;
 }
 
 /* REVIEW LIST */
@@ -952,7 +915,15 @@ onMounted(() => {
 .review-footer-action p {
   color: #fff;
   font-size: 17px;
-  margin-bottom: 14px;
+  margin-bottom: 20px;
+}
+
+.review-footer-action .action-buttons {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
 }
 
 .review-btn {
@@ -960,10 +931,11 @@ onMounted(() => {
   background: #f1e7d0;
   color: #8b1111;
   text-decoration: none;
-  padding: 12px 28px;
+  padding: 14px 32px;
   border-radius: 999px;
   font-weight: 700;
   transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  font-size: 15px;
 }
 
 .review-btn:hover {
@@ -971,6 +943,25 @@ onMounted(() => {
   transform: translateY(-2px);
   box-shadow: 0 12px 22px rgba(0, 0, 0, 0.16);
   color: #8b1111;
+}
+
+.view-all-btn {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  text-decoration: none;
+  padding: 14px 32px;
+  border-radius: 999px;
+  font-weight: 700;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  transition: transform 0.2s ease, background 0.2s ease;
+  font-size: 15px;
+}
+
+.view-all-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: translateY(-2px);
+  color: #fff;
 }
 
 /* RESPONSIVE */
@@ -1015,22 +1006,8 @@ onMounted(() => {
 
   .tip-pill {
     border-radius: 18px;
+    min-width: 100%;
   }
-}
-.btn-show-more {
-  background: linear-gradient(135deg, #f7c782, #f2b565);
-  border: none;
-  padding: 10px 22px;
-  border-radius: 999px;
-  font-weight: 700;
-  color: #3a1f12;
-  cursor: pointer;
-  transition: 0.2s;
-}
-
-.btn-show-more:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 20px rgba(0,0,0,0.2);
 }
 .review-item {
   border: 1px solid rgba(0,0,0,0.05);

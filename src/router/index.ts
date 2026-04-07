@@ -31,6 +31,7 @@ import CustomerView from '@/views/admin/CustomerView.vue'
 import ProductView from '@/views/admin/ProductView.vue'
 import ReviewPage from '@/views/reviews/ReviewPage.vue'
 import ReviewView from '@/views/admin/ReviewView.vue'
+import AllReviewsView from '@/views/AllReviewsView.vue'
 
 // Route guard helper
 function checkRole(allowedRoles: string[]) {
@@ -89,8 +90,8 @@ const router = createRouter({
         { path: 'home', name: 'home', component: HomeView },
         { path: 'menu', name: 'menu', component: MenuView },
         { path: 'profile', name: 'profile', component: ProfileView },
-        
-      { path: 'review', name: 'review', component: ReviewPage }, 
+        { path: 'review', name: 'review', component: ReviewPage },
+        { path: 'reviews', name: 'all-reviews', component: AllReviewsView },
       ],
     },
 

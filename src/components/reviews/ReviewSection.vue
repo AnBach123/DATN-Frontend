@@ -28,7 +28,6 @@ const loading = ref(false)
 const submitting = ref(false)
 
 const form = ref({
-  name: '',
   rating: 5,
   content: '',
   visitType: 'Bạn bè',
@@ -38,6 +37,11 @@ const form = ref({
   valueScore: 5,
   atmosphereScore: 5
 })
+
+// Lấy tên từ localStorage
+const getUserName = () => {
+  return localStorage.getItem('fullName') || localStorage.getItem('username') || ''
+}
 const calculatedRating = computed(() => {
   const { serviceScore, foodScore, valueScore, atmosphereScore } = form.value
 
@@ -67,8 +71,9 @@ const load = async () => {
 
 // validate
 const validate = () => {
-  if (!form.value.name.trim()) {
-    alert('Vui lòng nhập tên')
+  const userName = getUserName()
+  if (!userName) {
+    alert('Vui lòng đăng nhập để đánh giá')
     return false
   }
   if (!form.value.content.trim()) {
@@ -88,12 +93,17 @@ const submit = async () => {
 
   submitting.value = true
   try {
-    await createReview(form.value)
+    const userName = getUserName()
+    const payload = {
+      ...form.value,
+      name: userName // Lấy tên từ tài khoản
+    }
+    
+    await createReview(payload)
 
     alert('Gửi thành công! Chờ admin duyệt')
 
     form.value = {
-      name: '',
       rating: 5,
       content: '',
       visitType: 'Bạn bè',
@@ -166,17 +176,18 @@ onMounted(load)
 
         <div class="row g-3">
           <div class="col-md-6">
-            <label class="form-label">Tên của bạn</label>
+            <label class="form-label">Tên hiển thị</label>
             <input
-              v-model="form.name"
-              class="form-control custom-input"
-              placeholder="Ví dụ: Nguyễn Văn A"
+              :value="getUserName() || 'Chưa đăng nhập'"
+              class="custom-input"
+              disabled
             />
+            <small v-if="!getUserName()" class="text-danger" style="font-size: 12px; margin-top: 4px; display: block;">Vui lòng đăng nhập để đánh giá</small>
           </div>
 
           <div class="col-md-6">
             <label class="form-label">Bạn đi cùng ai?</label>
-            <select v-model="form.visitType" class="form-control custom-input">
+            <select v-model="form.visitType" class="custom-input">
               <option>Bạn bè</option>
               <option>Cặp đôi</option>
               <option>Gia đình</option>
@@ -186,64 +197,69 @@ onMounted(load)
           </div>
 
           <div class="col-12">
-            <label class="form-label">Đánh giá chung</label>
-           <select v-model="form.rating" class="form-control custom-input" disabled>
-  <option v-for="i in 5" :key="i" :value="i">
-    {{ i }} ⭐
-  </option>
-</select>
+            <label class="form-label">Đánh giá chi tiết (Đánh giá chung sẽ tự động tính)</label>
+            <div class="row g-3">
+              <div class="col-6 col-md-3">
+                <label class="form-label" style="font-size: 13px; font-weight: 500;">Dịch vụ</label>
+                <select v-model="form.serviceScore" class="custom-input">
+                  <option v-for="i in 5" :key="'s'+i" :value="i">{{ i }} ⭐</option>
+                </select>
+              </div>
+
+              <div class="col-6 col-md-3">
+                <label class="form-label" style="font-size: 13px; font-weight: 500;">Đồ ăn</label>
+                <select v-model="form.foodScore" class="custom-input">
+                  <option v-for="i in 5" :key="'f'+i" :value="i">{{ i }} ⭐</option>
+                </select>
+              </div>
+
+              <div class="col-6 col-md-3">
+                <label class="form-label" style="font-size: 13px; font-weight: 500;">Giá trị</label>
+                <select v-model="form.valueScore" class="custom-input">
+                  <option v-for="i in 5" :key="'v'+i" :value="i">{{ i }} ⭐</option>
+                </select>
+              </div>
+
+              <div class="col-6 col-md-3">
+                <label class="form-label" style="font-size: 13px; font-weight: 500;">Không gian</label>
+                <select v-model="form.atmosphereScore" class="custom-input">
+                  <option v-for="i in 5" :key="'a'+i" :value="i">{{ i }} ⭐</option>
+                </select>
+              </div>
+            </div>
           </div>
 
-          <!-- CHI TIẾT -->
-          <div class="col-md-6">
-            <label class="form-label">Dịch vụ</label>
-            <select v-model="form.serviceScore" class="form-control custom-input">
-              <option v-for="i in 5" :key="'s'+i" :value="i">{{ i }} ⭐</option>
-            </select>
-          </div>
-
-          <div class="col-md-6">
-            <label class="form-label">Đồ ăn</label>
-            <select v-model="form.foodScore" class="form-control custom-input">
-              <option v-for="i in 5" :key="'f'+i" :value="i">{{ i }} ⭐</option>
-            </select>
-          </div>
-
-          <div class="col-md-6">
-            <label class="form-label">Giá trị</label>
-            <select v-model="form.valueScore" class="form-control custom-input">
-              <option v-for="i in 5" :key="'v'+i" :value="i">{{ i }} ⭐</option>
-            </select>
-          </div>
-
-          <div class="col-md-6">
-            <label class="form-label">Không gian</label>
-            <select v-model="form.atmosphereScore" class="form-control custom-input">
-              <option v-for="i in 5" :key="'a'+i" :value="i">{{ i }} ⭐</option>
-            </select>
+          <div class="col-12">
+            <div style="background: #f7f4ef; padding: 12px 16px; border-radius: 10px; border: 1.5px solid #e4d6c7;">
+              <label class="form-label" style="margin-bottom: 4px;">Đánh giá chung</label>
+              <div style="font-size: 28px; font-weight: 700; color: #8b1111;">
+                {{ calculatedRating }} ⭐
+              </div>
+              <small style="color: #666; font-size: 12px;">Tự động tính từ 4 tiêu chí trên</small>
+            </div>
           </div>
 
           <div class="col-12">
             <label class="form-label">Cảm nhận của bạn</label>
             <textarea
               v-model="form.content"
-              class="form-control custom-input"
-              rows="5"
-              placeholder="Ví dụ: Nhân viên rất nhiệt tình, món ăn ngon, không gian ấm cúng..."
+              class="custom-input"
+              rows="4"
+              placeholder="Chia sẻ trải nghiệm của bạn tại ByHat... (tối thiểu 10 ký tự)"
             />
           </div>
 
           <div class="col-12">
-            <label class="form-label">Mẹo cho khách khác (không bắt buộc)</label>
+            <label class="form-label">Mẹo cho khách khác <span style="color: #999; font-weight: 400;">(không bắt buộc)</span></label>
             <input
               v-model="form.tip"
-              class="form-control custom-input"
+              class="custom-input"
               placeholder="Ví dụ: Nên đặt bàn trước vào cuối tuần"
             />
           </div>
         </div>
 
-        <div class="form-submit mt-4">
+        <div class="form-submit">
           <button class="submit-btn" @click="submit" :disabled="submitting">
             {{ submitting ? 'Đang gửi...' : 'Gửi đánh giá' }}
           </button>
@@ -310,13 +326,20 @@ onMounted(load)
 <style scoped>
 .review-page {
   min-height: 100vh;
-  padding: 80px 0;
+  padding: 0;
   background: linear-gradient(180deg, #5a1515 0%, #7b2323 50%, #5a1515 100%);
   font-family: 'Manrope', sans-serif;
 }
 
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
 .review-header {
-  margin-bottom: 40px;
+  padding-top: 0;
+  margin-bottom: 28px;
 }
 
 .review-badge {
@@ -327,31 +350,32 @@ onMounted(load)
   color: #ffe4c2;
   border: 1px solid rgba(255, 255, 255, 0.12);
   font-size: 14px;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
 }
 
 .review-title {
   color: white;
   font-size: 42px;
   font-weight: 800;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
+  line-height: 1.2;
 }
 
 .review-subtitle {
   color: rgba(255, 255, 255, 0.82);
-  font-size: 16px;
+  font-size: 17px;
 }
 
 .review-summary {
   background: #fff8f2;
-  border-radius: 28px;
-  padding: 32px;
+  border-radius: 16px;
+  padding: 24px;
   display: grid;
-  grid-template-columns: 260px 1fr;
-  gap: 28px;
+  grid-template-columns: 200px 1fr;
+  gap: 24px;
   align-items: center;
-  margin-bottom: 36px;
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.16);
+  margin-bottom: 28px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
 }
 
 .summary-left {
@@ -361,214 +385,234 @@ onMounted(load)
 }
 
 .big-score {
-  font-size: 68px;
+  font-size: 64px;
   font-weight: 800;
   color: #153b28;
   line-height: 1;
 }
 
 .summary-label {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
   color: #153b28;
-  margin-top: 10px;
+  margin-top: 8px;
 }
+
 .summary-stars {
-  color: #ffc107; /* vàng chuẩn giống toàn site */
-  font-size: 28px;
-  letter-spacing: 4px;
-  margin: 12px 0;
-  text-shadow: 0 2px 6px rgba(255, 193, 7, 0.6); /* thêm glow cho đẹp */
+  color: #ffc107;
+  font-size: 24px;
+  letter-spacing: 3px;
+  margin: 10px 0;
+  text-shadow: 0 2px 4px rgba(255, 193, 7, 0.4);
 }
 
 .summary-right h4 {
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 800;
   color: #7b1111;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .summary-right p {
   color: #444;
-  font-size: 16px;
+  font-size: 15px;
   margin: 0;
 }
 
 .review-form-card {
   background: #fffdf9;
-  padding: 36px;
-  border-radius: 28px;
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.14);
-  margin-bottom: 48px;
+  padding: 20px;
+  border-radius: 14px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  margin-bottom: 32px;
 }
 
 .form-title {
-  font-size: 30px;
+  font-size: 20px;
   font-weight: 800;
   color: #7b1111;
-  margin-bottom: 24px;
+  margin-bottom: 18px;
 }
 
 .form-label {
-  font-weight: 700;
+  font-weight: 600;
   color: #4b2b2b;
   margin-bottom: 8px;
+  font-size: 14px;
+  display: block;
 }
 
 .custom-input {
-  border-radius: 16px;
-  border: 1px solid #e4d6c7;
-  padding: 14px 16px;
-  min-height: 52px;
+  border-radius: 10px;
+  border: 2px solid #e4d6c7;
+  padding: 12px 16px;
+  min-height: auto;
   box-shadow: none !important;
+  font-size: 15px;
+  width: 100%;
+  transition: all 0.2s;
 }
 
 .custom-input:focus {
   border-color: #8b1e1e;
-  box-shadow: 0 0 0 0.2rem rgba(139, 30, 30, 0.12) !important;
+  box-shadow: 0 0 0 3px rgba(139, 30, 30, 0.1) !important;
+  outline: none;
+}
+
+.custom-input:disabled {
+  background-color: #f5f5f5;
+  cursor: not-allowed;
+  opacity: 0.7;
 }
 
 .form-submit {
-  text-align: right;
+  text-align: center;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid #f0e8dc;
 }
 
 .submit-btn {
   background: linear-gradient(135deg, #8b1111, #c52828);
   color: white;
   border: none;
-  padding: 14px 28px;
+  padding: 14px 48px;
   border-radius: 999px;
   font-weight: 700;
   font-size: 16px;
-  transition: 0.25s;
+  transition: all 0.3s;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(139, 17, 17, 0.2);
 }
 
 .submit-btn:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 12px 24px rgba(139, 17, 17, 0.25);
+  box-shadow: 0 8px 20px rgba(139, 17, 17, 0.3);
 }
 
 .submit-btn:disabled {
-  opacity: 0.7;
+  opacity: 0.5;
   cursor: not-allowed;
+  transform: none;
 }
 
 .review-list-section {
-  margin-top: 30px;
+  margin-top: 24px;
 }
 
 .list-title {
   color: white;
-  font-size: 32px;
+  font-size: 28px;
   font-weight: 800;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .review-list {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 20px;
 }
 
 .review-item {
   background: #fffdf9;
-  border-radius: 26px;
-  padding: 30px;
-  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.12);
-  transition: 0.25s;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  transition: 0.2s;
 }
 
 .review-item:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.16);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 }
 
 .review-top {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 16px;
-  margin-bottom: 18px;
+  gap: 12px;
+  margin-bottom: 14px;
   flex-wrap: wrap;
 }
 
 .review-user {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
 }
 
 .avatar {
-  width: 64px;
-  height: 64px;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
   object-fit: cover;
-  border: 3px solid #f1e5d6;
+  border: 2px solid #f1e5d6;
 }
 
 .review-user h5 {
   margin: 0;
-  font-size: 24px;
-  font-weight: 800;
+  font-size: 18px;
+  font-weight: 700;
   color: #153b28;
 }
 
 .review-user p {
-  margin: 4px 0 0;
+  margin: 3px 0 0;
   color: #666;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .review-text {
-  font-size: 17px;
-  line-height: 1.8;
+  font-size: 15px;
+  line-height: 1.7;
   color: #2b2b2b;
-  margin-bottom: 18px;
+  margin-bottom: 14px;
 }
 
 .tip-box {
   background: #f7f4ef;
   border: 1px solid #d8d2c8;
-  border-radius: 16px;
-  padding: 14px 18px;
+  border-radius: 12px;
+  padding: 12px 14px;
   color: #333;
-  font-size: 15px;
-  margin-bottom: 20px;
+  font-size: 14px;
+  margin-bottom: 16px;
 }
 
 .tip-box span {
-  font-weight: 800;
+  font-weight: 700;
   color: #153b28;
-  margin-right: 8px;
+  margin-right: 6px;
 }
 
 .score-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 18px;
-  margin-top: 12px;
+  gap: 12px;
+  margin-top: 10px;
 }
 
 .score-item {
   background: #fff7f0;
-  border-radius: 16px;
-  padding: 14px 16px;
+  border-radius: 12px;
+  padding: 10px 12px;
 }
 
 .score-item span {
   display: block;
-  font-weight: 700;
+  font-weight: 600;
   color: #153b28;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
+  font-size: 13px;
 }
 
 .empty-box {
   background: rgba(255, 255, 255, 0.08);
   color: white;
-  padding: 28px;
-  border-radius: 20px;
+  padding: 24px;
+  border-radius: 16px;
   text-align: center;
-  font-size: 16px;
+  font-size: 15px;
 }
 
 /* responsive */
@@ -581,7 +625,7 @@ onMounted(load)
     border-right: none;
     border-bottom: 1px solid rgba(0, 0, 0, 0.08);
     padding-right: 0;
-    padding-bottom: 20px;
+    padding-bottom: 16px;
   }
 
   .score-grid {
@@ -589,18 +633,53 @@ onMounted(load)
   }
 }
 
-@media (max-width: 576px) {
+@media (max-width: 768px) {
+  .review-page {
+    padding: 0;
+  }
+
+  .review-header {
+    padding-top: 30px;
+  }
+
   .review-title {
-    font-size: 30px;
+    font-size: 28px;
   }
 
   .big-score {
-    font-size: 54px;
+    font-size: 48px;
   }
 
   .review-form-card,
   .review-item {
-    padding: 22px;
+    padding: 24px;
+  }
+
+  .form-title {
+    font-size: 20px;
+  }
+
+  .list-title {
+    font-size: 22px;
+  }
+}
+
+@media (max-width: 576px) {
+  .review-header {
+    padding-top: 20px;
+  }
+
+  .review-title {
+    font-size: 24px;
+  }
+
+  .big-score {
+    font-size: 42px;
+  }
+
+  .review-form-card,
+  .review-item {
+    padding: 20px;
   }
 
   .score-grid {
@@ -613,6 +692,16 @@ onMounted(load)
 
   .submit-btn {
     width: 100%;
+    padding: 14px 24px;
+  }
+
+  .avatar {
+    width: 44px;
+    height: 44px;
+  }
+
+  .review-user h5 {
+    font-size: 16px;
   }
 }
 </style>
