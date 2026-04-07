@@ -2,6 +2,9 @@
 import { ref, onMounted, computed } from 'vue'
 import { getReviews, createReview } from '@/services/reviewApi'
 import StarRating from '@/components/StarRating.vue'
+import { watch } from 'vue'
+
+
 
 interface Review {
   id: number
@@ -35,7 +38,17 @@ const form = ref({
   valueScore: 5,
   atmosphereScore: 5
 })
+const calculatedRating = computed(() => {
+  const { serviceScore, foodScore, valueScore, atmosphereScore } = form.value
 
+  const avg =
+    (serviceScore + foodScore + valueScore + atmosphereScore) / 4
+
+  return Math.round(avg) // hoặc giữ .toFixed(1) nếu muốn lẻ
+})
+watch(calculatedRating, (val) => {
+  form.value.rating = val
+})
 // load reviews
 const load = async () => {
   loading.value = true
@@ -118,6 +131,7 @@ const formatDate = (date?: string) => {
 const getScore = (score?: number) => score || 5
 
 onMounted(load)
+
 </script>
 <template>
   <section class="review-page">
@@ -173,11 +187,11 @@ onMounted(load)
 
           <div class="col-12">
             <label class="form-label">Đánh giá chung</label>
-            <select v-model="form.rating" class="form-control custom-input">
-              <option v-for="i in 5" :key="i" :value="i">
-                {{ i }} ⭐
-              </option>
-            </select>
+           <select v-model="form.rating" class="form-control custom-input" disabled>
+  <option v-for="i in 5" :key="i" :value="i">
+    {{ i }} ⭐
+  </option>
+</select>
           </div>
 
           <!-- CHI TIẾT -->
