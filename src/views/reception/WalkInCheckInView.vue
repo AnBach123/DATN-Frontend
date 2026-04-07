@@ -22,10 +22,6 @@
           <span class="stat-label">Đã đặt</span>
           <span class="stat-value">{{ reservedCount }}</span>
         </div>
-        <div class="stat-item overtime">
-          <span class="stat-label">Quá giờ</span>
-          <span class="stat-value">{{ overtimeCount }}</span>
-        </div>
       </div>
     </div>
 
@@ -199,9 +195,8 @@
 
             <div class="detail-row" v-if="tableDetail.minutesSinceCheckIn !== null">
               <span class="detail-label">Thời gian phục vụ:</span>
-              <span class="detail-value" :class="{ 'text-warning': tableDetail.minutesSinceCheckIn && tableDetail.minutesSinceCheckIn > 90 }">
+              <span class="detail-value">
                 {{ tableDetail.minutesSinceCheckIn }} phút
-                <span v-if="tableDetail.minutesSinceCheckIn && tableDetail.minutesSinceCheckIn > 90" class="overtime-badge">Quá giờ</span>
               </span>
             </div>
 
@@ -286,10 +281,6 @@ const inUseCount = computed(() =>
 
 const reservedCount = computed(() => 
   tables.value.filter(t => t.status === 'RESERVED').length
-);
-
-const overtimeCount = computed(() => 
-  tables.value.filter(t => t.status === 'OVERTIME' || (t.minutesSinceCheckIn !== null && t.minutesSinceCheckIn !== undefined && t.minutesSinceCheckIn > 90)).length
 );
 
 const filteredTables = computed(() => {
@@ -412,7 +403,6 @@ const getTableClass = (table: TableStatus) => {
     'available': table.status === 'AVAILABLE',
     'in-use': table.status === 'IN_USE' || table.status === 'OCCUPIED',
     'reserved': table.status === 'RESERVED',
-    'overtime': table.status === 'OVERTIME',
     'out-of-service': table.status === 'OUT_OF_SERVICE',
     'selected': selectedTableIds.value.includes(table.id)
   };
@@ -433,7 +423,6 @@ const getStatusClass = (table: TableStatus) => {
     'IN_USE': 'status-in-use',
     'OCCUPIED': 'status-in-use',
     'RESERVED': 'status-reserved',
-    'OVERTIME': 'status-overtime',
     'OUT_OF_SERVICE': 'status-out'
   };
   return statusMap[table.status] || '';
@@ -445,7 +434,6 @@ const getStatusText = (table: TableStatus) => {
     'IN_USE': 'Đang phục vụ',
     'OCCUPIED': 'Đang phục vụ',
     'RESERVED': 'Đã đặt',
-    'OVERTIME': 'Quá giờ',
     'OUT_OF_SERVICE': 'Ngừng phục vụ'
   };
   return textMap[table.status] || table.status;
@@ -508,7 +496,6 @@ const getStatusLabel = (status: string | undefined) => {
     'OCCUPIED': 'Đang phục vụ',
     'IN_USE': 'Đang phục vụ',
     'RESERVED': 'Đã đặt',
-    'OVERTIME': 'Quá giờ',
     'CLEANING': 'Đang dọn',
     'OUT_OF_SERVICE': 'Ngừng phục vụ'
   };
@@ -696,7 +683,7 @@ const handleCheckIn = async () => {
 
 .stats-bar {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 16px;
 }
 
@@ -718,10 +705,6 @@ const handleCheckIn = async () => {
 
 .stat-item.reserved {
   border-left-color: #eab308;
-}
-
-.stat-item.overtime {
-  border-left-color: #fb923c;
 }
 
 .stat-label {
@@ -813,12 +796,6 @@ const handleCheckIn = async () => {
 .table-card.reserved {
   border-color: #eab308;
   background: linear-gradient(135deg, #fefce8 0%, #fef9c3 100%);
-  cursor: pointer;
-}
-
-.table-card.overtime {
-  border-color: #fb923c;
-  background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
   cursor: pointer;
 }
 
@@ -944,11 +921,6 @@ const handleCheckIn = async () => {
 
 .status-out {
   background: #94a3b8;
-  color: white;
-}
-
-.status-overtime {
-  background: #fb923c;
   color: white;
 }
 
@@ -1297,11 +1269,6 @@ const handleCheckIn = async () => {
   color: #92400e;
 }
 
-.status-badge.overtime {
-  background: #fb923c;
-  color: white;
-}
-
 .status-badge.cleaning {
   background: #e0e7ff;
   color: #3730a3;
@@ -1320,17 +1287,6 @@ const handleCheckIn = async () => {
 .text-primary {
   color: #10b981;
   font-size: 16px;
-}
-
-.overtime-badge {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 12px;
-  background: #fb923c;
-  color: white;
-  font-size: 11px;
-  font-weight: 700;
-  margin-left: 8px;
 }
 
 .empty-state {

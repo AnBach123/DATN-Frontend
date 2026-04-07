@@ -1,11 +1,5 @@
 <template>
   <div class="container">
-    <!-- ALERT -->
-    <div class="mb-4">
-      <OvertimeAlertPanel />
-      <NoShowNotificationPanel />
-    </div>
-
     <!-- HEADER -->
     <div class="header">
       <h2>Quản lý món theo bàn</h2>
@@ -131,8 +125,6 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { getKitchenGrouped, serveItem, cancelItem } from '@/services/kitchenApi'
 import { DashboardWebSocket } from '@/services/websocket/DashboardWebSocket'
-import OvertimeAlertPanel from './OvertimeAlertPanel.vue'
-import NoShowNotificationPanel from './NoShowNotificationPanel.vue'
 import Swal from 'sweetalert2'
 
 interface Item {

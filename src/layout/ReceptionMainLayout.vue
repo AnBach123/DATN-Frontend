@@ -7,9 +7,6 @@
       </main>
     </div>
     
-    <!-- OVERTIME ALERT PANEL - Only show in reception routes -->
-    <OvertimeAlertPanel v-if="isReceptionRoute" />
-    
     <!-- NO-SHOW NOTIFICATION PANEL - Only show in reception routes -->
     <NoShowNotificationPanel v-if="isReceptionRoute" />
   </div>
@@ -19,7 +16,6 @@
 import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import ReceptionSidebar from '@/components/ReceptionSidebar.vue'
-import OvertimeAlertPanel from '@/components/staff/OvertimeAlertPanel.vue'
 import NoShowNotificationPanel from '@/components/staff/NoShowNotificationPanel.vue'
 
 const route = useRoute()

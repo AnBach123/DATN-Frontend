@@ -201,10 +201,6 @@
             <span>Đã đặt</span>
           </div>
           <div class="legend-item">
-            <span class="legend-dot overtime"></span>
-            <span>Quá giờ</span>
-          </div>
-          <div class="legend-item">
             <span class="legend-dot cleaning"></span>
             <span>Đang dọn</span>
           </div>
@@ -291,9 +287,8 @@
 
             <div class="detail-row" v-if="tableDetail.minutesSinceCheckIn !== null">
               <span class="detail-label">Thời gian phục vụ:</span>
-              <span class="detail-value" :class="{ 'text-warning': tableDetail.minutesSinceCheckIn > 90 }">
+              <span class="detail-value">
                 {{ tableDetail.minutesSinceCheckIn }} phút
-                <span v-if="tableDetail.minutesSinceCheckIn > 90" class="overtime-badge">Quá giờ</span>
               </span>
             </div>
 
@@ -748,7 +743,6 @@ const getStatusLabel = (status: string | undefined) => {
     'AVAILABLE': 'Trống',
     'OCCUPIED': 'Đang phục vụ',
     'RESERVED': 'Đã đặt',
-    'OVERTIME': 'Quá giờ',
     'CLEANING': 'Đang dọn'
   }
   return labels[status] || status
@@ -1270,12 +1264,6 @@ const closeModal = () => {
   box-shadow: 0 4px 16px rgba(245, 158, 11, 0.2);
 }
 
-.table-item.overtime {
-  background: linear-gradient(135deg, #fed7aa 0%, #fdba74 100%);
-  border-color: #f97316;
-  box-shadow: 0 4px 16px rgba(249, 115, 22, 0.3);
-}
-
 .table-item.cleaning {
   background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
   border-color: #6366f1;
@@ -1354,10 +1342,6 @@ const closeModal = () => {
 
 .legend-dot.reserved {
   background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-}
-
-.legend-dot.overtime {
-  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
 }
 
 .legend-dot.cleaning {
@@ -1567,35 +1551,14 @@ const closeModal = () => {
   color: #92400e;
 }
 
-.status-badge.overtime {
-  background: #fed7aa;
-  color: #9a3412;
-}
-
 .status-badge.cleaning {
   background: #e0e7ff;
   color: #3730a3;
 }
 
-.text-warning {
-  color: #f97316 !important;
-  font-weight: 700 !important;
-}
-
 .text-primary {
   color: #667eea;
   font-size: 16px;
-}
-
-.overtime-badge {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 12px;
-  background: #fed7aa;
-  color: #9a3412;
-  font-size: 11px;
-  font-weight: 700;
-  margin-left: 8px;
 }
 
 .empty-state {

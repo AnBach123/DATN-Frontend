@@ -369,6 +369,17 @@
           <button class="btn-close" @click="closeTableChangeModal"></button>
         </div>
         
+        <!-- Guest Count Info -->
+        <div v-if="selectedReservation" class="guest-count-info">
+          <span class="guest-count-text">
+            Số khách: <strong>{{ selectedReservation.guestCount }} người</strong>
+          </span>
+          <span class="capacity-divider">|</span>
+          <span class="selected-capacity-text">
+            Sức chứa đã chọn: <strong :class="getCapacityClass()">{{ selectedTablesCapacity }} chỗ</strong>
+          </span>
+        </div>
+        
         <div class="table-change-body">
           <div v-if="loadingAlternatives" class="loading-state">
             <span class="spinner-border spinner-border-lg"></span>
@@ -741,6 +752,31 @@ const tablesByArea = computed(() => {
   
   return grouped;
 });
+
+// Computed property to calculate total capacity of selected tables
+const selectedTablesCapacity = computed(() => {
+  return alternativeTables.value
+    .filter(table => selectedTableIds.value.includes(table.id))
+    .reduce((sum, table) => sum + table.seatingCapacity, 0);
+});
+
+// Function to get capacity class based on comparison with guest count
+const getCapacityClass = () => {
+  if (selectedTableIds.value.length === 0) {
+    return 'capacity-none';
+  }
+  
+  const guestCount = selectedReservation.value?.guestCount || 0;
+  const capacity = selectedTablesCapacity.value;
+  
+  if (capacity < guestCount) {
+    return 'capacity-insufficient'; // Red - not enough
+  } else if (capacity >= guestCount) {
+    return 'capacity-sufficient'; // Green - enough
+  }
+  
+  return 'capacity-none';
+};
 
 // Function to calculate total capacity for an area
 const getAreaTotalCapacity = (tables: TableInfo[]): number => {
@@ -1514,6 +1550,57 @@ const getAreaTotalCapacity = (tables: TableInfo[]): number => {
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   overflow: hidden;
   animation: slideUp 0.3s ease;
+}
+
+/* Guest Count Info */
+.guest-count-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 32px;
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border-bottom: 2px solid #3b82f6;
+}
+
+.guest-count-text {
+  font-size: 15px;
+  color: #1e293b;
+  font-weight: 600;
+}
+
+.guest-count-text strong {
+  color: #0369a1;
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.capacity-divider {
+  color: #94a3b8;
+  font-size: 18px;
+  font-weight: 300;
+}
+
+.selected-capacity-text {
+  font-size: 15px;
+  color: #1e293b;
+  font-weight: 600;
+}
+
+.selected-capacity-text strong {
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.selected-capacity-text strong.capacity-none {
+  color: #64748b;
+}
+
+.selected-capacity-text strong.capacity-insufficient {
+  color: #dc2626;
+}
+
+.selected-capacity-text strong.capacity-sufficient {
+  color: #16a34a;
 }
 
 .table-change-body {

@@ -1,11 +1,5 @@
 <template>
   <div class="order-container">
-    <!-- ALERT -->
-    <div class="mb-4">
-      <OvertimeAlertPanel />
-      <NoShowNotificationPanel />
-    </div>
-
     <div class="container-fluid p-4">
       <!-- BACK BUTTON -->
       <button class="btn-back-top" @click="goBack">← Chọn bàn khác</button>
@@ -154,8 +148,6 @@ import { useRoute, useRouter } from 'vue-router'
 import { getProducts } from '@/services/productApi'
 import { getAllProductCombos } from '@/services/productComboApi'
 import { addItemsToInvoice, type OrderItemRequest, type InvoiceGroup } from '@/services/staffOrderApi'
-import OvertimeAlertPanel from './OvertimeAlertPanel.vue'
-import NoShowNotificationPanel from './NoShowNotificationPanel.vue'
 import { getInProgressInvoices } from '@/services/staffOrderApi'
 
 const route = useRoute()
