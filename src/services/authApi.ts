@@ -46,6 +46,7 @@ export type LoginData = {
     userId: number
     fullName: string
     username: string
+    phoneNumber?: string
 }
 
 async function postJson<T>(url: string, payload: unknown): Promise<T> {
@@ -78,16 +79,6 @@ export function callLogin(payload: LoginPayload) {
     return postJson<ApiResponse<LoginData>>('/api/auth/login', payload)
 }
 
-/**
- * Customer login - ONLY for customers using EMAIL
- */
-export function callCustomerLogin(payload: LoginPayload) {
-    return postJson<ApiResponse<LoginData>>('/api/auth/login/customer', payload)
-}
-
-/**
- * Employee login - ONLY for employees using USERNAME
- */
 export function callEmployeeLogin(payload: LoginPayload) {
-    return postJson<ApiResponse<LoginData>>('/api/auth/login/employee', payload)
+    return postJson<ApiResponse<LoginData>>('/api/auth/login', payload)
 }

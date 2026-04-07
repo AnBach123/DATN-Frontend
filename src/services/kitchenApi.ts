@@ -37,6 +37,8 @@ export interface KitchenTable {
   totalAmount: number
   totalItems: number
   items: KitchenItem[]
+  servingStaffId?: number
+  servingStaffName?: string
 }
 
 /* ========================

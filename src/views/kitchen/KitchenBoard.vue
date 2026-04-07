@@ -153,7 +153,7 @@ onMounted(() => {
   fetchKitchen()
   
   // Initialize WebSocket
-  const token = localStorage.getItem('token') || ''
+  const token = localStorage.getItem('accessToken') || ''
   console.log('🔑 Kitchen - Token for WebSocket:', token ? 'Found' : 'Not found (dev mode)')
   
   const wsUrl = import.meta.env.VITE_WS_URL || 'http://localhost:8080/ws'

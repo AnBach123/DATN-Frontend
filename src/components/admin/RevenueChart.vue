@@ -78,7 +78,7 @@ const chartOptions = computed(() => ({
       borderRadius: 8,
       titleFont: {
         size: 14,
-        weight: 'bold'
+        weight: 'bold' as const
       },
       bodyFont: {
         size: 13
@@ -105,7 +105,7 @@ const chartOptions = computed(() => ({
       ticks: {
         font: {
           size: 12,
-          weight: '600'
+          weight: '600' as any
         },
         color: '#64748b'
       }
@@ -120,7 +120,7 @@ const chartOptions = computed(() => ({
       ticks: {
         font: {
           size: 12,
-          weight: '600'
+          weight: '600' as any
         },
         color: '#64748b',
         callback: function(value: any) {
@@ -136,7 +136,7 @@ const chartOptions = computed(() => ({
   },
   interaction: {
     intersect: false,
-    mode: 'index'
+    mode: 'index' as const
   }
 }))
 </script>

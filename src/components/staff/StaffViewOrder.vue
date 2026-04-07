@@ -149,18 +149,51 @@ interface Table {
   guestCount: number
   totalAmount: number
   items: Item[]
+  servingStaffId?: number
+  servingStaffName?: string
 }
 
 const tables = ref<Table[]>([])
 const selectedTable = ref<Table | null>(null)
+const currentStaffId = ref<number | null>(null)
 
 // WebSocket instance
 let wsClient: DashboardWebSocket | null = null
 
+// Get current staff ID from localStorage
+function getCurrentStaffId(): number | null {
+  try {
+    const userIdStr = localStorage.getItem('userId')
+    if (userIdStr) {
+      const userId = parseInt(userIdStr, 10)
+      if (!isNaN(userId)) {
+        console.log('Got staff ID from localStorage:', userId)
+        return userId
+      }
+    }
+    return null
+  } catch (error) {
+    console.error('Failed to get staff ID:', error)
+    return null
+  }
+}
+
 async function fetchData() {
   try {
     const data = await getKitchenGrouped()
-    tables.value = data
+    
+    // Filter tables: only show tables served by current staff
+    if (currentStaffId.value) {
+      tables.value = data.filter((table: Table) => {
+        // Show table if it's served by current staff OR if it has no serving staff assigned
+        return !table.servingStaffId || table.servingStaffId === currentStaffId.value
+      })
+      console.log(`📋 Filtered tables for staff ${currentStaffId.value}:`, tables.value.length, 'out of', data.length)
+    } else {
+      // If no staff ID, show all tables (fallback for development)
+      tables.value = data
+      console.warn('⚠️ No staff ID found, showing all tables')
+    }
   } catch (e) {
     console.error(e)
   }
@@ -317,10 +350,14 @@ function formatCurrency(amount: number) {
 }
 
 onMounted(() => {
+  // Get current staff ID first
+  currentStaffId.value = getCurrentStaffId()
+  console.log('👤 Current staff ID:', currentStaffId.value)
+  
   fetchData()
   
   // Initialize WebSocket
-  const token = localStorage.getItem('token') || ''
+  const token = localStorage.getItem('accessToken') || ''
   console.log('🔑 StaffViewOrder - Token for WebSocket:', token ? 'Found' : 'Not found (dev mode)')
   
   const wsUrl = import.meta.env.VITE_WS_URL || 'http://localhost:8080/ws'

@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { callCustomerLogin } from '@/services/authApi'
+import { callLogin } from '@/services/authApi'
 import { ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
-import { authenticateMockUser, generateMockJWT } from '@/mock/mockAuth'
 
 const router = useRouter()
 
@@ -11,57 +10,37 @@ const password = ref('')
 const loading = ref(false)
 const msg = ref('')
 const showPassword = ref(false)
-const useMockAuth = ref(false)
 
 async function onSubmit() {
     loading.value = true
     msg.value = ''
 
     try {
-        if (useMockAuth.value) {
-            const mockUser = authenticateMockUser(email.value.trim(), password.value)
-            
-            if (mockUser && mockUser.role === 'USER') {
-                const mockJWT = generateMockJWT(mockUser.email, mockUser.role)
-                
-                localStorage.setItem('accessToken', mockJWT)
-                localStorage.setItem('tokenType', 'Bearer')
-                localStorage.setItem('email', mockUser.email)
-                localStorage.setItem('userRole', mockUser.role)
-                localStorage.setItem('fullName', mockUser.fullName)
+        const res = await callLogin({
+            email: email.value.trim(),
+            password: password.value,
+        })
 
-                msg.value = 'Đăng nhập thành công!'
-                
-                setTimeout(() => {
-                    router.push('/')
-                }, 500)
-            } else {
-                msg.value = 'Email hoặc mật khẩu không đúng'
-            }
-        } else {
-            const res = await callCustomerLogin({
-                email: email.value.trim(),
-                password: password.value,
-            })
-
-            localStorage.setItem('accessToken', res.data.accessToken)
-            localStorage.setItem('tokenType', res.data.tokenType)
-            localStorage.setItem('email', res.data.email)
-            localStorage.setItem('userRole', res.data.role)
-            
-            if (res.data.userId) {
-                localStorage.setItem('userId', res.data.userId.toString())
-            }
-            if (res.data.fullName) {
-                localStorage.setItem('fullName', res.data.fullName)
-            }
-            if (res.data.username) {
-                localStorage.setItem('username', res.data.username)
-            }
-
-            msg.value = 'Đăng nhập thành công!'
-            router.push('/')
+        localStorage.setItem('accessToken', res.data.accessToken)
+        localStorage.setItem('tokenType', res.data.tokenType)
+        localStorage.setItem('email', res.data.email)
+        localStorage.setItem('userRole', res.data.role)
+        
+        if (res.data.userId) {
+            localStorage.setItem('userId', res.data.userId.toString())
         }
+        if (res.data.fullName) {
+            localStorage.setItem('fullName', res.data.fullName)
+        }
+        if (res.data.username) {
+            localStorage.setItem('username', res.data.username)
+        }
+        if (res.data.phoneNumber) {
+            localStorage.setItem('phoneNumber', res.data.phoneNumber)
+        }
+
+        msg.value = 'Đăng nhập thành công!'
+        router.push('/')
     } catch (e: any) {
         msg.value = e?.message || 'Đăng nhập thất bại'
     } finally {

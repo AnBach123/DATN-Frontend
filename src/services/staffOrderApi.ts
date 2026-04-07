@@ -37,6 +37,8 @@ export interface InvoiceGroup {
   subtotalAmount: number
   checkedInAt: string
   tables: TableInfo[]
+  servingStaffId?: number | null
+  servingStaffName?: string | null
 }
 
 export interface InvoiceItemResponse {

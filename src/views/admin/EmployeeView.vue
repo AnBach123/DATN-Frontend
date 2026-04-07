@@ -323,6 +323,7 @@ const form = ref({
   address: '',
   role: '',
   isActive: true,
+  password: '' as string | undefined,
 })
 
 const loadEmployees = async () => {
