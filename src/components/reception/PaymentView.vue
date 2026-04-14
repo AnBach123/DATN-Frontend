@@ -304,7 +304,7 @@
                   placeholder="Nhập số tiền khách đưa"
                 />
                 <div class="mt-2 small text-muted">
-                  Tiền thối lại:
+                  Tiền trả lại:
                   <strong class="text-success">{{ formatMoney(changeDue) }}</strong>
                 </div>
               </div>
@@ -959,7 +959,7 @@ const generateMoMoQR = async () => {
   
   try {
     // Create payment URL - Update this IP if needed
-    const localIP = '192.168.31.151'
+    const localIP = '10.41.188.33'
     const url = `http://${localIP}:5173/mock-bank-transfer?tid=${tableIdInput.value}&iid=${payment.value.invoiceId}&amt=${totalPayable.value}`
     
     // Generate QR code

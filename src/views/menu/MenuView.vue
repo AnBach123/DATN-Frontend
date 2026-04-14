@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="menu-page">
     <section class="menu-hero">
       <div class="hero-overlay">
@@ -45,7 +45,7 @@
 
         <div class="menu-bottom">
           <span class="price">{{ formatPrice(c.comboPrice) }}</span>
-          <button class="btn-add" @click="addCombo(c)">+ Đặt</button>
+          <button class="btn-add" @click="addCombo(c)">Ghi chú món</button>
         </div>
       </div>
     </div>
@@ -70,7 +70,7 @@
 
         <div class="menu-bottom">
           <span class="price">{{ formatPrice(item.unitPrice) }}</span>
-          <button class="btn-add" @click="addItem(item)">+ Đặt</button>
+          <button class="btn-add" @click="addItem(item)">Ghi chú món</button>
         </div>
       </div>
     </div>
@@ -196,7 +196,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { getProducts } from '@/services/productApi'
 import { useBookingStore } from '@/composables/bookingStore'
-import { getAllProductCombos } from '@/services/productComboApi'
+import { getActiveProductCombos } from '@/services/productComboApi'
 import { getPrimaryComboImage } from '@/services/imageApi'
 
 interface Product {
@@ -386,7 +386,7 @@ onMounted(async () => {
   try {
     const [productData, comboData] = await Promise.all([
       getProducts(),
-      getAllProductCombos()
+      getActiveProductCombos()
 
       
     ])

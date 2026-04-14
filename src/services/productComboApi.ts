@@ -14,7 +14,7 @@ export interface ProductComboResponse {
 }
 
 /**
- * Lấy danh sách product combo
+ * Lấy danh sách product combo (tất cả - dùng cho admin)
  */
 export const getAllProductCombos = async (): Promise<ProductComboResponse[]> => {
   try {
@@ -23,6 +23,21 @@ export const getAllProductCombos = async (): Promise<ProductComboResponse[]> => 
     return res.data?.data ?? res.data ?? []
   } catch (error) {
     console.error('Load combo lỗi:', error)
+
+    return []
+  }
+}
+
+/**
+ * Lấy danh sách product combo đang hoạt động (dùng cho khách hàng)
+ */
+export const getActiveProductCombos = async (): Promise<ProductComboResponse[]> => {
+  try {
+    const res = await axiosInstance.get(`${API_URL}/active`)
+
+    return res.data?.data ?? res.data ?? []
+  } catch (error) {
+    console.error('Load combo active lỗi:', error)
 
     return []
   }

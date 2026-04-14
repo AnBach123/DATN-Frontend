@@ -29,6 +29,7 @@ import ProfileView from '@/views/customer/ProfileView.vue'
 import VoucherView from '@/views/admin/VoucherView.vue'
 import CustomerView from '@/views/admin/CustomerView.vue'
 import ProductView from '@/views/admin/ProductView.vue'
+import ComboView from '@/views/admin/ComboView.vue'
 import ReviewPage from '@/views/reviews/ReviewPage.vue'
 import ReviewView from '@/views/admin/ReviewView.vue'
 import AllReviewsView from '@/views/AllReviewsView.vue'
@@ -149,6 +150,11 @@ const router = createRouter({
       path: 'products',
       name: 'admin-products',
       component: ProductView,
+    },
+    {
+      path: 'combos',
+      name: 'admin-combos',
+      component: ComboView,
     },
      {
       path: 'customers',
