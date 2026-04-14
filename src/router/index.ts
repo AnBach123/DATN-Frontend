@@ -33,6 +33,8 @@ import ComboView from '@/views/admin/ComboView.vue'
 import ReviewPage from '@/views/reviews/ReviewPage.vue'
 import ReviewView from '@/views/admin/ReviewView.vue'
 import AllReviewsView from '@/views/AllReviewsView.vue'
+import ReportView from '@/views/admin/ReportView.vue'
+import AuditLogView from '@/views/admin/AuditLogView.vue'
 
 // Route guard helper
 function checkRole(allowedRoles: string[]) {
@@ -171,6 +173,16 @@ const router = createRouter({
   name: 'admin-reviews',
   component: ReviewView,
 },
+    {
+      path: 'reports',
+      name: 'admin-reports',
+      component: ReportView,
+    },
+    {
+      path: 'audit-logs',
+      name: 'admin-audit-logs',
+      component: AuditLogView,
+    },
     {
       path: '',
       redirect: '/admin/dashboard',

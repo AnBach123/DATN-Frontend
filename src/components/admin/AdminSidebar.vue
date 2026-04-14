@@ -30,7 +30,6 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 interface Props {
@@ -43,7 +42,7 @@ const route = useRoute()
 const router = useRouter()
 
 const menuItems = [
-  { path: '/admin/dashboard', label: 'Trang chủ', icon: '⭐' },
+  { path: '/admin/dashboard', label: 'Trang chủ', icon: '🏠' },
   { path: '/admin/customers', label: 'Quản lý khách hàng', icon: '👥' },
   { path: '/admin/products', label: 'Quản lý sản phẩm', icon: '🍽️' },
   { path: '/admin/combos', label: 'Quản lý combo', icon: '🎁' },
@@ -54,7 +53,7 @@ const menuItems = [
   { path: '/admin/employees', label: 'Quản lý nhân viên', icon: '👨‍💼' },
   { path: '/admin/reviews', label: 'Quản lý đánh giá', icon: '⭐' },
   { path: '/admin/reports', label: 'Báo cáo', icon: '📊' },
-  { path: '/admin/settings', label: 'Cài đặt', icon: '⚙️' },
+  { path: '/admin/audit-logs', label: 'Nhật ký hoạt động', icon: '📋' },
 ]
 
 const isActive = (path: string) => {
