@@ -19,10 +19,9 @@
         </select>
 
         <select v-model="filters.status" class="filter-select" @change="searchProducts">
-          <option value="">Trạng thái</option>
-          <option value="AVAILABLE">Còn hàng</option>
-          <option value="OUT_OF_STOCK">Hết hàng</option>
-          <option value="DISCONTINUED">Ngừng bán</option>
+          <option value="">Tất cả</option>
+          <option value="AVAILABLE">Kinh doanh</option>
+          <option value="DISCONTINUED">Ngừng kinh doanh</option>
         </select>
 
         <button class="add-btn" @click="openAddModal">
@@ -40,6 +39,7 @@
       <table class="product-table">
         <thead>
           <tr>
+            <th>Ảnh</th>
             <th @click="sortBy('id')">
               ID
               <span v-if="sortField === 'id'">
@@ -70,14 +70,24 @@
 
         <tbody>
           <tr v-if="loading">
-            <td colspan="6" class="loading-cell">Đang tải...</td>
+            <td colspan="8" class="loading-cell">Đang tải...</td>
           </tr>
 
           <tr v-else-if="products.length === 0">
-            <td colspan="6" class="empty-cell">Không có sản phẩm</td>
+            <td colspan="8" class="empty-cell">Không có sản phẩm</td>
           </tr>
 
           <tr v-else v-for="p in products" :key="p.id">
+            <td>
+              <img 
+                v-if="p.imageUrl" 
+                :src="p.imageUrl" 
+                alt="Product" 
+                class="product-thumbnail"
+                @error="onImgError"
+              />
+              <div v-else class="no-image">📷</div>
+            </td>
             <td>{{ p.id }}</td>
             <td class="name">{{ p.productName }}</td>
             <td>{{ formatCurrency(p.unitPrice) }}</td>
@@ -145,7 +155,7 @@
 
           <div class="form-grid">
 
-            <div class="form-group">
+            <div class="form-group full">
               <label>Tên sản phẩm</label>
               <input v-model="newProduct.productName" />
             </div>
@@ -166,18 +176,32 @@
               <input type="number" v-model="newProduct.unitPrice" />
             </div>
 
-            <div class="form-group">
-              <label>Số lượng</label>
-              <input type="number" v-model="newProduct.stockQuantity" />
-            </div>
-
-            <div class="form-group">
+            <div class="form-group full">
               <label>Trạng thái</label>
               <select v-model="newProduct.availabilityStatus">
-                <option value="AVAILABLE">Còn hàng</option>
-                <option value="OUT_OF_STOCK">Hết hàng</option>
-                <option value="DISCONTINUED">Ngừng bán</option>
+                <option value="AVAILABLE">Kinh doanh</option>
+                <option value="DISCONTINUED">Ngừng kinh doanh</option>
               </select>
+            </div>
+
+            <div class="form-group full">
+              <label>Ảnh sản phẩm</label>
+              <div class="image-upload-section">
+                <input 
+                  type="file" 
+                  ref="imageInput" 
+                  accept="image/*" 
+                  @change="handleImageSelect"
+                  style="display: none"
+                />
+                <button type="button" class="upload-btn" @click="triggerImageUpload">
+                  📷 Chọn ảnh
+                </button>
+                <div v-if="imagePreview" class="image-preview">
+                  <img :src="imagePreview" alt="Preview" />
+                  <button type="button" class="remove-image-btn" @click="removeImage">✕</button>
+                </div>
+              </div>
             </div>
 
             <div class="form-group full">
@@ -208,6 +232,8 @@ import * as productApi from '@/services/admin/productApi'
 import axiosInstance from '@/services/axiosInstance'
 
 const products = ref<any[]>([])
+const allProductsData = ref<any[]>([])
+const filteredData = ref<any[]>([])
 const loading = ref(false)
 
 const sortField = ref('')
@@ -230,9 +256,12 @@ const newProduct = ref({
   productCategory: 'RAW_FOOD',
   unitPrice: 0,
   description: '',
-  availabilityStatus: 'AVAILABLE',
-  stockQuantity: 0
+  availabilityStatus: 'AVAILABLE'
 })
+
+const imageFile = ref<File | null>(null)
+const imagePreview = ref<string | null>(null)
+const imageInput = ref<HTMLInputElement | null>(null)
 
 let searchTimeout: any = null
 
@@ -241,12 +270,48 @@ const handleSearch = () => {
   searchTimeout = setTimeout(searchProducts, 400)
 }
 
+const triggerImageUpload = () => {
+  imageInput.value?.click()
+}
+
+const handleImageSelect = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  
+  if (file) {
+    imageFile.value = file
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      imagePreview.value = e.target?.result as string
+    }
+    reader.readAsDataURL(file)
+  }
+}
+
+const removeImage = () => {
+  imageFile.value = null
+  imagePreview.value = null
+  if (imageInput.value) {
+    imageInput.value.value = ''
+  }
+}
+
 const loadProducts = async () => {
   loading.value = true
   try {
-    const allProducts = await productApi.getAllProducts()
-    totalItems.value = allProducts.length
-    products.value = paginateData(allProducts)
+    allProductsData.value = await productApi.getAllProducts()
+    
+    // Sắp xếp: Kinh doanh lên trước
+    allProductsData.value.sort((a: any, b: any) => {
+      if (a.availabilityStatus === 'AVAILABLE' && b.availabilityStatus !== 'AVAILABLE') return -1
+      if (a.availabilityStatus !== 'AVAILABLE' && b.availabilityStatus === 'AVAILABLE') return 1
+      return 0
+    })
+    
+    filteredData.value = allProductsData.value
+    totalItems.value = filteredData.value.length
+    currentPage.value = 0
+    updateDisplayedProducts()
   } finally {
     loading.value = false
   }
@@ -260,12 +325,27 @@ const searchProducts = async () => {
       category: filters.value.category || undefined,
       status: filters.value.status || undefined
     })
-    totalItems.value = results.length
+    
+    // Sắp xếp: Kinh doanh lên trước
+    results.sort((a: any, b: any) => {
+      if (a.availabilityStatus === 'AVAILABLE' && b.availabilityStatus !== 'AVAILABLE') return -1
+      if (a.availabilityStatus !== 'AVAILABLE' && b.availabilityStatus === 'AVAILABLE') return 1
+      return 0
+    })
+    
+    filteredData.value = results
+    totalItems.value = filteredData.value.length
     currentPage.value = 0
-    products.value = paginateData(results)
+    updateDisplayedProducts()
   } finally {
     loading.value = false
   }
+}
+
+const updateDisplayedProducts = () => {
+  const start = currentPage.value * pageSize.value
+  const end = start + pageSize.value
+  products.value = filteredData.value.slice(start, end)
 }
 
 const sortBy = async (field: string) => {
@@ -277,25 +357,20 @@ const sortBy = async (field: string) => {
   }
 
   const sorted = await productApi.sortProducts(sortField.value, sortDirection.value)
-  totalItems.value = sorted.length
+  filteredData.value = sorted
+  totalItems.value = filteredData.value.length
   currentPage.value = 0
-  products.value = paginateData(sorted)
+  updateDisplayedProducts()
 }
-
-const paginateData = (data: any[]) => {
-  const start = currentPage.value * pageSize.value
-  const end = start + pageSize.value
-  return data.slice(start, end)
-}
-
-const totalPages = computed(() => Math.ceil(totalItems.value / pageSize.value))
 
 const goToPage = (page: number) => {
   if (page >= 0 && page < totalPages.value) {
     currentPage.value = page
-    loadProducts()
+    updateDisplayedProducts()
   }
 }
+
+const totalPages = computed(() => Math.ceil(totalItems.value / pageSize.value))
 
 const visiblePages = computed(() => {
   const pages: number[] = []
@@ -328,12 +403,13 @@ const openAddModal = () => {
     productCategory: 'RAW_FOOD',
     unitPrice: 0,
     description: '',
-    availabilityStatus: 'AVAILABLE',
-    stockQuantity: 0
+    availabilityStatus: 'AVAILABLE'
   }
-
+  
+  removeImage()
   showAddModal.value = true
 }
+
 const closeAddModal = () => showAddModal.value = false
 
 const isEdit = ref(false)
@@ -343,23 +419,27 @@ const openEdit = (product: any) => {
   isEdit.value = true
   editingId.value = product.id
 
-  // clone object tránh dính reference
   newProduct.value = {
     productName: product.productName,
     productCategory: product.productCategory,
     unitPrice: product.unitPrice,
     description: product.description,
-    availabilityStatus: product.availabilityStatus,
-    stockQuantity: product.stockQuantity
+    availabilityStatus: product.availabilityStatus
+  }
+  
+  // Load existing image if available
+  if (product.imageUrl) {
+    imagePreview.value = product.imageUrl
+  } else {
+    removeImage()
   }
 
   showAddModal.value = true
 }
 
-const createProduct = async () => {
-  await axiosInstance.post('/api/products', newProduct.value)
-  closeAddModal()
-  loadProducts()
+const onImgError = (e: Event) => {
+  const target = e.target as HTMLImageElement
+  target.src = 'https://picsum.photos/100/100'
 }
 
 const formatCurrency = (value: number) =>
@@ -367,7 +447,6 @@ const formatCurrency = (value: number) =>
 
 const getStatusClass = (status: string) => ({
   AVAILABLE: 'available',
-  OUT_OF_STOCK: 'out',
   DISCONTINUED: 'dis'
 }[status])
 
@@ -380,20 +459,37 @@ const getCategoryText = (category: string) => ({
 }[category] || category)
 
 const getStatusText = (status: string) => ({
-  AVAILABLE: 'Còn hàng',
-  OUT_OF_STOCK: 'Hết hàng',
-  DISCONTINUED: 'Ngừng bán'
+  AVAILABLE: 'Kinh doanh',
+  DISCONTINUED: 'Ngừng kinh doanh'
 }[status] || status)
 
 const handleSubmit = async () => {
-  if (isEdit.value) {
-    await productApi.updateProduct(editingId.value!, newProduct.value)
-  } else {
-    await productApi.createProduct(newProduct.value)
-  }
+  try {
+    let productId: number
+    
+    if (isEdit.value) {
+      await productApi.updateProduct(editingId.value!, newProduct.value)
+      productId = editingId.value!
+    } else {
+      const response = await productApi.createProduct(newProduct.value)
+      productId = response.id
+    }
+    
+    // Upload image if selected
+    if (imageFile.value && productId) {
+      const formData = new FormData()
+      formData.append('file', imageFile.value)
+      await axiosInstance.post(`/api/images/product/${productId}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
+    }
 
-  closeAddModal()
-  loadProducts()
+    closeAddModal()
+    loadProducts()
+  } catch (error) {
+    console.error('Error saving product:', error)
+    alert('Lỗi khi lưu sản phẩm: ' + error)
+  }
 }
 
 onMounted(loadProducts)
@@ -468,6 +564,26 @@ onMounted(loadProducts)
   background: #f0f4ff;
 }
 
+.product-thumbnail {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 2px solid #e2e8f0;
+}
+
+.no-image {
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f7fafc;
+  border-radius: 8px;
+  border: 2px dashed #cbd5e0;
+  font-size: 24px;
+}
+
 .name {
   font-weight: 600;
 }
@@ -480,14 +596,12 @@ onMounted(loadProducts)
 
 .available {
   background: #c6f6d5;
-}
-
-.out {
-  background: #fed7d7;
+  color: #22543d;
 }
 
 .dis {
-  background: #e2e8f0;
+  background: #fed7d7;
+  color: #742a2a;
 }
 
 .loading-cell,
@@ -504,6 +618,60 @@ onMounted(loadProducts)
   border-radius: 10px;
 }
 
+/* IMAGE UPLOAD */
+.image-upload-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.upload-btn {
+  padding: 10px 16px;
+  background: #4299e1;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.3s;
+}
+
+.upload-btn:hover {
+  background: #3182ce;
+}
+
+.image-preview {
+  position: relative;
+  width: 200px;
+  height: 200px;
+  border: 2px dashed #cbd5e0;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.image-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.remove-image-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(239, 68, 68, 0.9);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 /* ===== MODAL (CHUẨN - ĐÃ CLEAN) ===== */
 .modal-overlay {
   position: fixed;
@@ -512,13 +680,16 @@ onMounted(loadProducts)
   display: flex;
   justify-content: center;
   align-items: center;
+  z-index: 1000;
 }
 
 .modal-content {
   background: white;
   border-radius: 20px;
-  width: 520px;
+  width: 600px;
   max-width: 95%;
+  max-height: 90vh;
+  overflow-y: auto;
   box-shadow: 0 20px 60px rgba(0,0,0,0.3);
   animation: slideUp 0.3s;
 }

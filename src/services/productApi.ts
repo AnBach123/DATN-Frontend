@@ -39,3 +39,39 @@ export const getProducts = async () => {
   }
 }
 
+
+export const getActiveProducts = async () => {
+  try {
+    const res = await axiosInstance.get(`${PRODUCT_API}/active`)
+
+    const products = res.data.data || []
+
+    const result = await Promise.all(
+      products.map(async (product: any) => {
+        try {
+          const imgRes = await axiosInstance.get(`${IMAGE_API}/${product.id}`)
+
+          const images = imgRes.data.data || []
+
+          const primaryImage = images.find((img: any) => img.isPrimary)
+
+          return {
+            ...product,
+            imageUrl: primaryImage ? primaryImage.imageUrl : null,
+          }
+        } catch (error) {
+          return {
+            ...product,
+            imageUrl: null,
+          }
+        }
+      }),
+    )
+
+    return result
+  } catch (error) {
+    console.error('Load active product lỗi:', error)
+
+    return []
+  }
+}

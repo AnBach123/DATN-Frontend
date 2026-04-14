@@ -11,8 +11,8 @@
 
         <select v-model="filters.status" class="filter-select" @change="searchCombos">
           <option value="">Trạng thái</option>
-          <option value="true">Đang hoạt động</option>
-          <option value="false">Ngừng hoạt động</option>
+          <option value="true">Kinh doanh</option>
+          <option value="false">Ngừng kinh doanh</option>
         </select>
 
         <button class="add-btn" @click="openAddModal">
@@ -57,7 +57,7 @@
             <td>{{ c.description }}</td>
             <td>
               <span :class="['status', c.isActive ? 'active' : 'inactive']">
-                {{ c.isActive ? 'Hoạt động' : 'Ngừng' }}
+                {{ c.isActive ? 'Kinh doanh' : 'Ngừng kinh doanh' }}
               </span>
             </td>
             <td>
@@ -159,8 +159,8 @@
             <div class="form-group">
               <label>Trạng thái</label>
               <select v-model="newCombo.isActive">
-                <option :value="true">Hoạt động</option>
-                <option :value="false">Ngừng hoạt động</option>
+                <option :value="true">Kinh doanh</option>
+                <option :value="false">Ngừng kinh doanh</option>
               </select>
             </div>
 

@@ -194,7 +194,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { getProducts } from '@/services/productApi'
+import { getActiveProducts } from '@/services/productApi'
 import { useBookingStore } from '@/composables/bookingStore'
 import { getActiveProductCombos } from '@/services/productComboApi'
 import { getPrimaryComboImage } from '@/services/imageApi'
@@ -374,7 +374,7 @@ const loadComboImages = async (comboData:any[]) => {
 }
 const getImage = (item: Product) => {
   if (!item.imageUrl) return 'https://picsum.photos/400/300'
-  if (item.imageUrl.startsWith('http')) return item.imageUrl
+  if (item.imageUrl.startsWith('http') || item.imageUrl.startsWith('data:')) return item.imageUrl
   return 'http://localhost:8080' + item.imageUrl
 }
 
@@ -385,7 +385,7 @@ const onImgError = (e: Event) => {
 onMounted(async () => {
   try {
     const [productData, comboData] = await Promise.all([
-      getProducts(),
+      getActiveProducts(),
       getActiveProductCombos()
 
       
