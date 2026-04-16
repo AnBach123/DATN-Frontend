@@ -11,7 +11,6 @@
         :value="formatMoney(stats.todayRevenue.amount)"
         :percent-change="stats.todayRevenue.percentChange"
         :trend="stats.todayRevenue.trend"
-        icon="💰"
         color="success"
       />
       <StatCard
@@ -19,7 +18,6 @@
         :value="stats.todayInvoices.count.toString()"
         :percent-change="stats.todayInvoices.percentChange"
         :trend="stats.todayInvoices.trend"
-        icon="📄"
         color="info"
       />
       <StatCard
@@ -27,7 +25,6 @@
         :value="stats.todayCustomers.count.toString()"
         :percent-change="stats.todayCustomers.percentChange"
         :trend="stats.todayCustomers.trend"
-        icon="👥"
         color="purple"
       />
       <StatCard
@@ -35,7 +32,6 @@
         :value="`${stats.activeTables.occupied}/${stats.activeTables.total}`"
         :percent-change="stats.activeTables.percentOccupied"
         trend="neutral"
-        icon="🪑"
         color="warning"
       />
     </div>
@@ -199,10 +195,6 @@
           <div class="legend-item">
             <span class="legend-dot reserved"></span>
             <span>Đã đặt</span>
-          </div>
-          <div class="legend-item">
-            <span class="legend-dot cleaning"></span>
-            <span>Đang dọn</span>
           </div>
         </div>
         <div class="pagination-controls" v-if="totalTablePages > 1">

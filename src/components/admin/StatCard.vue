@@ -1,6 +1,6 @@
 <template>
   <div class="stat-card" :class="color">
-    <div class="stat-icon">{{ icon }}</div>
+    <div v-if="icon" class="stat-icon">{{ icon }}</div>
     <div class="stat-content">
       <div class="stat-title">{{ title }}</div>
       <div class="stat-value">{{ value }}</div>
@@ -20,7 +20,7 @@ interface Props {
   value: string
   percentChange: number
   trend: 'up' | 'down' | 'neutral'
-  icon: string
+  icon?: string
   color: 'success' | 'info' | 'warning' | 'danger' | 'purple'
 }
 

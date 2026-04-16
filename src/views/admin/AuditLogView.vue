@@ -1,7 +1,7 @@
 <template>
   <div class="audit-log-view">
     <div class="page-header">
-      <h1>📋 Nhật ký hoạt động</h1>
+      <h1>Nhật ký hoạt động</h1>
       <p class="subtitle">Theo dõi tất cả hoạt động trong hệ thống</p>
     </div>
 

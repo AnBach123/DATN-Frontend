@@ -15,7 +15,6 @@
         
         <div class="date-range-picker" ref="dateRangePicker">
           <button @click="toggleDatePicker" class="date-range-btn">
-            <span>📅</span>
             <span>{{ formatDateRange }}</span>
           </button>
           <div v-if="showDatePicker" class="date-picker-dropdown">
@@ -40,13 +39,13 @@
         :class="['tab-btn', { active: activeTab === 'revenue' }]"
         @click="activeTab = 'revenue'"
       >
-        💰 Báo cáo Doanh Thu
+        Báo cáo Doanh Thu
       </button>
       <button 
         :class="['tab-btn', { active: activeTab === 'products' }]"
         @click="activeTab = 'products'"
       >
-        🍽️ Báo cáo Món Ăn
+        Báo cáo Món Ăn
       </button>
     </div>
 
@@ -71,7 +70,6 @@
         <!-- Summary Cards -->
         <div class="summary-cards">
           <div class="summary-card">
-            <div class="card-icon">💰</div>
             <div class="card-content">
               <div class="card-label">Tổng doanh thu</div>
               <div class="card-value">{{ formatMoney(revenueReport.totalRevenue) }}</div>
@@ -84,7 +82,6 @@
           </div>
           
           <div class="summary-card">
-            <div class="card-icon">📄</div>
             <div class="card-content">
               <div class="card-label">Tổng hóa đơn</div>
               <div class="card-value">{{ revenueReport.totalInvoices }}</div>
@@ -97,7 +94,6 @@
           </div>
           
           <div class="summary-card">
-            <div class="card-icon">📊</div>
             <div class="card-content">
               <div class="card-label">Giá trị TB/đơn</div>
               <div class="card-value">{{ formatMoney(revenueReport.averageOrderValue) }}</div>
@@ -111,10 +107,21 @@
             <h3>Phương thức thanh toán</h3>
             <div class="export-buttons">
               <button @click="handleDownloadRevenueExcel" :disabled="downloading" class="export-btn excel-btn">
-                📥 Xuất Excel
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                Xuất Excel
               </button>
               <button @click="handleDownloadRevenuePdf" :disabled="downloading" class="export-btn pdf-btn">
-                📄 Xuất PDF
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                  <polyline points="14 2 14 8 20 8"/>
+                  <line x1="16" y1="13" x2="8" y2="13"/>
+                  <line x1="16" y1="17" x2="8" y2="17"/>
+                </svg>
+                Xuất PDF
               </button>
             </div>
           </div>
@@ -151,7 +158,7 @@
         <!-- Peak Hours Chart -->
         <div class="report-section">
           <div class="section-header">
-            <h3>⏰ Giờ cao điểm</h3>
+            <h3>Giờ cao điểm</h3>
           </div>
           <div class="chart-container" style="height: 350px;">
             <canvas ref="peakHoursCanvas"></canvas>
@@ -161,7 +168,7 @@
         <!-- Category Breakdown -->
         <div class="report-section">
           <div class="section-header">
-            <h3>📊 Doanh thu theo danh mục</h3>
+            <h3>Doanh thu theo danh mục</h3>
           </div>
           <div class="category-grid">
             <div class="category-chart">
@@ -199,10 +206,21 @@
             <h3>Top món ăn theo doanh thu</h3>
             <div class="export-buttons">
               <button @click="handleDownloadProductExcel" :disabled="downloading" class="export-btn excel-btn">
-                📥 Xuất Excel
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                Xuất Excel
               </button>
               <button @click="handleDownloadProductPdf" :disabled="downloading" class="export-btn pdf-btn">
-                📄 Xuất PDF
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                  <polyline points="14 2 14 8 20 8"/>
+                  <line x1="16" y1="13" x2="8" y2="13"/>
+                  <line x1="16" y1="17" x2="8" y2="17"/>
+                </svg>
+                Xuất PDF
               </button>
             </div>
           </div>

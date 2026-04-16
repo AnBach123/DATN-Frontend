@@ -2,7 +2,13 @@
   <aside class="admin-sidebar" :class="{ collapsed }">
     <div class="sidebar-header">
       <div class="logo">
-        <span class="logo-icon">🍽️</span>
+        <span class="logo-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/>
+            <path d="M7 2v20"/>
+            <path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>
+          </svg>
+        </span>
         <span v-if="!collapsed" class="logo-text">ByHat</span>
       </div>
     </div>
@@ -22,7 +28,13 @@
 
     <div class="sidebar-footer">
       <button class="nav-item logout-btn" @click="handleLogout">
-        <span class="nav-icon">🚪</span>
+        <span class="nav-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+            <polyline points="16 17 21 12 16 7"/>
+            <line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
+        </span>
         <span v-if="!collapsed" class="nav-text">Đăng xuất</span>
       </button>
     </div>
@@ -42,18 +54,61 @@ const route = useRoute()
 const router = useRouter()
 
 const menuItems = [
-  { path: '/admin/dashboard', label: 'Trang chủ', icon: '🏠' },
-  { path: '/admin/customers', label: 'Quản lý khách hàng', icon: '👥' },
-  { path: '/admin/products', label: 'Quản lý sản phẩm', icon: '🍽️' },
-  { path: '/admin/combos', label: 'Quản lý combo', icon: '🎁' },
-  { path: '/admin/vouchers', label: 'Quản lý voucher', icon: '🎫' },
-  { path: '/admin/tables', label: 'Quản lý bàn', icon: '🪑' },
-  // { path: '/admin/reservations', label: 'Quản lý đặt bàn', icon: '📅' },
-  { path: '/admin/invoices', label: 'Quản lý hóa đơn', icon: '📄' },
-  { path: '/admin/employees', label: 'Quản lý nhân viên', icon: '👨‍💼' },
-  { path: '/admin/reviews', label: 'Quản lý đánh giá', icon: '⭐' },
-  { path: '/admin/reports', label: 'Báo cáo', icon: '📊' },
-  { path: '/admin/audit-logs', label: 'Nhật ký hoạt động', icon: '📋' },
+  { 
+    path: '/admin/dashboard', 
+    label: 'Trang chủ', 
+    icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>' 
+  },
+  { 
+    path: '/admin/customers', 
+    label: 'Quản lý khách hàng', 
+    icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>' 
+  },
+  { 
+    path: '/admin/products', 
+    label: 'Quản lý sản phẩm', 
+    icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>' 
+  },
+  { 
+    path: '/admin/combos', 
+    label: 'Quản lý combo', 
+    icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-6"/><path d="M2 7h20"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>' 
+  },
+  { 
+    path: '/admin/vouchers', 
+    label: 'Quản lý voucher', 
+    icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>' 
+  },
+  { 
+    path: '/admin/tables', 
+    label: 'Quản lý bàn', 
+    icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 9V6a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v3"/><path d="M3 16a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5a2 2 0 0 0-4 0v1.5a.5.5 0 0 1-.5.5h-9a.5.5 0 0 1-.5-.5V11a2 2 0 0 0-4 0v5Z"/><path d="M5 18v3"/><path d="M19 18v3"/></svg>' 
+  },
+  { 
+    path: '/admin/invoices', 
+    label: 'Quản lý hóa đơn', 
+    icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>' 
+  },
+  { 
+    path: '/admin/employees', 
+    label: 'Quản lý nhân viên', 
+    icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><rect x="17" y="8" width="4" height="12" rx="1"/></svg>' 
+  },
+  { 
+    path: '/admin/reviews', 
+    label: 'Quản lý đánh giá', 
+    icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>' 
+  },
+  { 
+    path: '/admin/reports', 
+    label: 'Báo cáo', 
+    icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>' 
+  },
+  { 
+    path: '/admin/audit-logs', 
+    label: 'Nhật ký hoạt động', 
+    icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>' 
+  },
 ]
 
 const isActive = (path: string) => {
@@ -104,7 +159,13 @@ const handleLogout = () => {
 }
 
 .logo-icon {
-  font-size: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #667eea;
+}
+
+.logo-icon svg {
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
 }
 
@@ -165,10 +226,17 @@ const handleLogout = () => {
 }
 
 .nav-icon {
-  font-size: 22px;
-  min-width: 22px;
-  text-align: center;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+}
+
+.nav-icon svg {
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
 }
 
 .nav-text {
