@@ -214,6 +214,31 @@
         </div>
         <div class="modal-body">
           <div class="form-grid">
+            <div class="form-group" style="grid-column: 1 / -1;">
+              <label>Sản phẩm *</label>
+              <select v-model="productForm.productId" class="product-select">
+                <option value="">-- Chọn sản phẩm --</option>
+                <optgroup label="━━━ Sản phẩm chưa có voucher ━━━">
+                  <option 
+                    v-for="product in productsWithVoucherStatus.filter(p => !p.hasActiveVoucher)" 
+                    :key="product.id" 
+                    :value="product.id"
+                  >
+                    {{ product.productName }}
+                  </option>
+                </optgroup>
+                <optgroup label="━━━ Sản phẩm đã có voucher ━━━" v-if="productsWithVoucherStatus.filter(p => p.hasActiveVoucher).length > 0">
+                  <option 
+                    v-for="product in productsWithVoucherStatus.filter(p => p.hasActiveVoucher)" 
+                    :key="product.id" 
+                    :value="product.id"
+                    disabled
+                  >
+                    {{ product.productName }}
+                  </option>
+                </optgroup>
+              </select>
+            </div>
             <div class="form-group">
               <label>Mã Voucher *</label>
               <input v-model="productForm.voucherCode" type="text" placeholder="VD: SALE20" style="text-transform: uppercase" @input="productForm.voucherCode = productForm.voucherCode.toUpperCase()" />
@@ -225,15 +250,6 @@
             <div class="form-group">
               <label>Giảm giá (%) *</label>
               <input v-model="productForm.discountPercent" type="number" min="1" max="100" />
-            </div>
-            <div class="form-group">
-              <label>Sản phẩm *</label>
-              <select v-model="productForm.productId">
-                <option value="">-- Chọn sản phẩm --</option>
-                <option v-for="product in products" :key="product.id" :value="product.id">
-                  {{ product.productName }}
-                </option>
-              </select>
             </div>
             <div class="form-group">
               <label>Số lượng</label>
@@ -362,6 +378,31 @@
               <label>Ngày tạo</label>
               <input :value="selectedProductVoucher ? formatDateTime(selectedProductVoucher.createdAt) : ''" type="text" disabled />
             </div>
+            <div class="form-group" style="grid-column: 1 / -1;">
+              <label>Sản phẩm *</label>
+              <select v-model="productForm.productId" class="product-select">
+                <option value="">-- Chọn sản phẩm --</option>
+                <optgroup label="━━━ Sản phẩm chưa có voucher ━━━">
+                  <option 
+                    v-for="product in productsWithVoucherStatus.filter(p => !p.hasActiveVoucher || p.id === selectedProductVoucher?.productId)" 
+                    :key="product.id" 
+                    :value="product.id"
+                  >
+                    {{ product.productName }}
+                  </option>
+                </optgroup>
+                <optgroup label="━━━ Sản phẩm đã có voucher ━━━" v-if="productsWithVoucherStatus.filter(p => p.hasActiveVoucher && p.id !== selectedProductVoucher?.productId).length > 0">
+                  <option 
+                    v-for="product in productsWithVoucherStatus.filter(p => p.hasActiveVoucher && p.id !== selectedProductVoucher?.productId)" 
+                    :key="product.id" 
+                    :value="product.id"
+                    disabled
+                  >
+                    {{ product.productName }}
+                  </option>
+                </optgroup>
+              </select>
+            </div>
             <div class="form-group">
               <label>Mã Voucher *</label>
               <input v-model="productForm.voucherCode" type="text" style="text-transform: uppercase" @input="productForm.voucherCode = productForm.voucherCode.toUpperCase()" />
@@ -373,15 +414,6 @@
             <div class="form-group">
               <label>Giảm giá (%) *</label>
               <input v-model="productForm.discountPercent" type="number" min="1" max="100" />
-            </div>
-            <div class="form-group">
-              <label>Sản phẩm *</label>
-              <select v-model="productForm.productId">
-                <option value="">-- Chọn sản phẩm --</option>
-                <option v-for="product in products" :key="product.id" :value="product.id">
-                  {{ product.productName }}
-                </option>
-              </select>
             </div>
             <div class="form-group">
               <label>Số lượng</label>
@@ -488,6 +520,25 @@ const showAddModal = ref(false)
 const showProductDetailModal = ref(false)
 const selectedProductVoucher = ref<any | null>(null)
 const products = ref<any[]>([])
+
+// Computed: Products with voucher status
+const productsWithVoucherStatus = computed(() => {
+  return products.value
+    .filter(product => product.availabilityStatus === 'AVAILABLE') // Only show available products
+    .map(product => {
+      // Find if this product has an ACTIVE voucher
+      const activeVoucher = allProductVouchers.value.find(
+        v => v.productId === product.id && v.isActive === true
+      )
+      
+      return {
+        ...product,
+        hasActiveVoucher: !!activeVoucher,
+        activeVoucherCode: activeVoucher?.voucherCode || null,
+        activeVoucherName: activeVoucher?.voucherName || null,
+      }
+    })
+})
 
 const productCurrentPage = ref(0)
 const productPageSize = ref(10)
@@ -1386,22 +1437,31 @@ onMounted(() => {
 .modal-box {
   width: 700px;
   max-width: 92vw;
+  max-height: 75vh;
   background: white;
   border-radius: 16px;
   overflow: hidden;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   animation: slideUp 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  top: -5vh;
 }
 
 .detail-modal-box {
   width: 900px;
   max-width: 92vw;
-  max-height: 90vh;
+  max-height: 80vh;
   background: #fff;
   border-radius: 18px;
   overflow: hidden;
   box-shadow: 0 25px 80px rgba(0, 0, 0, 0.28);
   animation: slideUp 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  top: -5vh;
 }
 
 @keyframes slideUp {
@@ -1440,18 +1500,24 @@ onMounted(() => {
 .detail-body {
   padding: 24px;
   background: #f8fafc;
-}
-
-.detail-body {
-  max-height: calc(90vh - 140px);
   overflow-y: auto;
 }
 
-.detail-body::-webkit-scrollbar {
+.modal-body {
+  max-height: 50vh;
+}
+
+.detail-body {
+  max-height: 55vh;
+}
+
+.detail-body::-webkit-scrollbar,
+.modal-body::-webkit-scrollbar {
   width: 8px;
 }
 
-.detail-body::-webkit-scrollbar-thumb {
+.detail-body::-webkit-scrollbar-thumb,
+.modal-body::-webkit-scrollbar-thumb {
   background: #cbd5e0;
   border-radius: 10px;
 }
@@ -1495,6 +1561,43 @@ input:disabled {
   background: #f7fafc;
   color: #718096;
   cursor: not-allowed;
+}
+
+/* Product select with better optgroup styling */
+.product-select {
+  font-size: 14px;
+  max-height: 200px;
+}
+
+.product-select optgroup {
+  font-weight: 700;
+  font-size: 13px;
+  color: #2d3748;
+  background: linear-gradient(135deg, #e6f7ff 0%, #f0f9ff 100%);
+  padding: 8px 4px;
+  margin: 4px 0;
+  border-top: 2px solid #667eea;
+  border-bottom: 2px solid #667eea;
+}
+
+.product-select optgroup[label*="đã có"] {
+  background: linear-gradient(135deg, #fff5f5 0%, #ffe5e5 100%);
+  border-top: 2px solid #e53e3e;
+  border-bottom: 2px solid #e53e3e;
+  color: #742a2a;
+}
+
+.product-select option {
+  padding: 10px 12px;
+  font-size: 14px;
+  background: white;
+}
+
+/* Disabled option styling */
+.product-select option:disabled {
+  color: #a0aec0;
+  font-style: italic;
+  background: #f7fafc;
 }
 
 .modal-footer,
