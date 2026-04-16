@@ -64,41 +64,20 @@
             <div class="card pos-card h-100">
               <div class="card-body">
                 <h5 class="section-title">Voucher hóa đơn</h5>
-                <button class="btn btn-outline-primary w-100" @click="openVoucherModal">
-                  Chọn voucher
-                </button>
-                <div class="d-flex gap-2 mt-3">
-                  <input
-                    v-model="voucherCodeInput"
-                    class="form-control"
-                    placeholder="Nhập mã voucher (nếu có)"
-                  />
-                  <button class="btn btn-outline-primary" @click="applyVoucherCode">Áp dụng</button>
-                </div>
-                <div class="mt-2 small text-muted">
-                  Giảm hóa đơn:
-                  <strong class="text-dark">{{ formatMoney(invoiceVoucherDiscount) }}</strong>
-                </div>
-                <div v-if="selectedVoucher" class="mt-2 small">
-                  <span class="text-muted">Voucher hóa đơn:</span>
-                  <strong class="text-dark"
-                    >{{ selectedVoucher.name }} ({{ selectedVoucher.percent }}%)</strong
-                  >
-                </div>
-                <div v-if="selectedProductVoucherCodes.length > 0" class="mt-3">
-                  <div class="small text-muted mb-2">Voucher món/combo đã áp dụng:</div>
-                  <div class="d-flex flex-wrap gap-2">
-                    <span 
-                      v-for="code in selectedProductVoucherCodes" 
-                      :key="code"
-                      class="badge bg-success"
-                      style="cursor: pointer;"
-                      @click="removeProductVoucher(code)"
-                      title="Click để xóa"
-                    >
-                      {{ code }} ✕
-                    </span>
+                <div v-if="selectedVoucher" class="alert alert-success mb-0" style="padding: 12px;">
+                  <div class="d-flex align-items-center gap-2">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M9 11l3 3L22 4"></path>
+                      <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"></path>
+                    </svg>
+                    <div class="flex-grow-1">
+                      <div class="fw-semibold">{{ selectedVoucher.name }}</div>
+                      <div class="small">Giảm {{ selectedVoucher.percent }}% · -{{ formatMoney(invoiceVoucherDiscount) }}</div>
+                    </div>
                   </div>
+                </div>
+                <div v-else class="text-muted small">
+                  Không có voucher hóa đơn khả dụng
                 </div>
               </div>
             </div>
@@ -414,56 +393,7 @@
       </div>
     </div>
 
-    <!-- Voucher Modal -->
-    <div v-if="showVoucherModal" class="voucher-modal">
-      <div class="voucher-card">
-        <div class="voucher-header">
-          <h6 class="mb-0">Chọn voucher khả dụng</h6>
-          <button class="btn-close" @click="closeVoucherModal"></button>
-        </div>
-        <div class="voucher-body">
-          <div v-if="!allVouchers.length" class="text-muted small">
-            Hiện chưa có voucher.
-          </div>
-          <div v-else class="voucher-list">
-            <div 
-              v-for="v in allVouchers" 
-              :key="v.id" 
-              class="voucher-item"
-              :class="{ 'voucher-disabled': v.isDisabled }"
-            >
-              <div>
-                <div class="fw-semibold">
-                  Giảm {{ v.percent }}%
-                  <span v-if="v.code" class="badge bg-secondary ms-2">{{ v.code }}</span>
-                  <span v-if="v.voucherType === 'PRODUCT'" class="badge bg-primary ms-2">Món</span>
-                  <span v-else-if="v.voucherType === 'COMBO'" class="badge bg-success ms-2">Combo</span>
-                  <span v-else-if="v.voucherType === 'CUSTOMER'" class="badge bg-info ms-2">Hóa đơn</span>
-                  <span v-if="v.voucherStatus === 'USED'" class="badge bg-secondary ms-2">Đã sử dụng</span>
-                  <span v-else-if="v.voucherStatus === 'EXPIRED'" class="badge bg-warning ms-2">Hết hạn</span>
-                  <span v-else-if="v.voucherStatus === 'INACTIVE'" class="badge bg-dark ms-2">Vô hiệu</span>
-                </div>
-                <div class="small text-muted">
-                  {{ v.percent }}% · HSD {{ formatDateTime(v.expiresAt) }}
-                  <span v-if="v.remainingQuantity" class="ms-2">· Còn {{ v.remainingQuantity }} lượt</span>
-                </div>
-              </div>
-              <button 
-                class="btn btn-sm btn-primary" 
-                @click="selectVoucher(v.id, v.voucherType, v.code)"
-                :disabled="v.isDisabled"
-              >
-                Chọn
-              </button>
-            </div>
-          </div>
-        </div>
-        <div class="voucher-footer">
-          <button class="btn btn-light" @click="clearVoucher">Bỏ chọn</button>
-          <button class="btn btn-outline-secondary" @click="closeVoucherModal">Đóng</button>
-        </div>
-      </div>
-    </div>
+
   </div>
 </template>
 
@@ -536,6 +466,12 @@ type Payment = {
   vatPercent: number
   serviceFeePercent: number
   pointValue: number
+  // Auto-applied invoice voucher fields
+  autoAppliedVoucherId?: number
+  autoAppliedVoucherCode?: string
+  autoAppliedVoucherName?: string
+  autoAppliedVoucherPercent?: number
+  autoAppliedVoucherDiscount?: number
 }
 
 const payment = ref<Payment | null>(null)
@@ -548,15 +484,11 @@ const errorMsg = ref('')
 const isProcessingPayment = ref(false)
 
 const selectedVoucherId = ref<number | ''>('')
-const selectedProductVoucherCodes = ref<string[]>([]) // Product/Combo voucher codes
-const voucherCodeInput = ref('')
 const usePoints = ref(0)
 
 const paymentMethod = ref<'CASH' | 'TRANSFER' | 'EWALLET'>('CASH')
 const cashReceived = ref(0)
 const paymentNote = ref('')
-
-const showVoucherModal = ref(false)
 
 // MoMo payment states
 const momoQrUrl = ref('')
@@ -673,95 +605,24 @@ const handlePaymentSuccess = async (amount: number) => {
   await checkoutWithAutoPrint(savedPayment, savedTotalPayable, savedSubtotal, savedItemVoucherDiscount, savedInvoiceVoucherDiscount, savedVatAmount, savedServiceFeeAmount, savedPointsDiscount, savedTableText, savedSelectedVoucher)
 }
 
-const allVouchers = computed(() => {
-  if (!payment.value) return []
-  const list = payment.value.vouchers || []
-  const items = payment.value.items || []
-  
-  return list.map((v) => {
-    const isActive = v.voucherStatus === 'ACTIVE'
-    
-    // Filter Product/Combo vouchers - only show if invoice has matching item
-    let hasMatchingItem = true
-    if (v.voucherType === 'PRODUCT' && v.applicableItemId) {
-      hasMatchingItem = items.some(item => item.productId === v.applicableItemId)
-    } else if (v.voucherType === 'COMBO' && v.applicableItemId) {
-      hasMatchingItem = items.some(item => item.comboId === v.applicableItemId)
-    }
-    
-    return {
-      ...v,
-      isActive,
-      isDisabled: !isActive || !hasMatchingItem,
-      hasMatchingItem
-    }
-  }).filter(v => {
-    // Hide Product/Combo vouchers that don't have matching items
-    if ((v.voucherType === 'PRODUCT' || v.voucherType === 'COMBO') && !v.hasMatchingItem) {
-      return false
-    }
-    return true
-  }).sort((a, b) => {
-    // Active vouchers first, then used/expired/inactive vouchers
-    if (a.isActive && !b.isActive) return -1
-    if (!a.isActive && b.isActive) return 1
-    return 0
-  })
+const selectedVoucher = computed(() => {
+  if (!payment.value || !selectedVoucherId.value) return null
+  const vouchers = payment.value.vouchers || []
+  return vouchers.find((v) => v.id === selectedVoucherId.value && v.voucherStatus === 'ACTIVE')
 })
-
-const validVouchers = computed(() => {
-  return allVouchers.value.filter(v => v.isActive)
-})
-
-const selectedVoucher = computed(() =>
-  validVouchers.value.find((v) => v.id === selectedVoucherId.value),
-)
 
 const subtotal = computed(() => payment.value?.subtotal || 0)
 
-// Calculate item voucher discount based on selected Product/Combo voucher codes
+// Calculate item voucher discount from backend
 const itemVoucherDiscount = computed(() => {
-  if (!payment.value || selectedProductVoucherCodes.value.length === 0) {
-    return payment.value?.itemVoucherDiscount || 0
-  }
-  
-  let totalDiscount = 0
-  const items = payment.value.items || []
-  
-  // For each selected voucher code
-  for (const code of selectedProductVoucherCodes.value) {
-    // Find the voucher details
-    const voucher = validVouchers.value.find(v => v.code === code)
-    if (!voucher) continue
-    
-    // Find matching items
-    for (const item of items) {
-      let matches = false
-      
-      if (voucher.voucherType === 'PRODUCT' && item.productId === voucher.applicableItemId) {
-        matches = true
-      } else if (voucher.voucherType === 'COMBO' && item.comboId === voucher.applicableItemId) {
-        matches = true
-      }
-      
-      if (matches) {
-        // Calculate discount for this item
-        const itemTotal = item.unitPrice * item.quantity
-        const discount = Math.floor((itemTotal * voucher.percent) / 100)
-        totalDiscount += discount
-      }
-    }
-  }
-  
-  return totalDiscount
+  return payment.value?.itemVoucherDiscount || 0
 })
 
 const invoiceVoucherDiscount = computed(() => {
-  const voucher = validVouchers.value.find((v) => v.id === selectedVoucherId.value)
-  if (!voucher) return 0
+  if (!selectedVoucher.value) return 0
   const base = subtotal.value - itemVoucherDiscount.value
   if (base <= 0) return 0
-  return Math.floor((base * voucher.percent) / 100)
+  return Math.floor((base * selectedVoucher.value.percent) / 100)
 })
 
 // Calculate taxable base (after all discounts except points)
@@ -830,14 +691,28 @@ const loadPayment = async () => {
     const res = await getPaymentByTable(tableIdInput.value)
     payment.value = res.data.data
     
-    selectedVoucherId.value = ''
-    selectedProductVoucherCodes.value = []
+    // Auto-apply invoice voucher if backend returned one
+    if (payment.value && payment.value.autoAppliedVoucherId) {
+      selectedVoucherId.value = payment.value.autoAppliedVoucherId
+      
+      // Show notification that voucher was auto-applied
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        html: `<div style="font-family: Arial, sans-serif;">✓ Đã tự động áp dụng voucher: ${payment.value.autoAppliedVoucherName || ''} (${payment.value.autoAppliedVoucherPercent || 0}%)</div>`,
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true,
+      })
+    } else {
+      selectedVoucherId.value = ''
+    }
+    
     usePoints.value = 0
-    voucherCodeInput.value = ''
     paymentMethod.value = 'CASH'
     cashReceived.value = 0
     paymentNote.value = ''
-    showVoucherModal.value = false
   } catch (error: any) {
     errorMsg.value = error.response.data.message || 'Không tải được hóa đơn'
     payment.value = null
@@ -849,106 +724,6 @@ const loadPayment = async () => {
 const useMaxPoints = () => {
   if (!payment.value) return
   usePoints.value = payment.value.loyaltyPoints || 0
-}
-
-const applyVoucherCode = () => {
-  const code = voucherCodeInput.value.trim().toUpperCase()
-  if (!code) {
-    selectedVoucherId.value = ''
-    return
-  }
-  
-  const found = validVouchers.value.find((v) => (v.code || '').toUpperCase() === code)
-  if (found) {
-    // Check voucher type
-    if (found.voucherType === 'CUSTOMER') {
-      // Customer voucher - select as invoice voucher
-      selectedVoucherId.value = found.id
-      voucherCodeInput.value = ''
-    } else if (found.voucherType === 'PRODUCT' || found.voucherType === 'COMBO') {
-      // Product/Combo voucher - add to list
-      if (!selectedProductVoucherCodes.value.includes(code)) {
-        selectedProductVoucherCodes.value.push(code)
-        voucherCodeInput.value = ''
-        
-        Swal.fire({
-          toast: true,
-          position: 'top-end',
-          icon: 'success',
-          html: '<div style="font-family: Arial, sans-serif;">Đã áp dụng voucher thành công</div>',
-          showConfirmButton: false,
-          timer: 2000,
-          timerProgressBar: true,
-        })
-      } else {
-        Swal.fire({
-          toast: true,
-          position: 'top-end',
-          icon: 'warning',
-          html: '<div style="font-family: Arial, sans-serif;">Voucher đã được áp dụng rồi</div>',
-          showConfirmButton: false,
-          timer: 2000,
-          timerProgressBar: true,
-        })
-      }
-    }
-  } else {
-    Swal.fire({
-      toast: true,
-      position: 'top-end',
-      icon: 'error',
-      html: '<div style="font-family: Arial, sans-serif;">Không tìm thấy voucher hợp lệ</div>',
-      showConfirmButton: false,
-      timer: 3000,
-      timerProgressBar: true,
-    })
-    selectedVoucherId.value = ''
-  }
-}
-
-const openVoucherModal = () => {
-  showVoucherModal.value = true
-}
-
-const closeVoucherModal = () => {
-  showVoucherModal.value = false
-}
-
-const selectVoucher = (id: number, voucherType?: string, code?: string) => {
-  if (voucherType === 'CUSTOMER') {
-    // Customer voucher - select as invoice voucher
-    selectedVoucherId.value = id
-    closeVoucherModal()
-  } else if (voucherType === 'PRODUCT' || voucherType === 'COMBO') {
-    // Product/Combo voucher - add to list
-    if (code && !selectedProductVoucherCodes.value.includes(code)) {
-      selectedProductVoucherCodes.value.push(code)
-      
-      Swal.fire({
-        toast: true,
-        position: 'top-end',
-        icon: 'success',
-        html: '<div style="font-family: Arial, sans-serif;">Đã áp dụng voucher thành công</div>',
-        showConfirmButton: false,
-        timer: 2000,
-        timerProgressBar: true,
-      })
-    }
-    closeVoucherModal()
-  } else {
-    // Fallback - treat as customer voucher
-    selectedVoucherId.value = id
-    closeVoucherModal()
-  }
-}
-
-const clearVoucher = () => {
-  selectedVoucherId.value = ''
-  voucherCodeInput.value = ''
-}
-
-const removeProductVoucher = (code: string) => {
-  selectedProductVoucherCodes.value = selectedProductVoucherCodes.value.filter(c => c !== code)
 }
 
 // Generate MoMo QR code for payment
@@ -1425,7 +1200,6 @@ const checkout = async () => {
     const res = await checkoutPayment({
       tableId: tableIdInput.value as number,
       customerVoucherId: selectedVoucherId.value ? Number(selectedVoucherId.value) : null,
-      voucherCodes: selectedProductVoucherCodes.value.length > 0 ? selectedProductVoucherCodes.value : null,
       usePoints: usePoints.value,
       paymentMethod: paymentMethod.value,
       cashReceived: paymentMethod.value === 'CASH' ? cashReceived.value : 0,
@@ -1618,7 +1392,6 @@ const checkoutWithAutoPrint = async (
     const res = await checkoutPayment({
       tableId: tableIdInput.value as number,
       customerVoucherId: selectedVoucherId.value ? Number(selectedVoucherId.value) : null,
-      voucherCodes: selectedProductVoucherCodes.value.length > 0 ? selectedProductVoucherCodes.value : null,
       usePoints: usePoints.value,
       paymentMethod: 'TRANSFER',
       cashReceived: 0,
@@ -1809,9 +1582,8 @@ const printInvoice = async () => {
   await new Promise(resolve => setTimeout(resolve, 500))
   
   const items = payment.value.items || []
-  const voucher = validVouchers.value.find((v) => v.id === selectedVoucherId.value)
-  const voucherName = voucher ? voucher.name : 'Không áp dụng'
-  const voucherPercent = voucher ? `${voucher.percent}%` : ''
+  const voucherName = selectedVoucher.value ? selectedVoucher.value.name : 'Không áp dụng'
+  const voucherPercent = selectedVoucher.value ? `${selectedVoucher.value.percent}%` : ''
   const printedAt = new Date().toLocaleString('vi-VN', { hour12: false })
   const printTitle = 'HÓA ĐƠN THANH TOÁN'
   const methodLabelMap: Record<string, string> = {

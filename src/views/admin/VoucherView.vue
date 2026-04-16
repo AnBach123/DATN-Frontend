@@ -122,7 +122,7 @@
             v-model="customerFilters.keyword"
             type="text"
             class="filter-input keyword-input"
-            placeholder="Tìm theo mã voucher hoặc tên khách hàng..."
+            placeholder="Tìm theo mã voucher..."
             @input="searchCustomerVouchers"
           />
           <select v-model="customerFilters.status" class="filter-input" @change="searchCustomerVouchers">
@@ -142,7 +142,6 @@
                 <th>ID</th>
                 <th>Mã Voucher</th>
                 <th>Tên Voucher</th>
-                <th>Khách hàng</th>
                 <th>Ngày phát hành</th>
                 <th>Ngày hết hạn</th>
                 <th>SL còn lại</th>
@@ -152,13 +151,12 @@
             </thead>
             <tbody>
               <tr v-if="customerVouchers.length === 0">
-                <td colspan="9" class="empty">Không có dữ liệu</td>
+                <td colspan="8" class="empty">Không có dữ liệu</td>
               </tr>
               <tr v-for="voucher in customerVouchers" :key="voucher.id">
                 <td>{{ voucher.id }}</td>
                 <td>{{ voucher.voucherCode }}</td>
                 <td>{{ voucher.voucherName }}</td>
-                <td>{{ voucher.customerFullName }}</td>
                 <td>{{ formatDate(voucher.issuedAt) }}</td>
                 <td>{{ formatDate(voucher.expiresAt) }}</td>
                 <td>{{ voucher.remainingQuantity }}</td>
@@ -262,7 +260,7 @@
     <div v-if="showAddCustomerModal" class="modal-overlay" @click.self="closeAddCustomerModal">
       <div class="modal-box">
         <div class="modal-header">
-          <h3>Thêm Voucher Khách Hàng</h3>
+          <h3>Thêm Voucher Hóa Đơn</h3>
           <button class="close-btn" @click="closeAddCustomerModal">×</button>
         </div>
 
@@ -294,30 +292,6 @@
                 </option>
               </select>
             </div>
-            <div class="form-group customer-search-group" style="grid-column: 1 / -1;">
-              <label>Khách hàng * <span v-if="customerForm.customerId" class="selected-badge">✓ Đã chọn</span></label>
-              <div class="search-input-wrapper">
-                <input 
-                  v-model="customerSearchKeyword" 
-                  type="text" 
-                  placeholder="Nhập tên, SĐT hoặc email để tìm..."
-                  @input="searchCustomers"
-                  @focus="searchCustomers"
-                />
-                <button v-if="customerForm.customerId" class="clear-btn" @click="clearCustomerSelection" type="button">×</button>
-              </div>
-              <div v-if="showCustomerDropdown" class="customer-dropdown">
-                <div 
-                  v-for="customer in filteredCustomers" 
-                  :key="customer.id"
-                  class="customer-item"
-                  @click="selectCustomer(customer)"
-                >
-                  <div class="customer-name">{{ customer.fullName }}</div>
-                  <div class="customer-info">{{ customer.phoneNumber }} • {{ customer.email }}</div>
-                </div>
-              </div>
-            </div>
             <div class="form-group">
               <label>Ngày phát hành</label>
               <input v-model="customerForm.issuedAt" type="date" />
@@ -346,29 +320,9 @@
               <label>Giảm giá (%) *</label>
               <input v-model="customerForm.discountPercent" type="number" min="1" max="100" />
             </div>
-            <div class="form-group customer-search-group" style="grid-column: 1 / -1;">
-              <label>Khách hàng * <span v-if="customerForm.customerId" class="selected-badge">✓ Đã chọn</span></label>
-              <div class="search-input-wrapper">
-                <input 
-                  v-model="customerSearchKeyword" 
-                  type="text" 
-                  placeholder="Nhập tên, SĐT hoặc email để tìm..."
-                  @input="searchCustomers"
-                  @focus="searchCustomers"
-                />
-                <button v-if="customerForm.customerId" class="clear-btn" @click="clearCustomerSelection" type="button">×</button>
-              </div>
-              <div v-if="showCustomerDropdown" class="customer-dropdown">
-                <div 
-                  v-for="customer in filteredCustomers" 
-                  :key="customer.id"
-                  class="customer-item"
-                  @click="selectCustomer(customer)"
-                >
-                  <div class="customer-name">{{ customer.fullName }}</div>
-                  <div class="customer-info">{{ customer.phoneNumber }} • {{ customer.email }}</div>
-                </div>
-              </div>
+            <div class="form-group">
+              <label>Số tiền tối thiểu (VNĐ)</label>
+              <input v-model="customerForm.minOrderAmount" type="number" min="0" step="1000" placeholder="VD: 100000" />
             </div>
             <div class="form-group">
               <label>Ngày phát hành</label>
@@ -462,7 +416,7 @@
     <div v-if="showCustomerDetailModal" class="modal-overlay" @click.self="closeCustomerDetailModal">
       <div class="detail-modal-box">
         <div class="modal-header">
-          <h3>Chi tiết Voucher Khách Hàng</h3>
+          <h3>Chi tiết Voucher Hóa Đơn</h3>
           <button class="close-btn" @click="closeCustomerDetailModal">×</button>
         </div>
         <div class="detail-body">
@@ -484,8 +438,12 @@
               <input :value="customerForm.voucherName" type="text" disabled />
             </div>
             <div class="form-group">
-              <label>Khách hàng</label>
-              <input :value="customerForm.customerFullName" type="text" disabled />
+              <label>Giảm giá (%)</label>
+              <input :value="customerForm.discountPercent" type="text" disabled />
+            </div>
+            <div class="form-group">
+              <label>Số tiền tối thiểu (VNĐ)</label>
+              <input :value="customerForm.minOrderAmount ? customerForm.minOrderAmount.toLocaleString('vi-VN') : '0'" type="text" disabled />
             </div>
             <div class="form-group">
               <label>Ngày phát hành</label>
@@ -561,19 +519,13 @@ const voucherCreationMode = ref<'template' | 'direct'>('template') // New: track
 const customerCurrentPage = ref(0)
 const customerPageSize = ref(10)
 
-// Customer search
-const customerSearchKeyword = ref('')
-const filteredCustomers = ref<any[]>([])
-const showCustomerDropdown = ref(false)
-
 const customerForm = ref({
   id: null as number | null,
   personalVoucherId: null as number | null,
   voucherCode: '',
   voucherName: '',
   discountPercent: 0,
-  customerId: null as number | null,
-  customerFullName: '',
+  minOrderAmount: 0,
   issuedAt: '',
   expiresAt: '',
   remainingQuantity: 0,
@@ -685,8 +637,7 @@ const searchCustomerVouchers = () => {
     
     const filtered = allData.filter((v: any) => {
       const matchKeyword = !customerFilters.value.keyword ||
-        v.voucherCode?.toLowerCase().includes(customerFilters.value.keyword.toLowerCase()) ||
-        v.customerFullName?.toLowerCase().includes(customerFilters.value.keyword.toLowerCase())
+        v.voucherCode?.toLowerCase().includes(customerFilters.value.keyword.toLowerCase())
       
       const matchStatus = !customerFilters.value.status ||
         v.voucherStatus === customerFilters.value.status
@@ -878,50 +829,13 @@ const resetCustomerForm = () => {
     voucherCode: '',
     voucherName: '',
     discountPercent: 0,
-    customerId: null,
-    customerFullName: '',
+    minOrderAmount: 0,
     issuedAt: '',
     expiresAt: '',
     remainingQuantity: 0,
     voucherStatus: '',
   }
   voucherCreationMode.value = 'template' // Reset to default
-  customerSearchKeyword.value = ''
-  filteredCustomers.value = []
-  showCustomerDropdown.value = false
-}
-
-// Customer search functionality
-const searchCustomers = () => {
-  const keyword = customerSearchKeyword.value.toLowerCase().trim()
-  if (!keyword) {
-    filteredCustomers.value = []
-    showCustomerDropdown.value = false
-    return
-  }
-
-  filteredCustomers.value = customers.value.filter((c: any) => 
-    c.fullName?.toLowerCase().includes(keyword) ||
-    c.phoneNumber?.includes(keyword) ||
-    c.email?.toLowerCase().includes(keyword)
-  ).slice(0, 10) // Limit to 10 results
-
-  showCustomerDropdown.value = filteredCustomers.value.length > 0
-}
-
-const selectCustomer = (customer: any) => {
-  customerForm.value.customerId = customer.id
-  customerForm.value.customerFullName = customer.fullName
-  customerSearchKeyword.value = `${customer.fullName} - ${customer.phoneNumber}`
-  showCustomerDropdown.value = false
-}
-
-const clearCustomerSelection = () => {
-  customerForm.value.customerId = null
-  customerForm.value.customerFullName = ''
-  customerSearchKeyword.value = ''
-  filteredCustomers.value = []
-  showCustomerDropdown.value = false
 }
 
 const closeAddCustomerModal = () => {
@@ -930,11 +844,6 @@ const closeAddCustomerModal = () => {
 }
 
 const submitAddCustomerVoucher = async () => {
-  if (!customerForm.value.customerId) {
-    alert('Vui lòng chọn khách hàng')
-    return
-  }
-
   // Validate based on mode
   if (voucherCreationMode.value === 'template') {
     if (!customerForm.value.personalVoucherId) {
@@ -951,6 +860,13 @@ const submitAddCustomerVoucher = async () => {
     const discount = Number(customerForm.value.discountPercent)
     if (discount < 1 || discount > 100) {
       alert('Giảm giá phải từ 1% đến 100%')
+      return
+    }
+
+    // Validate minOrderAmount
+    const minAmount = Number(customerForm.value.minOrderAmount)
+    if (minAmount < 0) {
+      alert('Số tiền tối thiểu không được âm')
       return
     }
   }
@@ -983,7 +899,6 @@ const submitAddCustomerVoucher = async () => {
 
   try {
     const payload: any = {
-      customerId: Number(customerForm.value.customerId),
       issuedAt: customerForm.value.issuedAt || undefined,
       expiresAt: customerForm.value.expiresAt || undefined,
       remainingQuantity: remainingQty,
@@ -997,14 +912,15 @@ const submitAddCustomerVoucher = async () => {
       payload.voucherCode = customerForm.value.voucherCode
       payload.voucherName = customerForm.value.voucherName
       payload.discountPercent = Number(customerForm.value.discountPercent)
+      payload.minOrderAmount = Number(customerForm.value.minOrderAmount) || 0
     }
 
     await VoucherService.createCustomerVoucher(payload)
-    alert('Thêm voucher khách hàng thành công')
+    alert('Thêm voucher hóa đơn thành công')
     closeAddCustomerModal()
     await loadCustomerVouchers()
   } catch (error: any) {
-    alert(error?.response?.data?.message || 'Thêm voucher khách hàng thất bại')
+    alert(error?.response?.data?.message || 'Thêm voucher hóa đơn thất bại')
   }
 }
 
@@ -1016,8 +932,7 @@ const openCustomerDetailModal = (voucher: any) => {
     voucherCode: voucher.voucherCode,
     voucherName: voucher.voucherName,
     discountPercent: voucher.discountPercent || 0,
-    customerId: voucher.customerId,
-    customerFullName: voucher.customerFullName,
+    minOrderAmount: voucher.minOrderAmount || 0,
     issuedAt: voucher.issuedAt,
     expiresAt: voucher.expiresAt,
     remainingQuantity: voucher.remainingQuantity,
