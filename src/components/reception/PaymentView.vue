@@ -472,6 +472,8 @@ type Payment = {
   autoAppliedVoucherName?: string
   autoAppliedVoucherPercent?: number
   autoAppliedVoucherDiscount?: number
+  // Pre-calculated totalPayable from backend (with points = 0)
+  totalPayable?: number
 }
 
 const payment = ref<Payment | null>(null)
@@ -630,38 +632,48 @@ const baseAfterVoucher = computed(() => {
   return Math.max(0, subtotal.value - itemVoucherDiscount.value - invoiceVoucherDiscount.value)
 })
 
+// CRITICAL FIX: VAT and service fee are calculated on baseAfterVoucher (BEFORE points)
+// Points are a payment method, not a discount, so tax is calculated before points
+const vatAmount = computed(() => {
+  if (!payment.value) return 0
+  const vatPercent = payment.value.vatPercent || 8
+  return Math.floor((baseAfterVoucher.value * vatPercent) / 100)
+})
+
+const serviceFeeAmount = computed(() => {
+  if (!payment.value) return 0
+  const serviceFeePercent = payment.value.serviceFeePercent || 0
+  return Math.floor((baseAfterVoucher.value * serviceFeePercent) / 100)
+})
+
+// Calculate totalPayable BEFORE points (this is the amount customer owes)
+const totalPayableBeforePoints = computed(() => {
+  return Math.max(0, baseAfterVoucher.value + vatAmount.value + serviceFeeAmount.value)
+})
+
+// Points discount (applied AFTER calculating tax)
 const pointsDiscount = computed(() => {
   if (!payment.value) return 0
   const pointValue = payment.value.pointValue || 1000
   const maxByPoints = Math.max(0, usePoints.value) * pointValue
   
-  // Points can only reduce up to baseAfterVoucher
-  const maxAllowed = baseAfterVoucher.value
+  // Points can only reduce up to totalPayableBeforePoints
+  const maxAllowed = totalPayableBeforePoints.value
   return Math.max(0, Math.min(maxByPoints, maxAllowed))
 })
 
-// Taxable base = baseAfterVoucher - pointsDiscount
-const taxableBase = computed(() => {
-  return Math.max(0, baseAfterVoucher.value - pointsDiscount.value)
-})
-
-// VAT amount (8% of taxable base)
-const vatAmount = computed(() => {
+// Final amount customer needs to pay (after points)
+const totalPayable = computed(() => {
   if (!payment.value) return 0
-  const vatPercent = payment.value.vatPercent || 8
-  return Math.floor((taxableBase.value * vatPercent) / 100)
+  
+  // If user hasn't used any points, use backend's pre-calculated value
+  if (usePoints.value === 0 && payment.value.totalPayable !== undefined) {
+    return payment.value.totalPayable
+  }
+  
+  // If user changed points, recalculate: totalPayableBeforePoints - pointsDiscount
+  return Math.max(0, totalPayableBeforePoints.value - pointsDiscount.value)
 })
-
-// Service fee amount (0% of taxable base)
-const serviceFeeAmount = computed(() => {
-  if (!payment.value) return 0
-  const serviceFeePercent = payment.value.serviceFeePercent || 0
-  return Math.floor((taxableBase.value * serviceFeePercent) / 100)
-})
-
-const totalPayable = computed(() =>
-  Math.max(0, taxableBase.value + vatAmount.value + serviceFeeAmount.value),
-)
 
 const changeDue = computed(() =>
   paymentMethod.value === 'CASH' ? Math.max(0, cashReceived.value - totalPayable.value) : 0,
