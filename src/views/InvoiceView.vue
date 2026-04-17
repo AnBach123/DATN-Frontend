@@ -36,6 +36,16 @@
         </div>
         <div class="info-row">
           <div class="info-item">
+            <label>Loại khách:</label>
+            <strong>{{ invoiceData.customerType === 'MEMBER' ? 'Thành viên' : 'Khách lẻ' }}</strong>
+          </div>
+          <div class="info-item">
+            <label>Kênh hóa đơn:</label>
+            <strong>{{ invoiceData.invoiceChannel === 'ONLINE' ? 'Đặt bàn online' : 'Tại quầy' }}</strong>
+          </div>
+        </div>
+        <div class="info-row">
+          <div class="info-item">
             <label>Phương thức:</label>
             <strong>{{ getPaymentMethodLabel(invoiceData.paymentMethod) }}</strong>
           </div>

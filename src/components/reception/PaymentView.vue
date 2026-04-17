@@ -1676,6 +1676,8 @@ const printInvoice = async () => {
           <div><span>Mã hóa đơn</span><span>${payment.value.invoiceCode}</span></div>
           <div><span>Bàn</span><span>${tableText.value}</span></div>
           <div><span>Khách</span><span>${payment.value.customerName}</span></div>
+          <div><span>Loại khách</span><span>${payment.value.customerType === 'MEMBER' ? 'Thành viên' : 'Khách lẻ'}</span></div>
+          <div><span>Kênh hóa đơn</span><span>${payment.value.invoiceChannel === 'ONLINE' ? 'Đặt bàn online' : 'Tại quầy'}</span></div>
           <div><span>Thời gian</span><span>${printedAt}</span></div>
         </div>
         <table>
@@ -1841,6 +1843,8 @@ const printInvoiceWithData = (
           <div><span>Mã hóa đơn</span><span>${savedPayment.invoiceCode}</span></div>
           <div><span>Bàn</span><span>${savedTableText}</span></div>
           <div><span>Khách</span><span>${savedPayment.customerName}</span></div>
+          <div><span>Loại khách</span><span>${savedPayment.customerType === 'MEMBER' ? 'Thành viên' : 'Khách lẻ'}</span></div>
+          <div><span>Kênh hóa đơn</span><span>${savedPayment.invoiceChannel === 'ONLINE' ? 'Đặt bàn online' : 'Tại quầy'}</span></div>
           <div><span>Thời gian</span><span>${printedAt}</span></div>
         </div>
         <table>

@@ -1,10 +1,10 @@
 import axiosInstance from './axiosInstance'
 
 export interface ProductVoucherRequest {
-  voucherCode: string
-  voucherName: string
-  discountPercent: number
-  productId: number
+  voucherCode?: string // Optional for update
+  voucherName?: string // Optional for update
+  discountPercent?: number // Optional for update
+  productId?: number // Optional for update
   remainingQuantity?: number
   validFrom?: string
   validTo?: string
@@ -19,9 +19,10 @@ export interface CustomerVoucherRequest {
   voucherCode?: string
   voucherName?: string
   discountPercent?: number
+  minOrderAmount?: number
   
   // Common fields
-  customerId: number
+  customerId?: number | null // Optional - null means voucher applies to all customers
   issuedAt?: string
   expiresAt?: string
   remainingQuantity?: number

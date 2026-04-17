@@ -257,11 +257,21 @@
             </div>
             <div class="form-group">
               <label>Từ ngày</label>
-              <input v-model="productForm.validFrom" type="date" />
+              <input 
+                v-model="productForm.validFrom" 
+                type="date"
+                :class="{ 'input-error': productFormErrors.validFrom }"
+              />
+              <span v-if="productFormErrors.validFrom" class="error-message">{{ productFormErrors.validFrom }}</span>
             </div>
             <div class="form-group">
               <label>Đến ngày</label>
-              <input v-model="productForm.validTo" type="date" />
+              <input 
+                v-model="productForm.validTo" 
+                type="date"
+                :class="{ 'input-error': productFormErrors.validTo }"
+              />
+              <span v-if="productFormErrors.validTo" class="error-message">{{ productFormErrors.validTo }}</span>
             </div>
           </div>
         </div>
@@ -280,50 +290,8 @@
           <button class="close-btn" @click="closeAddCustomerModal">×</button>
         </div>
 
-        <!-- MODE SELECTOR -->
-        <div class="mode-selector">
-          <button 
-            :class="['mode-btn', { active: voucherCreationMode === 'template' }]"
-            @click="voucherCreationMode = 'template'"
-          >
-            📋 Từ Template
-          </button>
-          <button 
-            :class="['mode-btn', { active: voucherCreationMode === 'direct' }]"
-            @click="voucherCreationMode = 'direct'"
-          >
-            ✏️ Tạo Trực Tiếp
-          </button>
-        </div>
-
         <div class="modal-body">
-          <!-- MODE: FROM TEMPLATE -->
-          <div v-if="voucherCreationMode === 'template'" class="form-grid">
-            <div class="form-group" style="grid-column: 1 / -1;">
-              <label>Voucher Template *</label>
-              <select v-model="customerForm.personalVoucherId">
-                <option value="">-- Chọn voucher template --</option>
-                <option v-for="voucher in personalVouchers" :key="voucher.id" :value="voucher.id">
-                  {{ voucher.voucherCode }} - {{ voucher.voucherName }} ({{ voucher.discountPercent }}%)
-                </option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Ngày phát hành</label>
-              <input v-model="customerForm.issuedAt" type="date" />
-            </div>
-            <div class="form-group">
-              <label>Ngày hết hạn</label>
-              <input v-model="customerForm.expiresAt" type="date" />
-            </div>
-            <div class="form-group">
-              <label>Số lượng còn lại</label>
-              <input v-model="customerForm.remainingQuantity" type="number" min="0" />
-            </div>
-          </div>
-
-          <!-- MODE: DIRECT CREATION -->
-          <div v-else class="form-grid">
+          <div class="form-grid">
             <div class="form-group">
               <label>Mã Voucher * (tối đa 8 ký tự)</label>
               <input v-model="customerForm.voucherCode" type="text" placeholder="VD: VIP50" maxlength="8" style="text-transform: uppercase" @input="customerForm.voucherCode = customerForm.voucherCode.toUpperCase()" />
@@ -342,11 +310,21 @@
             </div>
             <div class="form-group">
               <label>Ngày phát hành</label>
-              <input v-model="customerForm.issuedAt" type="date" />
+              <input 
+                v-model="customerForm.issuedAt" 
+                type="date"
+                :class="{ 'input-error': customerFormErrors.issuedAt }"
+              />
+              <span v-if="customerFormErrors.issuedAt" class="error-message">{{ customerFormErrors.issuedAt }}</span>
             </div>
             <div class="form-group">
               <label>Ngày hết hạn</label>
-              <input v-model="customerForm.expiresAt" type="date" />
+              <input 
+                v-model="customerForm.expiresAt" 
+                type="date"
+                :class="{ 'input-error': customerFormErrors.expiresAt }"
+              />
+              <span v-if="customerFormErrors.expiresAt" class="error-message">{{ customerFormErrors.expiresAt }}</span>
             </div>
             <div class="form-group">
               <label>Số lượng còn lại</label>
@@ -380,40 +358,19 @@
             </div>
             <div class="form-group" style="grid-column: 1 / -1;">
               <label>Sản phẩm *</label>
-              <select v-model="productForm.productId" class="product-select">
-                <option value="">-- Chọn sản phẩm --</option>
-                <optgroup label="━━━ Sản phẩm chưa có voucher ━━━">
-                  <option 
-                    v-for="product in productsWithVoucherStatus.filter(p => !p.hasActiveVoucher || p.id === selectedProductVoucher?.productId)" 
-                    :key="product.id" 
-                    :value="product.id"
-                  >
-                    {{ product.productName }}
-                  </option>
-                </optgroup>
-                <optgroup label="━━━ Sản phẩm đã có voucher ━━━" v-if="productsWithVoucherStatus.filter(p => p.hasActiveVoucher && p.id !== selectedProductVoucher?.productId).length > 0">
-                  <option 
-                    v-for="product in productsWithVoucherStatus.filter(p => p.hasActiveVoucher && p.id !== selectedProductVoucher?.productId)" 
-                    :key="product.id" 
-                    :value="product.id"
-                    disabled
-                  >
-                    {{ product.productName }}
-                  </option>
-                </optgroup>
-              </select>
+              <input :value="selectedProductVoucher ? selectedProductVoucher.productName : ''" type="text" disabled />
             </div>
             <div class="form-group">
               <label>Mã Voucher *</label>
-              <input v-model="productForm.voucherCode" type="text" style="text-transform: uppercase" @input="productForm.voucherCode = productForm.voucherCode.toUpperCase()" />
+              <input :value="productForm.voucherCode" type="text" disabled />
             </div>
             <div class="form-group">
               <label>Tên Voucher *</label>
-              <input v-model="productForm.voucherName" type="text" />
+              <input :value="productForm.voucherName" type="text" disabled />
             </div>
             <div class="form-group">
               <label>Giảm giá (%) *</label>
-              <input v-model="productForm.discountPercent" type="number" min="1" max="100" />
+              <input :value="productForm.discountPercent" type="text" disabled />
             </div>
             <div class="form-group">
               <label>Số lượng</label>
@@ -421,11 +378,21 @@
             </div>
             <div class="form-group">
               <label>Từ ngày</label>
-              <input v-model="productForm.validFrom" type="date" />
+              <input 
+                v-model="productForm.validFrom" 
+                type="date"
+                :class="{ 'input-error': productFormErrors.validFrom }"
+              />
+              <span v-if="productFormErrors.validFrom" class="error-message">{{ productFormErrors.validFrom }}</span>
             </div>
             <div class="form-group">
               <label>Đến ngày</label>
-              <input v-model="productForm.validTo" type="date" />
+              <input 
+                v-model="productForm.validTo" 
+                type="date"
+                :class="{ 'input-error': productFormErrors.validTo }"
+              />
+              <span v-if="productFormErrors.validTo" class="error-message">{{ productFormErrors.validTo }}</span>
             </div>
             <div class="form-group">
               <label>Trạng thái</label>
@@ -491,13 +458,17 @@
             </div>
             <div class="form-group">
               <label>Trạng thái</label>
-              <input :value="formatStatus(customerForm.voucherStatus)" type="text" disabled />
+              <select v-model="customerForm.isActive">
+                <option :value="true">Hoạt động</option>
+                <option :value="false">Không hoạt động</option>
+              </select>
             </div>
           </div>
         </div>
         <div class="detail-footer">
           <button class="reset-btn" @click="closeCustomerDetailModal">Đóng</button>
           <button class="save-btn" @click="updateCustomerVoucher">Cập nhật</button>
+          <button class="lock-btn" @click="disableCustomerVoucher">Vô hiệu hóa</button>
         </div>
       </div>
     </div>
@@ -505,11 +476,23 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import VoucherService from '@/services/voucherService'
 import axiosInstance from '@/services/axiosInstance'
 
 const activeTab = ref('product')
+
+// Validation errors for customer voucher form
+const customerFormErrors = ref({
+  issuedAt: '',
+  expiresAt: '',
+})
+
+// Validation errors for product voucher form
+const productFormErrors = ref({
+  validFrom: '',
+  validTo: '',
+})
 
 // Product Voucher State
 const productVouchers = ref<any[]>([])
@@ -563,9 +546,6 @@ const customerFilters = ref({ keyword: '', status: '' })
 const showCustomerDetailModal = ref(false)
 const showAddCustomerModal = ref(false)
 const selectedCustomerVoucher = ref<any | null>(null)
-const personalVouchers = ref<any[]>([])
-const customers = ref<any[]>([])
-const voucherCreationMode = ref<'template' | 'direct'>('template') // New: track creation mode
 
 const customerCurrentPage = ref(0)
 const customerPageSize = ref(10)
@@ -581,6 +561,7 @@ const customerForm = ref({
   expiresAt: '',
   remainingQuantity: 0,
   voucherStatus: '',
+  isActive: true, // Add isActive field for status control
 })
 
 // Load Products for dropdown
@@ -590,26 +571,6 @@ const loadProducts = async () => {
     products.value = response.data.data || []
   } catch (error) {
     console.error('Failed to load products:', error)
-  }
-}
-
-// Load Personal Vouchers for dropdown
-const loadPersonalVouchers = async () => {
-  try {
-    const response = await VoucherService.getAllPersonalVouchers()
-    personalVouchers.value = response.data.data || []
-  } catch (error) {
-    console.error('Failed to load personal vouchers:', error)
-  }
-}
-
-// Load Customers for dropdown
-const loadCustomers = async () => {
-  try {
-    const response = await VoucherService.getAllCustomers()
-    customers.value = response.data.data || []
-  } catch (error) {
-    console.error('Failed to load customers:', error)
   }
 }
 
@@ -726,6 +687,65 @@ const resetProductForm = () => {
     validTo: '',
     isActive: true,
   }
+  // Reset validation errors
+  productFormErrors.value = {
+    validFrom: '',
+    validTo: '',
+  }
+}
+
+// Real-time validation for product voucher validFrom
+watch(() => productForm.value.validFrom, (newValue) => {
+  if (!newValue) {
+    productFormErrors.value.validFrom = ''
+    return
+  }
+  
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const fromDate = new Date(newValue)
+  
+  if (fromDate < today) {
+    productFormErrors.value.validFrom = 'Ngày bắt đầu không được ở quá khứ'
+  } else {
+    productFormErrors.value.validFrom = ''
+  }
+  
+  // Also validate validTo if both dates are set
+  if (productForm.value.validTo) {
+    validateProductValidTo()
+  }
+})
+
+// Real-time validation for product voucher validTo
+watch(() => productForm.value.validTo, () => {
+  validateProductValidTo()
+})
+
+const validateProductValidTo = () => {
+  if (!productForm.value.validTo) {
+    productFormErrors.value.validTo = ''
+    return
+  }
+  
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const toDate = new Date(productForm.value.validTo)
+  
+  if (toDate < today) {
+    productFormErrors.value.validTo = 'Ngày kết thúc phải trong tương lai'
+    return
+  }
+  
+  if (productForm.value.validFrom) {
+    const fromDate = new Date(productForm.value.validFrom)
+    if (toDate < fromDate) {
+      productFormErrors.value.validTo = 'Ngày kết thúc phải sau ngày bắt đầu'
+      return
+    }
+  }
+  
+  productFormErrors.value.validTo = ''
 }
 
 const closeAddModal = () => {
@@ -756,6 +776,12 @@ const closeProductDetailModal = () => {
 
 // Submit Add Product Voucher
 const submitAddProductVoucher = async () => {
+  // Check for validation errors first
+  if (productFormErrors.value.validFrom || productFormErrors.value.validTo) {
+    alert('Vui lòng sửa các lỗi trước khi tiếp tục')
+    return
+  }
+  
   if (!productForm.value.voucherCode || !productForm.value.voucherName || 
       !productForm.value.discountPercent || !productForm.value.productId) {
     alert('Vui lòng nhập đầy đủ thông tin bắt buộc')
@@ -808,16 +834,9 @@ const submitAddProductVoucher = async () => {
 const updateProductVoucher = async () => {
   if (!productForm.value.id) return
   
-  if (!productForm.value.voucherCode || !productForm.value.voucherName || 
-      !productForm.value.discountPercent || !productForm.value.productId) {
-    alert('Vui lòng nhập đầy đủ thông tin bắt buộc')
-    return
-  }
-
-  // Validate discount percent
-  const discount = Number(productForm.value.discountPercent)
-  if (discount < 1 || discount > 100) {
-    alert('Giảm giá phải từ 1% đến 100%')
+  // Check for validation errors first
+  if (productFormErrors.value.validFrom || productFormErrors.value.validTo) {
+    alert('Vui lòng sửa các lỗi trước khi tiếp tục')
     return
   }
 
@@ -837,11 +856,9 @@ const updateProductVoucher = async () => {
   }
 
   try {
+    // Only send fields that are allowed to be updated
+    // Backend will ignore voucherCode, voucherName, discountPercent, productId
     const payload = {
-      voucherCode: productForm.value.voucherCode,
-      voucherName: productForm.value.voucherName,
-      discountPercent: discount,
-      productId: Number(productForm.value.productId),
       remainingQuantity: remainingQty,
       validFrom: productForm.value.validFrom || undefined,
       validTo: productForm.value.validTo || undefined,
@@ -885,8 +902,67 @@ const resetCustomerForm = () => {
     expiresAt: '',
     remainingQuantity: 0,
     voucherStatus: '',
+    isActive: true, // Default to active
   }
-  voucherCreationMode.value = 'template' // Reset to default
+  // Reset validation errors
+  customerFormErrors.value = {
+    issuedAt: '',
+    expiresAt: '',
+  }
+}
+
+// Real-time validation for issued date
+watch(() => customerForm.value.issuedAt, (newValue) => {
+  if (!newValue) {
+    customerFormErrors.value.issuedAt = ''
+    return
+  }
+  
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const issuedDate = new Date(newValue)
+  
+  if (issuedDate < today) {
+    customerFormErrors.value.issuedAt = 'Ngày phát hành không được ở quá khứ'
+  } else {
+    customerFormErrors.value.issuedAt = ''
+  }
+  
+  // Also validate expiry date if both dates are set
+  if (customerForm.value.expiresAt) {
+    validateExpiryDate()
+  }
+})
+
+// Real-time validation for expiry date
+watch(() => customerForm.value.expiresAt, () => {
+  validateExpiryDate()
+})
+
+const validateExpiryDate = () => {
+  if (!customerForm.value.expiresAt) {
+    customerFormErrors.value.expiresAt = ''
+    return
+  }
+  
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const expiryDate = new Date(customerForm.value.expiresAt)
+  
+  if (expiryDate < today) {
+    customerFormErrors.value.expiresAt = 'Ngày hết hạn phải trong tương lai'
+    return
+  }
+  
+  if (customerForm.value.issuedAt) {
+    const issuedDate = new Date(customerForm.value.issuedAt)
+    if (expiryDate < issuedDate) {
+      customerFormErrors.value.expiresAt = 'Ngày hết hạn phải sau ngày phát hành'
+      return
+    }
+  }
+  
+  customerFormErrors.value.expiresAt = ''
 }
 
 const closeAddCustomerModal = () => {
@@ -895,34 +971,33 @@ const closeAddCustomerModal = () => {
 }
 
 const submitAddCustomerVoucher = async () => {
-  // Validate based on mode
-  if (voucherCreationMode.value === 'template') {
-    if (!customerForm.value.personalVoucherId) {
-      alert('Vui lòng chọn voucher template')
-      return
-    }
-  } else {
-    if (!customerForm.value.voucherCode || !customerForm.value.voucherName || !customerForm.value.discountPercent) {
-      alert('Vui lòng nhập đầy đủ: mã voucher, tên voucher, % giảm giá')
-      return
-    }
-    
-    // Validate discount percent for direct mode
-    const discount = Number(customerForm.value.discountPercent)
-    if (discount < 1 || discount > 100) {
-      alert('Giảm giá phải từ 1% đến 100%')
-      return
-    }
-
-    // Validate minOrderAmount
-    const minAmount = Number(customerForm.value.minOrderAmount)
-    if (minAmount < 0) {
-      alert('Số tiền tối thiểu không được âm')
-      return
-    }
+  // Check for validation errors first
+  if (customerFormErrors.value.issuedAt || customerFormErrors.value.expiresAt) {
+    alert('Vui lòng sửa các lỗi trước khi tiếp tục')
+    return
+  }
+  
+  // Validate required fields for direct creation
+  if (!customerForm.value.voucherCode || !customerForm.value.voucherName || !customerForm.value.discountPercent) {
+    alert('Vui lòng nhập đầy đủ: mã voucher, tên voucher, % giảm giá')
+    return
+  }
+  
+  // Validate discount percent
+  const discount = Number(customerForm.value.discountPercent)
+  if (discount < 1 || discount > 100) {
+    alert('Giảm giá phải từ 1% đến 100%')
+    return
   }
 
-  // FIX #7: Validate date range
+  // Validate minOrderAmount
+  const minAmount = Number(customerForm.value.minOrderAmount)
+  if (minAmount < 0) {
+    alert('Số tiền tối thiểu không được âm')
+    return
+  }
+
+  // Validate date range
   if (customerForm.value.issuedAt && customerForm.value.expiresAt) {
     if (new Date(customerForm.value.expiresAt) < new Date(customerForm.value.issuedAt)) {
       alert('Ngày hết hạn phải sau ngày phát hành')
@@ -930,7 +1005,7 @@ const submitAddCustomerVoucher = async () => {
     }
   }
 
-  // FIX #5: Validate expiry date must be in the future
+  // Validate expiry date must be in the future
   if (customerForm.value.expiresAt) {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
@@ -941,7 +1016,7 @@ const submitAddCustomerVoucher = async () => {
     }
   }
 
-  // FIX #9: Validate remaining quantity
+  // Validate remaining quantity
   const remainingQty = Number(customerForm.value.remainingQuantity)
   if (remainingQty < 0) {
     alert('Số lượng không được âm')
@@ -950,20 +1025,14 @@ const submitAddCustomerVoucher = async () => {
 
   try {
     const payload: any = {
+      voucherCode: customerForm.value.voucherCode,
+      voucherName: customerForm.value.voucherName,
+      discountPercent: discount,
+      minOrderAmount: minAmount,
       issuedAt: customerForm.value.issuedAt || undefined,
       expiresAt: customerForm.value.expiresAt || undefined,
       remainingQuantity: remainingQty,
       isActive: true,
-    }
-
-    // Add fields based on mode
-    if (voucherCreationMode.value === 'template') {
-      payload.personalVoucherId = Number(customerForm.value.personalVoucherId)
-    } else {
-      payload.voucherCode = customerForm.value.voucherCode
-      payload.voucherName = customerForm.value.voucherName
-      payload.discountPercent = Number(customerForm.value.discountPercent)
-      payload.minOrderAmount = Number(customerForm.value.minOrderAmount) || 0
     }
 
     await VoucherService.createCustomerVoucher(payload)
@@ -988,6 +1057,8 @@ const openCustomerDetailModal = (voucher: any) => {
     expiresAt: voucher.expiresAt,
     remainingQuantity: voucher.remainingQuantity,
     voucherStatus: voucher.voucherStatus,
+    // Map voucherStatus to isActive
+    isActive: voucher.voucherStatus === 'Hoạt động',
   }
   showCustomerDetailModal.value = true
 }
@@ -1016,13 +1087,28 @@ const updateCustomerVoucher = async () => {
     return
   }
 
+  // NEW FIX: If trying to activate voucher, validate expiry date is not in the past
+  const wasInactive = selectedCustomerVoucher.value?.voucherStatus !== 'Hoạt động'
+  const tryingToActivate = customerForm.value.isActive === true
+  
+  if (wasInactive && tryingToActivate && customerForm.value.expiresAt) {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const expiryDate = new Date(customerForm.value.expiresAt)
+    
+    if (expiryDate < today) {
+      alert('Không thể kích hoạt voucher đã hết hạn. Vui lòng cập nhật ngày hết hạn trước.')
+      return
+    }
+  }
+
   try {
-    const payload = {
+    const payload: any = {
       personalVoucherId: customerForm.value.personalVoucherId!,
-      customerId: customerForm.value.customerId!,
       issuedAt: customerForm.value.issuedAt || undefined,
       expiresAt: customerForm.value.expiresAt || undefined,
       remainingQuantity: remainingQty,
+      isActive: customerForm.value.isActive, // Add isActive to payload
     }
     await VoucherService.updateCustomerVoucher(customerForm.value.id, payload)
     alert('Cập nhật voucher khách hàng thành công')
@@ -1030,6 +1116,22 @@ const updateCustomerVoucher = async () => {
     await loadCustomerVouchers()
   } catch (error: any) {
     alert(error?.response?.data?.message || 'Cập nhật voucher khách hàng thất bại')
+  }
+}
+
+// Disable Customer Voucher
+const disableCustomerVoucher = async () => {
+  if (!customerForm.value.id) return
+  
+  if (!confirm('Bạn có chắc muốn vô hiệu hóa voucher này?')) return
+
+  try {
+    await VoucherService.deleteCustomerVoucher(customerForm.value.id)
+    alert('Vô hiệu hóa voucher thành công')
+    closeCustomerDetailModal()
+    await loadCustomerVouchers()
+  } catch (error: any) {
+    alert(error?.response?.data?.message || 'Vô hiệu hóa voucher thất bại')
   }
 }
 
@@ -1169,8 +1271,6 @@ const customerVisiblePages = computed(() => {
 
 onMounted(() => {
   loadProducts()
-  loadPersonalVouchers()
-  loadCustomers()
   loadProductVouchers()
   loadCustomerVouchers()
 })
@@ -1853,5 +1953,36 @@ input:disabled {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border-color: #667eea;
   color: white;
+}
+
+/* ERROR STYLING */
+.input-error {
+  border-color: #e53e3e !important;
+  background-color: #fff5f5;
+}
+
+.input-error:focus {
+  border-color: #e53e3e !important;
+  box-shadow: 0 0 0 3px rgba(229, 62, 62, 0.1) !important;
+}
+
+.error-message {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: #e53e3e;
+  font-weight: 500;
+  animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 </style>

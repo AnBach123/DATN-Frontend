@@ -1,7 +1,10 @@
 <template>
   <div class="combo-container">
-    <div class="header-section">
-      <h2>Quản lý combo</h2>
+    <div class="page-header">
+      <h2 class="page-title">Quản lý combo</h2>
+      <button class="add-btn" @click="openAddModal">
+        + Thêm combo
+      </button>
     </div>
 
     <!-- FILTER -->
@@ -14,14 +17,6 @@
           <option value="true">Kinh doanh</option>
           <option value="false">Ngừng kinh doanh</option>
         </select>
-
-        <button class="add-btn" @click="openAddModal">
-          + Thêm combo
-        </button>
-
-        <button class="clear-btn" @click="clearFilters">
-          Xóa lọc
-        </button>
       </div>
     </div>
 
@@ -54,7 +49,7 @@
             <td class="name">{{ c.comboName }}</td>
             <td>{{ formatCurrency(c.comboPrice) }}</td>
             <td>{{ c.itemCount || 0 }} món</td>
-            <td>{{ c.description }}</td>
+            <td class="description-cell" :title="c.description">{{ c.description }}</td>
             <td>
               <span :class="['status', c.isActive ? 'active' : 'inactive']">
                 {{ c.isActive ? 'Kinh doanh' : 'Ngừng kinh doanh' }}
@@ -62,7 +57,7 @@
             </td>
             <td>
               <button class="save-btn" @click="openEdit(c)">
-                Sửa
+                Chi tiết
               </button>
             </td>
           </tr>
@@ -410,11 +405,6 @@ const visiblePages = computed(() => {
   return pages
 })
 
-const clearFilters = () => {
-  filters.value = { name: '', status: '' }
-  applyFilters()
-}
-
 const openAddModal = () => {
   isEdit.value = false
   editingId.value = null
@@ -657,9 +647,33 @@ onMounted(() => {
   min-height: 100vh;
 }
 
-.header-section h2 {
-  font-size: 26px;
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 20px;
+}
+
+.page-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #2d3748;
+}
+
+.add-btn {
+  padding: 10px 18px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.add-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
 }
 
 .filters-section {
@@ -684,14 +698,6 @@ onMounted(() => {
   border-radius: 10px;
   font-size: 14px;
   transition: all 0.3s;
-}
-
-.clear-btn {
-  background: #e53e3e;
-  color: white;
-  border: none;
-  padding: 10px 16px;
-  border-radius: 10px;
 }
 
 .table-container {
@@ -723,6 +729,14 @@ onMounted(() => {
   font-weight: 600;
 }
 
+.description-cell {
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: help;
+}
+
 .status {
   padding: 5px 10px;
   border-radius: 10px;
@@ -741,14 +755,6 @@ onMounted(() => {
 .empty-cell {
   text-align: center;
   padding: 20px;
-}
-
-.add-btn {
-  background: #38a169;
-  color: white;
-  border: none;
-  padding: 10px 16px;
-  border-radius: 10px;
 }
 
 /* ===== MODAL ===== */
