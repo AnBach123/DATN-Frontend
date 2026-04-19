@@ -10,6 +10,11 @@ export interface RevenueReport {
   transferRevenue: number
   dailyRevenues: DailyRevenue[]
   paymentMethods: PaymentMethodBreakdown[]
+  revenueGrowthPercentage: number | null
+  invoiceGrowthPercentage: number | null
+  hourlyRevenues: HourlyRevenue[]
+  categoryBreakdown: CategoryBreakdown[]
+  invoiceChannels?: InvoiceChannelBreakdown[]
 }
 
 export interface DailyRevenue {
@@ -20,6 +25,26 @@ export interface DailyRevenue {
 
 export interface PaymentMethodBreakdown {
   method: string
+  amount: number
+  count: number
+  percentage: number
+}
+
+export interface HourlyRevenue {
+  hour: number
+  revenue: number
+  invoiceCount: number
+}
+
+export interface CategoryBreakdown {
+  category: string
+  revenue: number
+  itemCount: number
+  percentage: number
+}
+
+export interface InvoiceChannelBreakdown {
+  channel: string
   amount: number
   count: number
   percentage: number

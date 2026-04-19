@@ -28,6 +28,12 @@
           <option value="TRANSFER">Chuyển khoản</option>
         </select>
 
+        <select v-model="filters.invoiceChannel" @change="loadInvoices" class="filter-select">
+          <option value="">Tất cả loại HĐ</option>
+          <option value="ONLINE">Online</option>
+          <option value="OFFLINE">Tại quầy</option>
+        </select>
+
         <input
           v-model="filters.startDate"
           type="date"
@@ -52,6 +58,7 @@
               Mã Hóa đơn
               <span v-if="filters.sortBy === 'code'">{{ filters.sortDirection === 'asc' ? '↑' : '↓' }}</span>
             </th>
+            <th>Loại</th>
             <th>Bàn</th>
             <th @click="handleSort('time')">
               Thời gian
@@ -72,13 +79,18 @@
         </thead>
         <tbody>
           <tr v-if="loading">
-            <td colspan="11" class="loading-cell">Đang tải...</td>
+            <td colspan="12" class="loading-cell">Đang tải...</td>
           </tr>
           <tr v-else-if="invoices.length === 0">
-            <td colspan="11" class="empty-cell">Không có hóa đơn nào</td>
+            <td colspan="12" class="empty-cell">Không có hóa đơn nào</td>
           </tr>
           <tr v-else v-for="invoice in invoices" :key="invoice.id" class="invoice-row">
             <td class="code-cell">{{ invoice.code }}</td>
+            <td>
+              <span :class="['channel-badge', getChannelClass(invoice.invoiceChannel)]">
+                {{ getChannelText(invoice.invoiceChannel) }}
+              </span>
+            </td>
             <td>{{ invoice.table }}</td>
             <td>{{ formatDateTime(invoice.time) }}</td>
             <td class="amount-cell">{{ formatCurrency(invoice.subtotal) }}</td>
@@ -129,6 +141,12 @@
                 <span class="label">Trạng thái:</span>
                 <span :class="['status-badge', getStatusClass(selectedInvoice.status)]">
                   {{ getStatusText(selectedInvoice.status) }}
+                </span>
+              </div>
+              <div class="detail-item">
+                <span class="label">Loại hóa đơn:</span>
+                <span :class="['channel-badge', getChannelClass(selectedInvoice.invoiceChannel)]">
+                  {{ getChannelText(selectedInvoice.invoiceChannel) }}
                 </span>
               </div>
             </div>
@@ -260,6 +278,7 @@ const filters = ref({
   search: '',
   status: '',
   paymentMethod: '',
+  invoiceChannel: '',
   startDate: '',
   endDate: '',
   sortBy: 'time',
@@ -297,6 +316,7 @@ const loadInvoices = async () => {
       endDate: filters.value.endDate || undefined,
       search: filters.value.search || undefined,
       paymentMethod: filters.value.paymentMethod || undefined,
+      invoiceChannel: filters.value.invoiceChannel || undefined,
       sortBy: filters.value.sortBy,
       sortDirection: filters.value.sortDirection
     })
@@ -383,6 +403,18 @@ const getPaymentMethodText = (method: string | null): string => {
     'TRANSFER': 'Chuyển khoản'
   }
   return methodMap[method] || method
+}
+
+const getChannelClass = (channel: string | null): string => {
+  if (channel === 'ONLINE') return 'channel-online'
+  if (channel === 'OFFLINE') return 'channel-walkin'
+  return 'channel-walkin'
+}
+
+const getChannelText = (channel: string | null): string => {
+  if (channel === 'ONLINE') return 'Online'
+  if (channel === 'OFFLINE') return 'Tại quầy'
+  return 'Tại quầy'
 }
 
 const showInvoiceDetail = async (invoice: RecentInvoice) => {
@@ -656,6 +688,24 @@ onMounted(() => {
 .status-no-show {
   background: #fef3c7;
   color: #78350f;
+}
+
+.channel-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.channel-online {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.channel-walkin {
+  background: #fef3c7;
+  color: #92400e;
 }
 
 .loading-cell,

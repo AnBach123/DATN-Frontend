@@ -123,6 +123,12 @@
                   {{ getStatusText(selectedInvoice.status) }}
                 </span>
               </div>
+              <div class="detail-item">
+                <span class="label">Loại hóa đơn:</span>
+                <span :class="['channel-badge', getChannelClass(selectedInvoice.invoiceChannel)]">
+                  {{ getChannelText(selectedInvoice.invoiceChannel) }}
+                </span>
+              </div>
             </div>
           </div>
 
@@ -313,7 +319,7 @@ const visiblePages = computed(() => {
   const pages: number[] = []
   const maxVisible = 5
   let start = Math.max(1, currentPage.value - Math.floor(maxVisible / 2) + 1)
-  let end = Math.min(totalPages.value, start + maxVisible - 1)
+  const end = Math.min(totalPages.value, start + maxVisible - 1)
   
   if (end - start < maxVisible - 1) {
     start = Math.max(1, end - maxVisible + 1)
@@ -374,6 +380,18 @@ const getPaymentMethodText = (method: string | null): string => {
     'TRANSFER': 'Chuyển khoản'
   }
   return methodMap[method] || method
+}
+
+const getChannelClass = (channel: string | null): string => {
+  if (channel === 'ONLINE') return 'channel-online'
+  if (channel === 'OFFLINE') return 'channel-walkin'
+  return 'channel-walkin'
+}
+
+const getChannelText = (channel: string | null): string => {
+  if (channel === 'ONLINE') return 'Online'
+  if (channel === 'OFFLINE') return 'Tại quầy'
+  return 'Tại quầy'
 }
 
 const showInvoiceDetail = async (invoice: RecentInvoice) => {
@@ -611,6 +629,24 @@ onMounted(() => {
   border-radius: 8px;
   font-size: 13px;
   font-weight: 700;
+}
+
+.channel-badge {
+  display: inline-block;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.channel-online {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.channel-walkin {
+  background: #fef3c7;
+  color: #92400e;
 }
 
 .status-paid {

@@ -47,6 +47,7 @@ export interface RecentInvoice {
   customerName: string | null
   customerEmail: string | null
   customerPhone: string | null
+  invoiceChannel: string | null
 }
 
 export interface TableStatus {
@@ -179,6 +180,7 @@ export const invoiceService = {
     endDate?: string
     search?: string
     paymentMethod?: string
+    invoiceChannel?: string
     sortBy?: string
     sortDirection?: string
   }): Promise<InvoicePageResponse> {

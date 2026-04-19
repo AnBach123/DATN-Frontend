@@ -34,19 +34,61 @@
       </div>
     </div>
 
-    <div class="report-tabs">
-      <button 
-        :class="['tab-btn', { active: activeTab === 'revenue' }]"
-        @click="activeTab = 'revenue'"
-      >
-        Báo cáo Doanh Thu
-      </button>
-      <button 
-        :class="['tab-btn', { active: activeTab === 'products' }]"
-        @click="activeTab = 'products'"
-      >
-        Báo cáo Món Ăn
-      </button>
+    <div class="report-tabs-container">
+      <div class="report-tabs">
+        <button 
+          :class="['tab-btn', { active: activeTab === 'revenue' }]"
+          @click="activeTab = 'revenue'"
+        >
+          Báo cáo Doanh Thu
+        </button>
+        <button 
+          :class="['tab-btn', { active: activeTab === 'products' }]"
+          @click="activeTab = 'products'"
+        >
+          Báo cáo Món Ăn
+        </button>
+      </div>
+      
+      <div v-if="activeTab === 'revenue'" class="export-buttons-group">
+        <button @click="handleDownloadRevenueExcel" :disabled="downloading" class="export-btn excel-btn">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Xuất Excel
+        </button>
+        <button @click="handleDownloadRevenuePdf" :disabled="downloading" class="export-btn pdf-btn">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+          </svg>
+          Xuất PDF
+        </button>
+      </div>
+      
+      <div v-if="activeTab === 'products'" class="export-buttons-group">
+        <button @click="handleDownloadProductExcel" :disabled="downloading" class="export-btn excel-btn">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Xuất Excel
+        </button>
+        <button @click="handleDownloadProductPdf" :disabled="downloading" class="export-btn pdf-btn">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+          </svg>
+          Xuất PDF
+        </button>
+      </div>
     </div>
 
     <!-- Revenue Report Tab -->
@@ -68,79 +110,90 @@
       </div>
       <div v-else-if="revenueReport" class="revenue-report">
         <!-- Summary Cards -->
-        <div class="summary-cards">
-          <div class="summary-card">
-            <div class="card-content">
-              <div class="card-label">Tổng doanh thu</div>
-              <div class="card-value">{{ formatMoney(revenueReport.totalRevenue) }}</div>
-              <div v-if="revenueReport.revenueGrowthPercentage !== null" 
-                   :class="['card-comparison', revenueReport.revenueGrowthPercentage >= 0 ? 'positive' : 'negative']">
-                <span class="comparison-icon">{{ revenueReport.revenueGrowthPercentage >= 0 ? '↑' : '↓' }}</span>
-                <span class="comparison-text">{{ Math.abs(revenueReport.revenueGrowthPercentage).toFixed(1) }}% so với kỳ trước</span>
+        <div class="summary-section">
+          <div class="summary-cards">
+            <div class="summary-card">
+              <div class="card-content">
+                <div class="card-label">Tổng doanh thu</div>
+                <div class="card-value">{{ formatMoney(revenueReport.totalRevenue) }}</div>
+                <div v-if="revenueReport.revenueGrowthPercentage !== null" 
+                     :class="['card-comparison', revenueReport.revenueGrowthPercentage >= 0 ? 'positive' : 'negative']">
+                  <span class="comparison-icon">{{ revenueReport.revenueGrowthPercentage >= 0 ? '↑' : '↓' }}</span>
+                  <span class="comparison-text">{{ Math.abs(revenueReport.revenueGrowthPercentage).toFixed(1) }}% so với kỳ trước</span>
+                </div>
               </div>
             </div>
-          </div>
-          
-          <div class="summary-card">
-            <div class="card-content">
-              <div class="card-label">Tổng hóa đơn</div>
-              <div class="card-value">{{ revenueReport.totalInvoices }}</div>
-              <div v-if="revenueReport.invoiceGrowthPercentage !== null" 
-                   :class="['card-comparison', revenueReport.invoiceGrowthPercentage >= 0 ? 'positive' : 'negative']">
-                <span class="comparison-icon">{{ revenueReport.invoiceGrowthPercentage >= 0 ? '↑' : '↓' }}</span>
-                <span class="comparison-text">{{ Math.abs(revenueReport.invoiceGrowthPercentage).toFixed(1) }}% so với kỳ trước</span>
+            
+            <div class="summary-card">
+              <div class="card-content">
+                <div class="card-label">Tổng hóa đơn</div>
+                <div class="card-value">{{ revenueReport.totalInvoices }}</div>
+                <div v-if="revenueReport.invoiceGrowthPercentage !== null" 
+                     :class="['card-comparison', revenueReport.invoiceGrowthPercentage >= 0 ? 'positive' : 'negative']">
+                  <span class="comparison-icon">{{ revenueReport.invoiceGrowthPercentage >= 0 ? '↑' : '↓' }}</span>
+                  <span class="comparison-text">{{ Math.abs(revenueReport.invoiceGrowthPercentage).toFixed(1) }}% so với kỳ trước</span>
+                </div>
               </div>
             </div>
-          </div>
-          
-          <div class="summary-card">
-            <div class="card-content">
-              <div class="card-label">Giá trị TB/đơn</div>
-              <div class="card-value">{{ formatMoney(revenueReport.averageOrderValue) }}</div>
+            
+            <div class="summary-card">
+              <div class="card-content">
+                <div class="card-label">Giá trị TB/đơn</div>
+                <div class="card-value">{{ formatMoney(revenueReport.averageOrderValue) }}</div>
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- Payment Methods -->
-        <div class="report-section">
-          <div class="section-header">
-            <h3>Phương thức thanh toán</h3>
-            <div class="export-buttons">
-              <button @click="handleDownloadRevenueExcel" :disabled="downloading" class="export-btn excel-btn">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                  <polyline points="7 10 12 15 17 10"/>
-                  <line x1="12" y1="15" x2="12" y2="3"/>
-                </svg>
-                Xuất Excel
-              </button>
-              <button @click="handleDownloadRevenuePdf" :disabled="downloading" class="export-btn pdf-btn">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                  <polyline points="14 2 14 8 20 8"/>
-                  <line x1="16" y1="13" x2="8" y2="13"/>
-                  <line x1="16" y1="17" x2="8" y2="17"/>
-                </svg>
-                Xuất PDF
-              </button>
+        <!-- Payment Methods and Invoice Channels Grid -->
+        <div class="dual-section-grid">
+          <!-- Payment Methods -->
+          <div class="report-section">
+            <div class="section-header">
+              <h3>Phương thức thanh toán</h3>
             </div>
-          </div>
-          <div class="payment-methods-grid">
-            <div class="payment-methods-list">
-              <div v-for="method in revenueReport.paymentMethods" :key="method.method" class="payment-method-item">
-                <div class="method-info">
-                  <span class="method-name">{{ getPaymentMethodName(method.method) }}</span>
-                  <span class="method-stats">{{ method.count }} đơn</span>
+            <div class="breakdown-container">
+              <div class="breakdown-list">
+                <div v-for="method in revenueReport.paymentMethods" :key="method.method" class="breakdown-item">
+                  <div class="item-info">
+                    <span class="item-name">{{ getPaymentMethodName(method.method) }}</span>
+                    <span class="item-stats">{{ method.count }} đơn</span>
+                  </div>
+                  <div class="item-amount">{{ formatMoney(method.amount) }}</div>
+                  <div class="item-bar">
+                    <div class="bar-fill" :style="{ width: method.percentage + '%' }"></div>
+                  </div>
+                  <div class="item-percentage">{{ method.percentage.toFixed(1) }}%</div>
                 </div>
-                <div class="method-amount">{{ formatMoney(method.amount) }}</div>
-                <div class="method-bar">
-                  <div class="bar-fill" :style="{ width: method.percentage + '%' }"></div>
-                </div>
-                <div class="method-percentage">{{ method.percentage.toFixed(1) }}%</div>
+              </div>
+              <div class="breakdown-chart">
+                <canvas ref="paymentPieCanvas"></canvas>
               </div>
             </div>
-            <div class="payment-pie-chart">
-              <canvas ref="paymentPieCanvas"></canvas>
+          </div>
+
+          <!-- Invoice Channels -->
+          <div class="report-section">
+            <div class="section-header">
+              <h3>Loại hóa đơn</h3>
+            </div>
+            <div class="breakdown-container">
+              <div class="breakdown-list">
+                <div v-for="channel in (revenueReport.invoiceChannels || [])" :key="channel.channel" class="breakdown-item">
+                  <div class="item-info">
+                    <span class="item-name">{{ getInvoiceChannelName(channel.channel) }}</span>
+                    <span class="item-stats">{{ channel.count }} đơn</span>
+                  </div>
+                  <div class="item-amount">{{ formatMoney(channel.amount) }}</div>
+                  <div class="item-bar">
+                    <div class="bar-fill" :style="{ width: channel.percentage + '%', background: getInvoiceChannelColor(channel.channel) }"></div>
+                  </div>
+                  <div class="item-percentage">{{ channel.percentage.toFixed(1) }}%</div>
+                </div>
+              </div>
+              <div class="breakdown-chart">
+                <canvas ref="channelPieCanvas"></canvas>
+              </div>
             </div>
           </div>
         </div>
@@ -204,25 +257,6 @@
         <div class="report-section">
           <div class="section-header">
             <h3>Top món ăn theo doanh thu</h3>
-            <div class="export-buttons">
-              <button @click="handleDownloadProductExcel" :disabled="downloading" class="export-btn excel-btn">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                  <polyline points="7 10 12 15 17 10"/>
-                  <line x1="12" y1="15" x2="12" y2="3"/>
-                </svg>
-                Xuất Excel
-              </button>
-              <button @click="handleDownloadProductPdf" :disabled="downloading" class="export-btn pdf-btn">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                  <polyline points="14 2 14 8 20 8"/>
-                  <line x1="16" y1="13" x2="8" y2="13"/>
-                  <line x1="16" y1="17" x2="8" y2="17"/>
-                </svg>
-                Xuất PDF
-              </button>
-            </div>
           </div>
           <div class="products-list">
             <div v-for="(product, index) in productReport.topByRevenue" :key="'rev-' + product.productId" class="product-item">
@@ -292,10 +326,12 @@ const dateRange = ref({
 
 const revenueChartCanvas = ref<HTMLCanvasElement | null>(null)
 const paymentPieCanvas = ref<HTMLCanvasElement | null>(null)
+const channelPieCanvas = ref<HTMLCanvasElement | null>(null)
 const peakHoursCanvas = ref<HTMLCanvasElement | null>(null)
 const categoryChartCanvas = ref<HTMLCanvasElement | null>(null)
 let revenueChart: Chart | null = null
 let paymentPieChart: Chart | null = null
+let channelPieChart: Chart | null = null
 let peakHoursChart: Chart | null = null
 let categoryChart: Chart | null = null
 
@@ -375,6 +411,7 @@ const loadReports = async () => {
       setTimeout(() => {
         renderRevenueChart()
         renderPaymentPieChart()
+        renderChannelPieChart()
         renderPeakHoursChart()
         renderCategoryChart()
       }, 100)
@@ -480,7 +517,7 @@ const renderPaymentPieChart = () => {
   const colors = ['#667eea', '#764ba2', '#f093fb', '#4facfe']
   
   paymentPieChart = new Chart(ctx, {
-    type: 'pie',
+    type: 'doughnut',
     data: {
       labels,
       datasets: [{
@@ -514,6 +551,64 @@ const renderPaymentPieChart = () => {
               const value = formatMoney(context.parsed)
               const percentage = revenueReport.value?.paymentMethods[context.dataIndex]?.percentage.toFixed(1) || '0'
               return `${label}: ${value} (${percentage}%)`
+            }
+          }
+        }
+      }
+    }
+  })
+}
+
+const renderChannelPieChart = () => {
+  if (!channelPieCanvas.value || !revenueReport.value || !revenueReport.value.invoiceChannels) return
+  
+  // Destroy existing chart
+  if (channelPieChart) {
+    channelPieChart.destroy()
+  }
+  
+  const ctx = channelPieCanvas.value.getContext('2d')
+  if (!ctx) return
+  
+  const labels = revenueReport.value.invoiceChannels.map(c => getInvoiceChannelName(c.channel))
+  const data = revenueReport.value.invoiceChannels.map(c => c.count)
+  const colors = revenueReport.value.invoiceChannels.map(c => getInvoiceChannelColor(c.channel))
+  
+  channelPieChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels,
+      datasets: [{
+        data,
+        backgroundColor: colors,
+        borderColor: '#fff',
+        borderWidth: 3
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: {
+            padding: 15,
+            font: { size: 13, weight: '600' },
+            usePointStyle: true,
+            pointStyle: 'circle'
+          }
+        },
+        tooltip: {
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          padding: 12,
+          titleFont: { size: 14, weight: 'bold' },
+          bodyFont: { size: 13 },
+          callbacks: {
+            label: (context) => {
+              const label = context.label || ''
+              const count = context.parsed
+              const percentage = revenueReport.value?.invoiceChannels[context.dataIndex]?.percentage.toFixed(1) || '0'
+              return `${label}: ${count} đơn (${percentage}%)`
             }
           }
         }
@@ -675,6 +770,22 @@ const getCategoryName = (category: string) => {
   return categories[category] || category
 }
 
+const getInvoiceChannelName = (channel: string) => {
+  const channels: Record<string, string> = {
+    'ONLINE': 'Online',
+    'OFFLINE': 'Tại quầy'
+  }
+  return channels[channel] || channel
+}
+
+const getInvoiceChannelColor = (channel: string) => {
+  const colors: Record<string, string> = {
+    'OFFLINE': '#667eea',
+    'ONLINE': '#764ba2'
+  }
+  return colors[channel] || '#667eea'
+}
+
 const handleDownloadRevenueExcel = async () => {
   if (downloading.value) return
   downloading.value = true
@@ -732,6 +843,7 @@ watch(activeTab, (newTab) => {
     setTimeout(() => {
       renderRevenueChart()
       renderPaymentPieChart()
+      renderChannelPieChart()
       renderPeakHoursChart()
       renderCategoryChart()
     }, 100)
@@ -750,6 +862,9 @@ onUnmounted(() => {
   }
   if (paymentPieChart) {
     paymentPieChart.destroy()
+  }
+  if (channelPieChart) {
+    channelPieChart.destroy()
   }
   if (peakHoursChart) {
     peakHoursChart.destroy()
@@ -896,11 +1011,17 @@ onUnmounted(() => {
   background: #5568d3;
 }
 
+.report-tabs-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  border-bottom: 2px solid #e5e7eb;
+}
+
 .report-tabs {
   display: flex;
   gap: 12px;
-  margin-bottom: 24px;
-  border-bottom: 2px solid #e5e7eb;
 }
 
 .tab-btn {
@@ -1042,11 +1163,20 @@ onUnmounted(() => {
   }
 }
 
+.summary-section {
+  margin-bottom: 32px;
+}
+
+.export-buttons-group {
+  display: flex;
+  gap: 12px;
+  margin-bottom: -2px;
+}
+
 .summary-cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 24px;
-  margin-bottom: 32px;
 }
 
 .summary-card {
@@ -1405,5 +1535,139 @@ onUnmounted(() => {
   min-width: 60px;
   text-align: right;
   font-size: 14px;
+}
+
+/* Dual Section Grid */
+.dual-section-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+.breakdown-container {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.breakdown-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.breakdown-item {
+  display: grid;
+  grid-template-columns: 2fr 1fr auto;
+  gap: 16px;
+  align-items: center;
+  padding: 12px 16px;
+  background: #f8fafc;
+  border-radius: 8px;
+  transition: all 0.3s;
+}
+
+.breakdown-item:hover {
+  background: #f1f5f9;
+  transform: translateX(4px);
+}
+
+.item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.item-name {
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 15px;
+}
+
+.item-stats {
+  font-size: 13px;
+  color: #64748b;
+}
+
+.item-amount {
+  font-weight: 700;
+  color: #667eea;
+  text-align: right;
+  font-size: 15px;
+}
+
+.item-bar {
+  position: relative;
+  height: 8px;
+  background: #e2e8f0;
+  border-radius: 4px;
+  overflow: hidden;
+  grid-column: 1 / -1;
+}
+
+.bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+  border-radius: 4px;
+  transition: width 0.6s ease;
+}
+
+.item-percentage {
+  font-weight: 600;
+  color: #64748b;
+  min-width: 60px;
+  text-align: right;
+  font-size: 14px;
+}
+
+.breakdown-chart {
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 250px;
+}
+
+.export-buttons-row {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 32px;
+}
+
+@media (max-width: 1200px) {
+  .dual-section-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .breakdown-container {
+    grid-template-columns: 1fr;
+  }
+  
+  .breakdown-chart {
+    max-width: 400px;
+    margin: 0 auto;
+  }
+}
+
+@media (max-width: 768px) {
+  .report-tabs-container {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+  }
+  
+  .export-buttons-group {
+    justify-content: center;
+    margin-bottom: 0;
+  }
+  
+  .export-btn {
+    flex: 1;
+  }
 }
 </style>
