@@ -31,6 +31,12 @@ axiosInstance.interceptors.request.use(
       config.headers['X-Employee-Username'] = username
     }
     
+    // Gửi email trong header để định danh customer khi security bị tắt
+    const email = localStorage.getItem('email')
+    if (email) {
+      config.headers['X-Customer-Email'] = email
+    }
+    
     return config
   },
   (error) => {
