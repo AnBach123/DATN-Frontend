@@ -54,3 +54,14 @@ export const deletePaymentItem = (itemId: number) => {
     headers: getAuthHeader(),
   })
 }
+
+export const addPaymentItem = (payload: {
+  tableId: number
+  productId?: number | null
+  comboId?: number | null
+  quantity: number
+}) => {
+  return axiosInstance.post(`${API_URL}/add-item`, payload, {
+    headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+  })
+}

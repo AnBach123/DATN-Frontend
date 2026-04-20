@@ -128,8 +128,13 @@
       <div class="col-12">
         <div class="card pos-card h-100">
           <div class="card-body">
-            <h5 class="section-title">Danh sách món ăn & combo</h5>
-            
+            <div class="d-flex align-items-center justify-content-between mb-3">
+              <h5 class="section-title mb-0">Danh sách món ăn & combo</h5>
+              <button class="btn btn-sm btn-outline-primary" @click="openAddItemModal">
+                + Thêm món
+              </button>
+            </div>
+
             <!-- Warning for unserved items -->
             <div v-if="hasUnservedItems" class="alert alert-warning mb-3" role="alert">
               <div class="d-flex align-items-center">
@@ -394,6 +399,95 @@
     </div>
 
 
+  <!-- Add Item Modal -->
+  <div v-if="showAddItemModal" class="add-item-modal-overlay" @click.self="closeAddItemModal">
+    <div class="add-item-modal-card">
+      <div class="add-item-modal-header">
+        <h5 class="mb-0">Thêm món vào hóa đơn</h5>
+        <button class="btn-close" @click="closeAddItemModal"></button>
+      </div>
+      <div class="add-item-modal-body">
+        <!-- Type toggle + search -->
+        <div class="d-flex gap-2 mb-2">
+          <button
+            class="btn btn-sm"
+            :class="addItemType === 'PRODUCT' ? 'btn-primary' : 'btn-outline-primary'"
+            @click="switchAddItemType('PRODUCT')"
+          >Món ăn</button>
+          <button
+            class="btn btn-sm"
+            :class="addItemType === 'COMBO' ? 'btn-primary' : 'btn-outline-primary'"
+            @click="switchAddItemType('COMBO')"
+          >Combo</button>
+        </div>
+        <input
+          v-model="addItemSearch"
+          type="text"
+          class="form-control form-control-sm mb-2"
+          placeholder="Tìm kiếm..."
+        />
+
+        <!-- List — inline quantity controls -->
+        <div class="add-item-list">
+          <div v-if="filteredAddItems.length === 0" class="text-muted text-center py-3 small">
+            Không tìm thấy kết quả
+          </div>
+          <div
+            v-for="item in filteredAddItems"
+            :key="item.id"
+            class="add-item-row"
+            :class="{ 'add-item-row--selected': getItemQty(item.id) > 0 }"
+            @click="onItemRowClick(item)"
+          >
+            <div class="flex-grow-1 me-2">
+              <div class="fw-semibold add-item-name">{{ item.name }}</div>
+              <div class="small text-muted">{{ formatMoney(item.price) }}</div>
+            </div>
+            <!-- Qty controls: visible when selected, click.stop so row click doesn't fire -->
+            <div
+              v-if="getItemQty(item.id) > 0"
+              class="add-item-qty-controls"
+              @click.stop
+            >
+              <button class="add-item-qty-btn" @click="decrementItem(item)">−</button>
+              <span class="add-item-qty-num">{{ getItemQty(item.id) }}</span>
+              <button class="add-item-qty-btn" @click="incrementItem(item)">+</button>
+            </div>
+            <span v-else class="add-item-plus-hint">+</span>
+          </div>
+        </div>
+
+        <!-- Selection summary chip list -->
+        <div v-if="selectedEntries.length > 0" class="add-item-summary">
+          <div class="add-item-summary-title">Đã chọn ({{ selectedEntries.length }} loại):</div>
+          <div class="add-item-chips">
+            <span
+              v-for="e in selectedEntries"
+              :key="e.key"
+              class="add-item-chip"
+            >
+              {{ e.item.name }} × {{ e.qty }}
+              <button class="add-item-chip-remove" @click="removeEntry(e.key)">×</button>
+            </span>
+          </div>
+          <div class="add-item-summary-total">
+            Tổng: <strong class="text-primary">{{ formatMoney(selectedTotal) }}</strong>
+          </div>
+        </div>
+      </div>
+      <div class="add-item-modal-footer">
+        <button class="btn btn-outline-secondary btn-sm" @click="closeAddItemModal">Hủy</button>
+        <button
+          class="btn btn-primary btn-sm"
+          :disabled="selectedEntries.length === 0 || addingItem"
+          @click="confirmAddItem"
+        >
+          {{ addingItem ? 'Đang thêm...' : `Thêm ${selectedEntries.length > 0 ? selectedEntries.length + ' loại' : ''}` }}
+        </button>
+      </div>
+    </div>
+  </div>
+
   </div>
 </template>
 
@@ -401,12 +495,14 @@
 import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import {
+  addPaymentItem,
   cancelPayment,
   checkoutPayment,
   deletePaymentItem,
   getPaymentByTable,
   updatePaymentItem,
 } from '@/services/paymentApi'
+import axiosInstance from '@/services/axiosInstance'
 import Swal from 'sweetalert2'
 import QRCode from 'qrcode'
 
@@ -503,6 +599,163 @@ let notificationInterval: number | null = null
 // Loading states for item operations
 const updatingItem = ref<number | null>(null)
 const removingItem = ref<number | null>(null)
+
+// Add Item modal state
+type AddItemEntry = { item: { id: number; name: string; price: number }; qty: number; type: 'PRODUCT' | 'COMBO' }
+
+const showAddItemModal = ref(false)
+const addItemType = ref<'PRODUCT' | 'COMBO'>('PRODUCT')
+const addItemSearch = ref('')
+const addingItem = ref(false)
+const addItemProducts = ref<{ id: number; name: string; price: number }[]>([])
+const addItemCombos = ref<{ id: number; name: string; price: number }[]>([])
+// key = `${type}-${id}`, supports selecting products and combos at the same time
+const selectedItemsMap = ref<Map<string, AddItemEntry>>(new Map())
+
+const filteredAddItems = computed(() => {
+  const list = addItemType.value === 'PRODUCT' ? addItemProducts.value : addItemCombos.value
+  const q = addItemSearch.value.toLowerCase().trim()
+  if (!q) return list
+  return list.filter((item) => item.name.toLowerCase().includes(q))
+})
+
+const selectedEntries = computed<(AddItemEntry & { key: string })[]>(() => {
+  const result: (AddItemEntry & { key: string })[] = []
+  selectedItemsMap.value.forEach((entry, key) => result.push({ ...entry, key }))
+  return result
+})
+
+const selectedTotal = computed(() =>
+  selectedEntries.value.reduce((sum, e) => sum + e.item.price * e.qty, 0),
+)
+
+const itemKey = (item: { id: number }) => `${addItemType.value}-${item.id}`
+
+const getItemQty = (id: number) => {
+  const key = `${addItemType.value}-${id}`
+  return selectedItemsMap.value.get(key)?.qty ?? 0
+}
+
+const onItemRowClick = (item: { id: number; name: string; price: number }) => {
+  const key = itemKey(item)
+  if (!selectedItemsMap.value.has(key)) {
+    const map = new Map(selectedItemsMap.value)
+    map.set(key, { item, qty: 1, type: addItemType.value })
+    selectedItemsMap.value = map
+  }
+}
+
+const incrementItem = (item: { id: number; name: string; price: number }) => {
+  const key = itemKey(item)
+  const map = new Map(selectedItemsMap.value)
+  const entry = map.get(key)
+  if (entry) {
+    map.set(key, { ...entry, qty: entry.qty + 1 })
+  } else {
+    map.set(key, { item, qty: 1, type: addItemType.value })
+  }
+  selectedItemsMap.value = map
+}
+
+const decrementItem = (item: { id: number; name: string; price: number }) => {
+  const key = itemKey(item)
+  const map = new Map(selectedItemsMap.value)
+  const entry = map.get(key)
+  if (!entry) return
+  if (entry.qty <= 1) {
+    map.delete(key)
+  } else {
+    map.set(key, { ...entry, qty: entry.qty - 1 })
+  }
+  selectedItemsMap.value = map
+}
+
+const removeEntry = (key: string) => {
+  const map = new Map(selectedItemsMap.value)
+  map.delete(key)
+  selectedItemsMap.value = map
+}
+
+const openAddItemModal = async () => {
+  addItemSearch.value = ''
+  addItemType.value = 'PRODUCT'
+  selectedItemsMap.value = new Map()
+  showAddItemModal.value = true
+  await fetchAddItemLists()
+}
+
+const closeAddItemModal = () => {
+  showAddItemModal.value = false
+}
+
+const switchAddItemType = (type: 'PRODUCT' | 'COMBO') => {
+  addItemType.value = type
+  addItemSearch.value = ''
+}
+
+const fetchAddItemLists = async () => {
+  try {
+    const [prodRes, comboRes] = await Promise.all([
+      axiosInstance.get('/api/products/active'),
+      axiosInstance.get('/api/product-combos/active'),
+    ])
+    addItemProducts.value = (prodRes.data.data || []).map((p: any) => ({
+      id: p.id,
+      name: p.productName,
+      price: p.unitPrice,
+    }))
+    addItemCombos.value = (comboRes.data.data || []).map((c: any) => ({
+      id: c.id,
+      name: c.comboName,
+      price: c.comboPrice,
+    }))
+  } catch {
+    addItemProducts.value = []
+    addItemCombos.value = []
+  }
+}
+
+const confirmAddItem = async () => {
+  if (selectedEntries.value.length === 0 || !payment.value || !tableIdInput.value) return
+  addingItem.value = true
+  try {
+    // Fire all requests in parallel
+    await Promise.all(
+      selectedEntries.value.map((e) => {
+        const payload: { tableId: number; quantity: number; productId?: number; comboId?: number } = {
+          tableId: tableIdInput.value!,
+          quantity: e.qty,
+        }
+        if (e.type === 'PRODUCT') payload.productId = e.item.id
+        else payload.comboId = e.item.id
+        return addPaymentItem(payload)
+      }),
+    )
+    closeAddItemModal()
+    await loadPayment()
+    Swal.fire({
+      toast: true,
+      position: 'top-end',
+      icon: 'success',
+      title: `Đã thêm ${selectedEntries.value.length} loại món`,
+      showConfirmButton: false,
+      timer: 2500,
+      timerProgressBar: true,
+    })
+  } catch (error: any) {
+    Swal.fire({
+      toast: true,
+      position: 'top-end',
+      icon: 'error',
+      title: error.response?.data?.message || 'Không thêm được món',
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true,
+    })
+  } finally {
+    addingItem.value = false
+  }
+}
 
 // Start polling for payment notifications
 const startPolling = () => {
@@ -2459,6 +2712,194 @@ const formatDateTime = (value: string) => {
 .btn:disabled {
   opacity: 0.5 !important;
   cursor: not-allowed;
+}
+
+/* Add Item Modal */
+.add-item-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 60;
+  padding: 16px;
+}
+
+.add-item-modal-card {
+  width: 100%;
+  max-width: 520px;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  max-height: 88vh;
+  animation: slideUp 0.25s ease;
+}
+
+.add-item-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 1px solid #e2e8f0;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  border-radius: 16px 16px 0 0;
+}
+
+.add-item-modal-header .btn-close {
+  filter: brightness(0) invert(1);
+}
+
+.add-item-modal-body {
+  padding: 16px 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.add-item-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 20px;
+  border-top: 1px solid #e2e8f0;
+}
+
+/* Item list */
+.add-item-list {
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.add-item-row {
+  display: flex;
+  align-items: center;
+  padding: 9px 12px;
+  cursor: pointer;
+  transition: background 0.12s;
+  border-bottom: 1px solid #f1f5f9;
+  user-select: none;
+}
+
+.add-item-row:last-child {
+  border-bottom: none;
+}
+
+.add-item-row:hover {
+  background: #f0f7ff;
+}
+
+.add-item-row--selected {
+  background: #eff6ff;
+}
+
+.add-item-name {
+  font-size: 14px;
+}
+
+.add-item-plus-hint {
+  color: #94a3b8;
+  font-size: 18px;
+  font-weight: 300;
+  line-height: 1;
+  padding: 0 4px;
+}
+
+/* Inline qty controls */
+.add-item-qty-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.add-item-qty-btn {
+  width: 26px;
+  height: 26px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #fff;
+  color: #334155;
+  font-size: 16px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+  padding: 0;
+}
+
+.add-item-qty-btn:hover {
+  background: #e2e8f0;
+  border-color: #94a3b8;
+}
+
+.add-item-qty-num {
+  min-width: 24px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 14px;
+  color: #2563eb;
+}
+
+/* Selection summary */
+.add-item-summary {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.add-item-summary-title {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.add-item-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.add-item-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #dbeafe;
+  color: #1e40af;
+  border-radius: 20px;
+  padding: 2px 10px 2px 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.add-item-chip-remove {
+  background: none;
+  border: none;
+  color: #3b82f6;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  margin-left: 2px;
+}
+
+.add-item-chip-remove:hover {
+  color: #dc2626;
+}
+
+.add-item-summary-total {
+  font-size: 13px;
+  color: #334155;
 }
 
 </style>
