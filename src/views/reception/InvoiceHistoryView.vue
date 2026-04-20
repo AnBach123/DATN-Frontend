@@ -129,6 +129,14 @@
                   {{ getChannelText(selectedInvoice.invoiceChannel) }}
                 </span>
               </div>
+              <div class="detail-item" v-if="invoiceDetail && invoiceDetail.staffName">
+                <span class="label">NV phục vụ:</span>
+                <span class="value">{{ invoiceDetail.staffName }}</span>
+              </div>
+              <div class="detail-item" v-if="invoiceDetail && invoiceDetail.receptionistName">
+                <span class="label">Lễ tân:</span>
+                <span class="value">{{ invoiceDetail.receptionistName }}</span>
+              </div>
             </div>
           </div>
 
@@ -160,6 +168,7 @@
                     <th>Tên món</th>
                     <th>SL</th>
                     <th>Đơn giá</th>
+                    <th>Giảm giá</th>
                     <th>Thành tiền</th>
                   </tr>
                 </thead>
@@ -168,10 +177,41 @@
                     <td class="item-name">{{ item.name }}</td>
                     <td class="item-quantity">{{ item.quantity }}</td>
                     <td class="item-price">{{ formatCurrency(item.unitPrice) }}</td>
+                    <td class="item-discount">
+                      <template v-if="item.discount && item.discount > 0">
+                        <div>-{{ formatCurrency(item.discount) }}</div>
+                        <div class="discount-percent" v-if="item.discountPercent">{{ item.discountPercent }}%</div>
+                      </template>
+                      <template v-else>—</template>
+                    </td>
                     <td class="item-total">{{ formatCurrency(item.lineTotal) }}</td>
                   </tr>
                 </tbody>
               </table>
+            </div>
+          </div>
+
+          <div class="detail-section" v-if="invoiceDetail && invoiceDetail.vouchers && invoiceDetail.vouchers.length > 0">
+            <h3>Voucher áp dụng</h3>
+            <div class="voucher-list">
+              <div v-for="(v, idx) in invoiceDetail.vouchers" :key="idx" class="voucher-card">
+                <div class="voucher-left">
+                  <span class="voucher-icon">🎫</span>
+                  <div>
+                    <div class="voucher-name">{{ v.name || 'N/A' }}
+                      <span class="voucher-code">{{ v.code ? '(' + v.code + ')' : '' }}</span>
+                    </div>
+                    <div class="voucher-desc">
+                      <span v-if="v.voucherType === 'CUSTOMER'">Giảm {{ v.percent }}% · Toàn hóa đơn</span>
+                      <span v-else-if="v.voucherType === 'PRODUCT'">Giảm {{ v.percent }}% · {{ v.applicableItemName }}</span>
+                      <span v-else-if="v.voucherType === 'COMBO'">Giảm {{ v.percent }}% · Combo: {{ v.applicableItemName }}</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="voucher-amount" v-if="v.discountAmount != null">
+                  -{{ formatCurrency(v.discountAmount) }}
+                </div>
+              </div>
             </div>
           </div>
 
@@ -958,7 +998,8 @@ onMounted(() => {
 }
 
 .items-table th:nth-child(3),
-.items-table th:nth-child(4) {
+.items-table th:nth-child(4),
+.items-table th:nth-child(5) {
   text-align: right;
 }
 
@@ -997,9 +1038,80 @@ onMounted(() => {
   text-align: right;
 }
 
+.item-discount {
+  text-align: right;
+  color: #dc2626;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.discount-percent {
+  font-size: 11px;
+  color: #ef4444;
+  font-weight: 700;
+  background: #fee2e2;
+  border-radius: 4px;
+  padding: 1px 5px;
+  display: inline-block;
+  margin-top: 2px;
+}
+
 .item-total {
   font-weight: 700;
   color: #0f172a;
   text-align: right;
+}
+
+.voucher-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.voucher-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+  padding: 12px 16px;
+}
+
+.voucher-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.voucher-icon {
+  font-size: 20px;
+}
+
+.voucher-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.voucher-code {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
+  margin-left: 4px;
+}
+
+.voucher-desc {
+  font-size: 13px;
+  color: #166534;
+  margin-top: 2px;
+  font-weight: 500;
+}
+
+.voucher-amount {
+  font-size: 15px;
+  font-weight: 800;
+  color: #16a34a;
+  white-space: nowrap;
 }
 </style>

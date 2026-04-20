@@ -177,6 +177,8 @@ export interface InvoiceItem {
   quantity: number
   unitPrice: number
   discount: number
+  discountPercent: number | null
+  voucherCode: string | null
   lineTotal: number
 }
 
@@ -192,12 +194,24 @@ export interface InvoiceDetail {
   checkedInAt: string | null
   guestCount: number | null
   staffName: string | null
+  receptionistName: string | null
   tables: Array<{
     id: number
     tableName: string
     seatingCapacity: number
   }>
   items: InvoiceItem[]
+  vouchers: Array<{
+    id: number | null
+    code: string | null
+    name: string | null
+    percent: number | null
+    discountAmount: number | null
+    voucherType: string | null
+    applicableItemId: number | null
+    applicableItemName: string | null
+  }>
+  totalPayable: number | null
   subtotal: number
   itemVoucherDiscount: number | null
   manualDiscountPercent: number | null
