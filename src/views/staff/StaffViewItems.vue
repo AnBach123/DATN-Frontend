@@ -50,7 +50,7 @@
             <p>Chưa có món nào được order</p>
           </div>
           <div v-else class="items-list">
-            <div v-for="item in items" :key="item.id" class="item-row">
+            <div v-for="item in items" :key="item.id" :class="['item-row', { 'item-row--pending': item.status === 'PENDING' }]">
               <div class="item-info">
                 <div class="item-name">{{ item.itemName }}</div>
                 <div class="item-meta">
@@ -60,8 +60,8 @@
                   </span>
                 </div>
               </div>
-              <div class="item-price">
-                {{ formatCurrency(item.price * item.quantity) }}
+              <div class="item-right">
+                <div class="item-price">{{ formatCurrency(item.price * item.quantity) }}</div>
               </div>
             </div>
           </div>
@@ -91,6 +91,7 @@ function formatCurrency(amount: number): string {
 
 function formatStatus(status: string): string {
   const map: Record<string, string> = {
+    PENDING: 'CHỜ KÍCH HOẠT',
     ORDERED: 'ĐÃ ORDER',
     IN_PROGRESS: 'ĐANG LÀM',
     DONE: 'HOÀN THÀNH',
@@ -308,6 +309,20 @@ onMounted(() => {
   gap: 12px;
 }
 
+.item-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  margin-left: 16px;
+  flex-shrink: 0;
+}
+
+.badge.pending {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
+}
+
 .item-row {
   display: flex;
   justify-content: space-between;
@@ -385,7 +400,6 @@ onMounted(() => {
   font-size: 16px;
   font-weight: 700;
   color: #2b6cb0;
-  margin-left: 16px;
 }
 
 .text-center {

@@ -86,3 +86,12 @@ export const addItemsToTable = async (tableId: number, items: OrderItemRequest[]
   )
   return res.data
 }
+
+export const activateDessertItem = async (itemId: number) => {
+  const res = await axiosInstance.put(
+    `/api/invoices/items/${itemId}/activate`,
+    {},
+    { headers: getAuthHeader() },
+  )
+  return res.data
+}

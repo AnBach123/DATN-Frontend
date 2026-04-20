@@ -19,7 +19,7 @@ const getAuthHeader = () => {
    TYPES
 ======================== */
 
-export type KitchenStatus = 'ORDERED' | 'IN_PROGRESS' | 'DONE' | 'SERVED' | 'CANCELLED'
+export type KitchenStatus = 'PENDING' | 'ORDERED' | 'IN_PROGRESS' | 'DONE' | 'SERVED' | 'CANCELLED'
 
 export interface KitchenItem {
   id: number // 🔥 FIX: BE trả id (không phải invoiceItemId)
@@ -50,13 +50,11 @@ export interface KitchenTable {
  * @param statuses optional filter status
  */
 export const getKitchenGrouped = async (statuses?: KitchenStatus[]): Promise<KitchenTable[]> => {
-  const res = await axiosInstance.get('/api/kitchen/tables', {
-    headers: getAuthHeader(),
-    params: {
-      statuses, // 🔥 BE sẽ nhận ?statuses=ORDERED&statuses=IN_PROGRESS
-    },
-  })
-
+  let url = '/api/kitchen/tables'
+  if (statuses && statuses.length > 0) {
+    url += '?' + statuses.map(s => `statuses=${encodeURIComponent(s)}`).join('&')
+  }
+  const res = await axiosInstance.get(url, { headers: getAuthHeader() })
   return res.data.data
 }
 

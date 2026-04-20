@@ -11,6 +11,9 @@
         <!-- CARD HEADER -->
         <div class="card-header">
           <h3>{{ table.tableName }}</h3>
+          <span v-if="table.items.some(i => i.status === 'PENDING')" class="pending-badge">
+             {{ table.items.filter(i => i.status === 'PENDING').length }} chờ kích hoạt
+          </span>
         </div>
 
         <!-- CARD BODY -->
@@ -80,7 +83,7 @@
           <div class="items-section">
             <h4>Danh sách món ({{ selectedTable.items.length }})</h4>
             <div class="items-list">
-              <div v-for="item in selectedTable.items" :key="item.id" class="item-row">
+              <div v-for="item in selectedTable.items" :key="item.id" :class="['item-row', { 'item-row--pending': item.status === 'PENDING' }]">
                 <div class="item-info">
                   <div class="item-name">{{ item.itemName }}</div>
                   <div class="item-meta">
@@ -92,6 +95,16 @@
                 </div>
 
                 <div class="item-actions">
+                  <!-- ACTIVATE (PENDING dessert) -->
+                  <button
+                    v-if="item.status === 'PENDING'"
+                    class="btn activate"
+                    :disabled="activatingId === item.id"
+                    @click="handleActivate(item.id)"
+                  >
+                    {{ activatingId === item.id ? 'Đang gửi...' : '🍮 Kích hoạt' }}
+                  </button>
+
                   <!-- SERVED -->
                   <button
                     v-if="item.status === 'DONE'"
@@ -124,6 +137,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 import { getKitchenGrouped, serveItem, cancelItem } from '@/services/kitchenApi'
+import { activateDessertItem } from '@/services/staffOrderApi'
 import { DashboardWebSocket } from '@/services/websocket/DashboardWebSocket'
 import Swal from 'sweetalert2'
 
@@ -148,6 +162,7 @@ interface Table {
 const tables = ref<Table[]>([])
 const selectedTable = ref<Table | null>(null)
 const currentStaffId = ref<number | null>(null)
+const activatingId = ref<number | null>(null)
 
 // WebSocket instance
 let wsClient: DashboardWebSocket | null = null
@@ -172,7 +187,7 @@ function getCurrentStaffId(): number | null {
 
 async function fetchData() {
   try {
-    const data = await getKitchenGrouped()
+    const data = await getKitchenGrouped(['PENDING', 'ORDERED', 'IN_PROGRESS', 'DONE'])
     
     // Filter tables: only show tables served by current staff
     if (currentStaffId.value) {
@@ -323,8 +338,26 @@ async function handleCancel(id: number) {
   }
 }
 
+async function handleActivate(id: number) {
+  activatingId.value = id
+  try {
+    await activateDessertItem(id)
+    await fetchData()
+    if (selectedTable.value) {
+      const updated = tables.value.find((t) => t.tableId === selectedTable.value!.tableId)
+      if (updated) selectedTable.value = updated
+    }
+  } catch (e) {
+    console.error(e)
+    Swal.fire('Lỗi!', 'Không thể kích hoạt món tráng miệng', 'error')
+  } finally {
+    activatingId.value = null
+  }
+}
+
 function formatStatus(status: string) {
   const map: Record<string, string> = {
+    PENDING: 'CHỜ KÍCH HOẠT',
     ORDERED: 'ĐÃ ORDER',
     IN_PROGRESS: 'ĐANG LÀM',
     DONE: 'HOÀN THÀNH',
@@ -445,6 +478,7 @@ onUnmounted(() => {
 .card-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
   padding: 20px 24px;
   background: linear-gradient(135deg, #667eea, #764ba2);
@@ -462,6 +496,18 @@ onUnmounted(() => {
   font-size: 1.4rem;
   font-weight: 700;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  flex: 1;
+}
+
+.pending-badge {
+  background: rgba(245, 158, 11, 0.2);
+  border: 1px solid rgba(245, 158, 11, 0.5);
+  color: #fef3c7;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 20px;
+  white-space: nowrap;
 }
 
 /* CARD BODY */
@@ -707,6 +753,15 @@ onUnmounted(() => {
   transform: translateX(4px);
 }
 
+.item-row--pending {
+  border-left: 3px solid #f59e0b;
+  background: #fffbeb;
+}
+
+.item-row--pending:hover {
+  background: #fef3c7;
+}
+
 .item-info {
   flex: 1;
   min-width: 0;
@@ -739,6 +794,11 @@ onUnmounted(() => {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.3px;
+}
+
+.badge.pending {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
 }
 
 .badge.ordered {
@@ -788,6 +848,18 @@ onUnmounted(() => {
 .btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn.activate {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
+}
+
+.btn.activate:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 .btn.serve {
