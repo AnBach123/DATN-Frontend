@@ -82,6 +82,19 @@ axiosInstance.interceptors.response.use(
 
     // Handle 403 Forbidden - User không có quyền truy cập
     if (error.response?.status === 403) {
+      // Kiểm tra xem có phải lỗi SQL validation không
+      const errorMessage = error.response?.data?.message || ''
+      const isSqlValidationError = errorMessage.includes('Security violation') || 
+                                   errorMessage.includes('Forbidden SQL keyword') ||
+                                   errorMessage.includes('Only SELECT queries')
+      
+      // Nếu là lỗi SQL validation, không redirect và để component xử lý message
+      if (isSqlValidationError) {
+        // Không alert, không redirect - để component hiển thị lỗi chi tiết
+        return Promise.reject(error)
+      }
+      
+      // Nếu là lỗi permission thật sự
       alert('Bạn không có quyền truy cập chức năng này.')
       
       // Redirect về trang phù hợp với role
