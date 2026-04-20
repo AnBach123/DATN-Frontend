@@ -1,7 +1,7 @@
 <template>
-  <div class="custom-dashboard-view">
+  <div class="custom-dashboard-view" :class="{ 'fullscreen-mode': isFullscreen }">
     <!-- Dashboard Header -->
-    <div class="dashboard-header">
+    <div class="dashboard-header" v-show="!isFullscreen">
       <div class="dashboard-title-section">
         <button class="btn-back" @click="goBack">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -16,6 +16,64 @@
       </div>
       
       <div class="dashboard-actions">
+        <!-- Auto-refresh Interval Dropdown -->
+        <div v-if="!editMode" class="refresh-interval-dropdown">
+          <label for="refresh-interval">Tự động làm mới:</label>
+          <select 
+            id="refresh-interval" 
+            v-model="selectedRefreshInterval" 
+            @change="onRefreshIntervalChange"
+            class="select-refresh-interval"
+          >
+            <option :value="0">Tắt</option>
+            <option :value="1">1 phút</option>
+            <option :value="5">5 phút</option>
+            <option :value="10">10 phút</option>
+            <option :value="15">15 phút</option>
+            <option :value="30">30 phút</option>
+            <option :value="60">60 phút</option>
+          </select>
+        </div>
+        
+        <!-- Export Buttons -->
+        <button
+          v-if="!editMode && gridLayout.length > 0"
+          class="btn-export excel"
+          @click="exportExcel"
+          :disabled="isExporting"
+          title="Xuất Excel"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          {{ isExporting ? 'Đang xuất file...' : 'Xuất Excel' }}
+        </button>
+        <button
+          v-if="!editMode && gridLayout.length > 0"
+          class="btn-export pdf"
+          @click="exportPdf"
+          :disabled="isExporting"
+          title="Xuất PDF"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          {{ isExporting ? 'Đang xuất file...' : 'Xuất PDF' }}
+        </button>
+
+        <!-- Manual Refresh Button -->
+        <button
+          v-if="!editMode && gridLayout.length > 0"
+          class="btn-refresh"
+          :class="{ refreshing: isRefreshing }"
+          @click="manualRefresh"
+          :disabled="isRefreshing"
+          title="Làm mới dữ liệu"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 4 23 10 17 10"/>
+            <polyline points="1 20 1 14 7 14"/>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+          </svg>
+          {{ isRefreshing ? 'Đang làm mới...' : 'Làm mới' }}
+        </button>
+        
         <button 
           v-if="editMode"
           class="btn-add-widget" 
@@ -40,6 +98,64 @@
             <polyline v-if="editMode" points="20 6 9 17 4 12"/>
           </svg>
           {{ editMode ? 'Lưu bố cục' : 'Chỉnh sửa' }}
+        </button>
+
+        <!-- Fullscreen Button -->
+        <button 
+          v-if="!editMode && gridLayout.length > 0"
+          class="btn-fullscreen" 
+          @click="toggleFullscreen"
+          :title="isFullscreen ? 'Thoát toàn màn hình' : 'Toàn màn hình'"
+        >
+          <svg v-if="!isFullscreen" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+          </svg>
+          <svg v-else xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Last Refresh Time Display -->
+    <div v-if="!editMode && lastRefreshTime && gridLayout.length > 0" class="last-refresh-info" v-show="!isFullscreen">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <polyline points="12 6 12 12 16 14"/>
+      </svg>
+      <span>Cập nhật lần cuối: {{ formatLastRefreshTime() }}</span>
+    </div>
+
+    <!-- Fullscreen Floating Controls -->
+    <div v-if="isFullscreen" class="fullscreen-controls">
+      <div class="fullscreen-title">
+        <h2>{{ currentDashboard?.dashboardName || 'Dashboard' }}</h2>
+        <span v-if="lastRefreshTime" class="fullscreen-refresh-time">
+          Cập nhật: {{ formatLastRefreshTime() }}
+        </span>
+      </div>
+      <div class="fullscreen-actions">
+        <button 
+          class="btn-fullscreen-refresh" 
+          :class="{ refreshing: isRefreshing }"
+          @click="manualRefresh"
+          :disabled="isRefreshing"
+          title="Làm mới dữ liệu"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 4 23 10 17 10"/>
+            <polyline points="1 20 1 14 7 14"/>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+          </svg>
+        </button>
+        <button 
+          class="btn-fullscreen-exit" 
+          @click="toggleFullscreen"
+          title="Thoát toàn màn hình (ESC)"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/>
+          </svg>
         </button>
       </div>
     </div>
@@ -127,7 +243,7 @@
       </div>
 
       <!-- CSS Grid Layout with Manual Drag & Drop -->
-      <div v-else class="widgets-grid">
+      <div v-else class="widgets-grid" :style="{ minHeight: gridHeight + 'px' }">
         <div
           v-for="item in gridLayout"
           :key="`widget-${item.savedQueryId}`"
@@ -225,6 +341,16 @@
               </div>
             </div>
             
+            <!-- Widget Footer - Execution Time -->
+            <div v-if="savedQueryResults.has(item.savedQueryId)" class="widget-footer">
+              <div class="execution-time">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                </svg>
+                <span>Thực thi: {{ savedQueryResults.get(item.savedQueryId)!.executionTimeMs }}ms</span>
+              </div>
+            </div>
+            
             <!-- Resize handle -->
             <div 
               v-if="editMode" 
@@ -239,7 +365,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, nextTick, watch, onUnmounted } from 'vue'
+import { ref, onMounted, nextTick, watch, onUnmounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { queryBuilderService, type SavedQuery, type QueryResponse, type DashboardLayoutRequest, type DashboardResponse } from '@/services/queryBuilderService'
 import { Chart, registerables } from 'chart.js'
@@ -265,10 +391,38 @@ const dragStartPos = ref({ x: 0, y: 0 })
 const itemStartPos = ref({ x: 0, y: 0 })
 const itemStartSize = ref({ w: 0, h: 0 })
 
+// Export state
+const isExporting = ref(false)
+
+// Auto-refresh state
+let autoRefreshInterval: number | null = null
+const selectedRefreshInterval = ref<number>(30) // in minutes
+const isRefreshing = ref(false)
+const lastRefreshTime = ref<Date | null>(null)
+
+// Fullscreen state
+const isFullscreen = ref(false)
+
 const GRID_COLS = 12
 const COL_WIDTH = 80 // pixels per column
 const ROW_HEIGHT = 80 // pixels per row
 const GAP = 16 // gap between widgets
+
+// Computed property to calculate dynamic grid height based on widget positions
+const gridHeight = computed(() => {
+  if (gridLayout.value.length === 0) {
+    return 400 // Default min-height when empty
+  }
+  
+  // Find the lowest widget position (y + h)
+  const maxY = Math.max(...gridLayout.value.map(item => item.y + item.h))
+  
+  // Calculate height: maxY * (ROW_HEIGHT + GAP) + extra padding
+  const calculatedHeight = maxY * (ROW_HEIGHT + GAP) + 40
+  
+  // Return at least 400px
+  return Math.max(400, calculatedHeight)
+})
 
 const goBack = () => {
   router.push('/admin/query-builder')
@@ -730,12 +884,162 @@ const calculatePercentage = (queryId: number, value: any): string => {
   return `${percentage.toFixed(1)}%`
 }
 
+// Export functions
+const exportExcel = async () => {
+  try {
+    isExporting.value = true
+    await queryBuilderService.downloadCustomDashboardExcel(dashboardId.value)
+  } catch (error) {
+    console.error('Error exporting Excel:', error)
+    alert('Xuất Excel thất bại. Vui lòng thử lại.')
+  } finally {
+    isExporting.value = false
+  }
+}
+
+const exportPdf = async () => {
+  try {
+    isExporting.value = true
+    await queryBuilderService.downloadCustomDashboardPdf(dashboardId.value)
+  } catch (error) {
+    console.error('Error exporting PDF:', error)
+    alert('Xuất PDF thất bại. Vui lòng thử lại.')
+  } finally {
+    isExporting.value = false
+  }
+}
+
+// Auto-refresh function to reload all widget data
+const refreshAllWidgets = async () => {
+  if (editMode.value) {
+    console.log('[refreshAllWidgets] Skipping refresh - in edit mode')
+    return
+  }
+  
+  if (gridLayout.value.length === 0) {
+    console.log('[refreshAllWidgets] Skipping refresh - no widgets')
+    return
+  }
+  
+  console.log('[refreshAllWidgets] Refreshing all widgets...')
+  isRefreshing.value = true
+  
+  try {
+    for (const item of gridLayout.value) {
+      const query = savedQueries.value.find(q => q.id === item.savedQueryId)
+      if (query) {
+        await executeWidgetQuery(query)
+      }
+    }
+    
+    lastRefreshTime.value = new Date()
+    console.log('[refreshAllWidgets] Refresh completed')
+  } catch (err) {
+    console.error('[refreshAllWidgets] Error during refresh:', err)
+  } finally {
+    isRefreshing.value = false
+  }
+}
+
+// Manual refresh triggered by button click
+const manualRefresh = async () => {
+  await refreshAllWidgets()
+}
+
+// Handle refresh interval change
+const onRefreshIntervalChange = () => {
+  console.log('[onRefreshIntervalChange] Interval changed to:', selectedRefreshInterval.value, 'minutes')
+  
+  // Stop existing interval
+  stopAutoRefresh()
+  
+  // Start new interval if not disabled
+  if (selectedRefreshInterval.value > 0) {
+    startAutoRefresh()
+  }
+}
+
+// Format last refresh time for display
+const formatLastRefreshTime = (): string => {
+  if (!lastRefreshTime.value) return ''
+  
+  const now = new Date()
+  const diff = now.getTime() - lastRefreshTime.value.getTime()
+  const seconds = Math.floor(diff / 1000)
+  const minutes = Math.floor(seconds / 60)
+  const hours = Math.floor(minutes / 60)
+  
+  if (hours > 0) {
+    return `${hours} giờ ${minutes % 60} phút trước`
+  } else if (minutes > 0) {
+    return `${minutes} phút trước`
+  } else {
+    return `${seconds} giây trước`
+  }
+}
+
+// Toggle fullscreen mode
+const toggleFullscreen = () => {
+  isFullscreen.value = !isFullscreen.value
+  
+  if (isFullscreen.value) {
+    // Enter fullscreen
+    document.body.style.overflow = 'hidden'
+    console.log('[toggleFullscreen] Entered fullscreen mode')
+  } else {
+    // Exit fullscreen
+    document.body.style.overflow = ''
+    console.log('[toggleFullscreen] Exited fullscreen mode')
+  }
+}
+
+// Handle ESC key to exit fullscreen
+const handleEscKey = (event: KeyboardEvent) => {
+  if (event.key === 'Escape' && isFullscreen.value) {
+    toggleFullscreen()
+  }
+}
+
+// Start auto-refresh interval
+const startAutoRefresh = () => {
+  if (autoRefreshInterval) {
+    clearInterval(autoRefreshInterval)
+  }
+  
+  if (selectedRefreshInterval.value === 0) {
+    console.log('[startAutoRefresh] Auto-refresh disabled')
+    return
+  }
+  
+  const intervalMs = selectedRefreshInterval.value * 60 * 1000
+  
+  autoRefreshInterval = window.setInterval(() => {
+    refreshAllWidgets()
+  }, intervalMs)
+  
+  console.log(`[startAutoRefresh] Auto-refresh started - interval: ${selectedRefreshInterval.value} minutes`)
+}
+
+// Stop auto-refresh interval
+const stopAutoRefresh = () => {
+  if (autoRefreshInterval) {
+    clearInterval(autoRefreshInterval)
+    autoRefreshInterval = null
+    console.log('[stopAutoRefresh] Auto-refresh stopped')
+  }
+}
+
 // Cleanup on unmount
 onUnmounted(() => {
   document.removeEventListener('mousemove', onDragMove)
   document.removeEventListener('mouseup', onDragEnd)
   document.removeEventListener('mousemove', onResizeMove)
   document.removeEventListener('mouseup', onResizeEnd)
+  document.removeEventListener('keydown', handleEscKey)
+  stopAutoRefresh()
+  
+  // Reset body overflow
+  document.body.style.overflow = ''
 })
 
 // Watch for changes in savedQueryResults and render charts
@@ -779,6 +1083,15 @@ onMounted(async () => {
   await loadDashboard()
   await loadSavedQueries()
   await loadDashboardLayouts()
+  
+  // Set initial refresh time
+  lastRefreshTime.value = new Date()
+  
+  // Start auto-refresh after initial load
+  startAutoRefresh()
+  
+  // Add ESC key listener for fullscreen
+  document.addEventListener('keydown', handleEscKey)
 })
 </script>
 
@@ -787,6 +1100,105 @@ onMounted(async () => {
   padding: 24px;
   background: #f7fafc;
   min-height: 100vh;
+}
+
+.custom-dashboard-view.fullscreen-mode {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  padding: 0;
+  margin: 0;
+  z-index: 9999;
+  background: #f7fafc;
+  overflow-y: auto;
+}
+
+.fullscreen-controls {
+  position: sticky;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid #e2e8f0;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.fullscreen-title h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #2d3748;
+  margin: 0 0 4px 0;
+}
+
+.fullscreen-refresh-time {
+  font-size: 13px;
+  color: #718096;
+}
+
+.fullscreen-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.btn-fullscreen-refresh,
+.btn-fullscreen-exit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  background: white;
+  color: #667eea;
+  border: 2px solid #667eea;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-fullscreen-refresh:hover,
+.btn-fullscreen-exit:hover {
+  background: #667eea;
+  color: white;
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.btn-fullscreen-refresh:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-fullscreen-refresh.refreshing svg {
+  animation: spin 1s linear infinite;
+}
+
+.btn-fullscreen-exit {
+  background: #e53e3e;
+  border-color: #e53e3e;
+  color: white;
+}
+
+.btn-fullscreen-exit:hover {
+  background: #c53030;
+  border-color: #c53030;
+}
+
+.fullscreen-mode .dashboard-grid-wrapper {
+  padding: 24px;
+}
+
+.fullscreen-mode .widgets-grid {
+  min-height: calc(100vh - 120px);
 }
 
 .dashboard-header {
@@ -840,6 +1252,151 @@ onMounted(async () => {
 .dashboard-actions {
   display: flex;
   gap: 12px;
+  align-items: center;
+}
+
+.refresh-interval-dropdown {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: #f7fafc;
+  border-radius: 8px;
+}
+
+.refresh-interval-dropdown label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #4a5568;
+  white-space: nowrap;
+}
+
+.select-refresh-interval {
+  padding: 6px 12px;
+  background: white;
+  border: 1px solid #cbd5e0;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #2d3748;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.select-refresh-interval:hover {
+  border-color: #667eea;
+}
+
+.select-refresh-interval:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.btn-export {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 18px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: white;
+}
+
+.btn-export:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-export.excel {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.btn-export.excel:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+}
+
+.btn-export.pdf {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+}
+
+.btn-export.pdf:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.35);
+}
+
+.btn-refresh {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: white;
+  color: #667eea;
+  border: 2px solid #667eea;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-refresh:hover:not(:disabled) {
+  background: #667eea;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.btn-refresh:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-refresh.refreshing svg {
+  animation: spin 1s linear infinite;
+}
+
+.btn-fullscreen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  background: white;
+  color: #667eea;
+  border: 2px solid #667eea;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-fullscreen:hover {
+  background: #667eea;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.last-refresh-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  margin-bottom: 16px;
+  font-size: 13px;
+  color: #718096;
+}
+
+.last-refresh-info svg {
+  flex-shrink: 0;
+  color: #667eea;
 }
 
 .btn-edit-mode {
@@ -1168,7 +1725,8 @@ onMounted(async () => {
 /* Widgets Grid Container */
 .widgets-grid {
   position: relative;
-  min-height: 600px;
+  min-height: 400px;
+  padding-bottom: 40px;
 }
 
 .grid-widget {
@@ -1382,6 +1940,27 @@ onMounted(async () => {
   background: rgba(255, 255, 255, 0.95);
   color: #718096;
   z-index: 10;
+}
+
+.widget-footer {
+  padding: 12px 16px;
+  border-top: 1px solid #e2e8f0;
+  background: #f7fafc;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.execution-time {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #718096;
+}
+
+.execution-time svg {
+  color: #667eea;
 }
 
 .spinner {

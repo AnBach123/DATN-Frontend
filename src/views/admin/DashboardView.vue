@@ -1399,11 +1399,11 @@ const closeModal = () => {
   .stats-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .dashboard-header {
     margin-bottom: 24px;
   }
-  
+
   .page-title {
     font-size: 24px;
   }

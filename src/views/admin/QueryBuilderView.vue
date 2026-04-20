@@ -9,7 +9,6 @@
         </svg>
         Truy vấn dữ liệu
       </h1>
-      <p class="page-subtitle">Tạo và thực thi truy vấn tùy chỉnh trên cơ sở dữ liệu</p>
     </div>
 
     <!-- Tab Navigation -->
@@ -26,7 +25,7 @@
         </svg>
         AI Assistant
       </button>
-      <button 
+      <!-- <button 
         class="tab-button" 
         :class="{ active: activeTab === 'visual' }"
         @click="handleTabChange('visual')"
@@ -36,7 +35,7 @@
           <line x1="9" y1="3" x2="9" y2="21"/>
         </svg>
         Truy vấn trực quan
-      </button>
+      </button> -->
       <button 
         class="tab-button" 
         :class="{ active: activeTab === 'sql' }"
@@ -76,7 +75,37 @@
               </svg>
               <div>
                 <h3>AI Assistant</h3>
-                <p>Hỏi bằng tiếng Việt, AI sẽ tự động tạo câu lệnh SQL cho bạn</p>
+                <p>AI hỗ trợ truy xuất dữ liệu</p>
+              </div>
+            </div>
+            <button class="btn-history-toggle" @click="showHistory = !showHistory">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+              </svg>
+              Lịch sử{{ aiHistory.length > 0 ? ` (${aiHistory.length})` : '' }}
+            </button>
+          </div>
+
+          <!-- History Panel -->
+          <div v-if="showHistory" class="ai-history-panel">
+            <div class="ai-history-panel-header">
+              <span>Lịch sử câu hỏi</span>
+              <button v-if="aiHistory.length > 0" class="btn-clear-history" @click="clearHistory">Xóa tất cả</button>
+            </div>
+            <div v-if="aiHistory.length === 0" class="ai-history-empty">Chưa có câu hỏi nào.</div>
+            <div v-else class="ai-history-list">
+              <div
+                v-for="item in aiHistory"
+                :key="item.id"
+                class="ai-history-item"
+                @click="restoreFromHistory(item)"
+              >
+                <div class="ai-history-item-content">
+                  <p class="ai-history-question">{{ item.question }}</p>
+                  <span class="ai-history-time">{{ formatHistoryTime(item.timestamp) }}</span>
+                </div>
+                <button class="btn-delete-history" @click.stop="deleteHistoryItem(item.id)" title="Xóa">×</button>
               </div>
             </div>
           </div>
@@ -86,7 +115,7 @@
             <textarea 
               v-model="aiQuestion" 
               class="ai-question-input"
-              placeholder="Ví dụ: Cho tôi xem 10 hóa đơn có doanh thu cao nhất tháng này"
+              placeholder="Nhập dữ liệu bạn muốn truy xuất..."
               rows="4"
               :disabled="aiLoading"
             ></textarea>
@@ -108,7 +137,7 @@
                 <line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/>
                 <line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/>
               </svg>
-              {{ aiLoading ? 'AI đang suy nghĩ...' : 'Tạo SQL' }}
+              {{ aiLoading ? 'Loading...' : 'Tạo truy vấn' }}
             </button>
           </div>
 
@@ -136,6 +165,10 @@
                   SQL đã tạo
                 </h4>
                 <div class="ai-sql-actions">
+                  <label class="sql-toggle-label">
+                    <input type="checkbox" v-model="showAiSql" class="sql-toggle-checkbox" />
+                    <span>{{ showAiSql ? 'Ẩn SQL' : 'Hiện SQL' }}</span>
+                  </label>
                   <button class="btn-ai-action" @click="executeAiGeneratedSql" :disabled="aiExecuting">
                     <svg v-if="!aiExecuting" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <polygon points="5 3 19 12 5 21 5 3"/>
@@ -162,7 +195,7 @@
                   </button>
                 </div>
               </div>
-              <pre class="ai-sql-code"><code>{{ aiResponse.generatedSql }}</code></pre>
+              <pre v-show="showAiSql" class="ai-sql-code"><code>{{ aiResponse.generatedSql }}</code></pre>
             </div>
 
             <!-- AI Query Results -->
@@ -277,43 +310,288 @@
 
       <!-- SQL Editor Tab -->
       <div v-if="activeTab === 'sql'" class="sql-editor-tab">
-        <div class="editor-container">
-          <div class="editor-header">
-            <h3>SQL Query Editor</h3>
-            <div class="editor-actions">
-              <button class="btn-save" @click="openSaveDialog" :disabled="!sqlQuery.trim()">
+        <div class="sql-editor-layout">
+          <!-- Database Schema Sidebar -->
+          <div v-if="showSchemaSidebar" class="schema-sidebar">
+            <div class="schema-header">
+              <h4>Database Schema</h4>
+              <button class="btn-close-sidebar" @click="showSchemaSidebar = false" title="Ẩn sidebar">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-                  <polyline points="17 21 17 13 7 13 7 21"/>
-                  <polyline points="7 3 7 8 15 8"/>
+                  <line x1="18" y1="6" x2="6" y2="18"/>
+                  <line x1="6" y1="6" x2="18" y2="18"/>
                 </svg>
-                Lưu truy vấn
-              </button>
-              <button class="btn-execute" @click="executeQuery" :disabled="loading || !sqlQuery.trim()">
-                <svg v-if="!loading" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <polygon points="5 3 19 12 5 21 5 3"/>
-                </svg>
-                <svg v-else class="spinner" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <line x1="12" y1="2" x2="12" y2="6"/>
-                  <line x1="12" y1="18" x2="12" y2="22"/>
-                  <line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/>
-                  <line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/>
-                  <line x1="2" y1="12" x2="6" y2="12"/>
-                  <line x1="18" y1="12" x2="22" y2="12"/>
-                  <line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/>
-                  <line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/>
-                </svg>
-                {{ loading ? 'Đang thực thi...' : 'Thực thi truy vấn' }}
               </button>
             </div>
+
+            <div class="schema-search">
+              <input 
+                v-model="schemaSearchQuery" 
+                type="text" 
+                class="schema-search-input" 
+                placeholder="Tìm kiếm bảng..."
+              />
+            </div>
+
+            <div v-if="loadingSchema" class="schema-loading">
+              <svg class="spinner" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="2" x2="12" y2="6"/>
+                <line x1="12" y1="18" x2="12" y2="22"/>
+                <line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/>
+                <line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/>
+                <line x1="2" y1="12" x2="6" y2="12"/>
+                <line x1="18" y1="12" x2="22" y2="12"/>
+                <line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/>
+                <line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/>
+              </svg>
+              <p>Đang tải schema...</p>
+            </div>
+
+            <div v-else class="tables-list">
+              <div v-for="table in filteredTables" :key="table.tableName" class="table-item">
+                <div class="table-header" @click="toggleTableExpansion(table.tableName)">
+                  <svg 
+                    class="expand-icon" 
+                    :class="{ expanded: expandedTables.has(table.tableName) }"
+                    xmlns="http://www.w3.org/2000/svg" 
+                    width="14" 
+                    height="14" 
+                    viewBox="0 0 24 24" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    stroke-width="2" 
+                    stroke-linecap="round" 
+                    stroke-linejoin="round"
+                  >
+                    <polyline points="9 18 15 12 9 6"/>
+                  </svg>
+                  <span class="table-name" @click.stop="insertIntoEditor(table.tableName)">
+                    {{ table.tableName }}
+                  </span>
+                  <span class="column-count">{{ table.columns.length }}</span>
+                </div>
+
+                <div v-if="expandedTables.has(table.tableName)" class="columns-list">
+                  <div 
+                    v-for="column in table.columns" 
+                    :key="column.columnName"
+                    class="column-item"
+                    @click="insertIntoEditor(column.columnName)"
+                  >
+                    <svg 
+                      v-if="column.primaryKey" 
+                      class="key-icon" 
+                      xmlns="http://www.w3.org/2000/svg" 
+                      width="12" 
+                      height="12" 
+                      viewBox="0 0 24 24" 
+                      fill="none" 
+                      stroke="currentColor" 
+                      stroke-width="2" 
+                      stroke-linecap="round" 
+                      stroke-linejoin="round"
+                    >
+                      <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
+                    </svg>
+                    <span class="column-name">{{ column.columnName }}</span>
+                    <span class="column-type">{{ column.dataType }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-          
-          <textarea 
-            v-model="sqlQuery" 
-            class="sql-textarea"
-            placeholder="Nhập câu lệnh SQL của bạn ở đây...&#10;&#10;Ví dụ:&#10;SELECT * FROM Invoice WHERE status = 'PAID' LIMIT 10"
-            spellcheck="false"
-          ></textarea>
+
+          <!-- Main Editor Area -->
+          <div class="editor-main">
+            <div class="editor-container">
+              <div class="editor-header">
+                <h3>
+                  <button 
+                    v-if="!showSchemaSidebar" 
+                    class="btn-show-sidebar" 
+                    @click="showSchemaSidebar = true"
+                    title="Hiện sidebar"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                      <line x1="9" y1="3" x2="9" y2="21"/>
+                    </svg>
+                  </button>
+                  SQL Query Editor
+                </h3>
+                <div class="editor-toolbar">
+                  <!-- Templates Dropdown -->
+                  <div class="dropdown-wrapper">
+                    <button 
+                      class="btn-toolbar" 
+                      @click="showTemplatesDropdown = !showTemplatesDropdown"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                        <line x1="12" y1="18" x2="12" y2="12"/>
+                        <line x1="9" y1="15" x2="15" y2="15"/>
+                      </svg>
+                      Templates
+                    </button>
+                    <div v-if="showTemplatesDropdown" class="dropdown-menu">
+                      <div class="dropdown-header">
+                        <span>SQL Templates</span>
+                        <button class="btn-close-sidebar" @click="showTemplatesDropdown = false">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18"/>
+                            <line x1="6" y1="6" x2="18" y2="18"/>
+                          </svg>
+                        </button>
+                      </div>
+                      <div class="dropdown-body">
+                        <button 
+                          v-for="template in sqlTemplates" 
+                          :key="template.name"
+                          class="template-item"
+                          @click="loadTemplate(template)"
+                        >
+                          <div>
+                            <div style="font-weight: 600; margin-bottom: 4px;">{{ template.name }}</div>
+                            <div style="font-size: 11px; color: #999;">{{ template.description }}</div>
+                          </div>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- History Dropdown -->
+                  <div class="dropdown-wrapper">
+                    <button 
+                      class="btn-toolbar" 
+                      @click="showHistoryDropdown = !showHistoryDropdown"
+                      :disabled="queryHistory.length === 0"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"/>
+                        <polyline points="12 6 12 12 16 14"/>
+                      </svg>
+                      History
+                    </button>
+                    <div v-if="showHistoryDropdown" class="dropdown-menu">
+                      <div class="dropdown-header">
+                        <span>Query History</span>
+                        <div style="display: flex; gap: 8px;">
+                          <button class="btn-close-sidebar" @click="clearQueryHistory" title="Xóa tất cả">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                              <polyline points="3 6 5 6 21 6"/>
+                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                            </svg>
+                          </button>
+                          <button class="btn-close-sidebar" @click="showHistoryDropdown = false">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                              <line x1="18" y1="6" x2="6" y2="18"/>
+                              <line x1="6" y1="6" x2="18" y2="18"/>
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                      <div class="dropdown-body">
+                        <button 
+                          v-for="(item, index) in queryHistory" 
+                          :key="index"
+                          class="history-item"
+                          @click="loadFromHistory(item)"
+                        >
+                          <div style="flex: 1;">
+                            <div class="history-sql">{{ item.sql.substring(0, 60) }}{{ item.sql.length > 60 ? '...' : '' }}</div>
+                            <div class="history-meta">
+                              <span>{{ formatHistoryTime(item.timestamp) }}</span>
+                              <span>{{ item.executionTime }}ms</span>
+                            </div>
+                          </div>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="toolbar-divider"></div>
+
+                  <!-- Format Button -->
+                  <button 
+                    class="btn-toolbar" 
+                    @click="formatSqlCode"
+                    :disabled="!sqlQuery.trim()"
+                    title="Format SQL"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="16 18 22 12 16 6"/>
+                      <polyline points="8 6 2 12 8 18"/>
+                    </svg>
+                    Format
+                  </button>
+
+                  <!-- Copy SQL Button -->
+                  <button 
+                    class="btn-toolbar" 
+                    @click="copySqlToClipboard"
+                    :disabled="!sqlQuery.trim()"
+                    title="Copy SQL"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                    </svg>
+                    Copy
+                  </button>
+
+                  <!-- Clear Button -->
+                  <button 
+                    class="btn-toolbar" 
+                    @click="clearSqlEditor"
+                    :disabled="!sqlQuery.trim()"
+                    title="Clear editor"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="3 6 5 6 21 6"/>
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                    </svg>
+                    Clear
+                  </button>
+
+                  <div class="toolbar-divider"></div>
+
+                  <!-- Save Button -->
+                  <button class="btn-save" @click="openSaveDialog" :disabled="!sqlQuery.trim()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                      <polyline points="17 21 17 13 7 13 7 21"/>
+                      <polyline points="7 3 7 8 15 8"/>
+                    </svg>
+                    Lưu
+                  </button>
+
+                  <!-- Execute Button -->
+                  <button class="btn-execute" @click="executeQuery" :disabled="loading || !sqlQuery.trim()">
+                    <svg v-if="!loading" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polygon points="5 3 19 12 5 21 5 3"/>
+                    </svg>
+                    <svg v-else class="spinner" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <line x1="12" y1="2" x2="12" y2="6"/>
+                      <line x1="12" y1="18" x2="12" y2="22"/>
+                      <line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/>
+                      <line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/>
+                      <line x1="2" y1="12" x2="6" y2="12"/>
+                      <line x1="18" y1="12" x2="22" y2="12"/>
+                      <line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/>
+                      <line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/>
+                    </svg>
+                    {{ loading ? 'Đang thực thi...' : 'Thực thi' }}
+                  </button>
+                </div>
+              </div>
+              
+              <textarea 
+                ref="sqlTextarea"
+                v-model="sqlQuery" 
+                class="sql-textarea"
+                placeholder="Nhập lệnh truy vấn..."
+                spellcheck="false"
+              ></textarea>
 
           <!-- Error Display -->
           <div v-if="error" class="error-message">
@@ -328,21 +606,32 @@
           <!-- Query Results -->
           <div v-if="queryResult" class="results-container">
             <div class="results-header">
-              <h3>Kết quả truy vấn</h3>
-              <div class="results-meta">
-                <span class="meta-item">
+              <div>
+                <h3>Kết quả truy vấn</h3>
+                <div class="results-meta">
+                  <span class="meta-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                    </svg>
+                    {{ queryResult.totalRows }} dòng
+                  </span>
+                  <span class="meta-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="10"/>
+                      <polyline points="12 6 12 12 16 14"/>
+                    </svg>
+                    {{ queryResult.executionTimeMs }}ms
+                  </span>
+                </div>
+              </div>
+              <div class="results-actions">
+                <button class="btn-copy-results" @click="copyResultsAsCSV" title="Copy as CSV">
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
                   </svg>
-                  {{ queryResult.totalRows }} dòng
-                </span>
-                <span class="meta-item">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="10"/>
-                    <polyline points="12 6 12 12 16 14"/>
-                  </svg>
-                  {{ queryResult.executionTimeMs }}ms
-                </span>
+                  Copy CSV
+                </button>
               </div>
             </div>
 
@@ -415,6 +704,16 @@
               <pre><code>{{ queryResult.generatedSql }}</code></pre>
             </details>
           </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Copy Success Toast -->
+        <div v-if="showCopySuccess" class="copy-success-toast">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          Đã copy vào clipboard!
         </div>
       </div>
 
@@ -896,11 +1195,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { queryBuilderService, type QueryRequest, type QueryResponse, type SavedQuery, type SavedQueryRequest, type AiQueryRequest, type AiQueryResponse, type DashboardLayoutRequest, type DashboardRequest, type DashboardResponse } from '@/services/queryBuilderService'
+import { queryBuilderService, type QueryRequest, type QueryResponse, type SavedQuery, type SavedQueryRequest, type AiQueryRequest, type AiQueryResponse, type DashboardLayoutRequest, type DashboardRequest, type DashboardResponse, type TableMetadata } from '@/services/queryBuilderService'
 import { Chart, registerables } from 'chart.js'
 import { GridLayout, GridItem } from 'vue-grid-layout'
+import { format as formatSql } from 'sql-formatter'
 
 Chart.register(...registerables)
 
@@ -908,9 +1208,116 @@ const router = useRouter()
 
 const activeTab = ref<'ai' | 'visual' | 'sql' | 'saved'>('ai')
 const sqlQuery = ref('')
+const sqlTextarea = ref<HTMLTextAreaElement | null>(null)
 const loading = ref(false)
 const error = ref<string | null>(null)
 const queryResult = ref<QueryResponse | null>(null)
+
+// Database Schema Sidebar
+const showSchemaSidebar = ref(true)
+const databaseTables = ref<TableMetadata[]>([])
+const loadingSchema = ref(false)
+const schemaSearchQuery = ref('')
+const expandedTables = ref<Set<string>>(new Set())
+
+// SQL Templates
+const showTemplatesDropdown = ref(false)
+const sqlTemplates: Array<{ name: string; description: string; sql: string }> = [
+  {
+    name: 'Top 10 hóa đơn cao nhất',
+    description: 'Xem 10 hóa đơn có giá trị cao nhất đã thanh toán',
+    sql: `SELECT TOP 10
+  invoice_code AS [Mã Hóa Đơn],
+  total_amount AS [Tổng Tiền],
+  created_at AS [Ngày Tạo]
+FROM Invoice
+WHERE invoice_status = 'PAID'
+ORDER BY total_amount DESC`
+  },
+  {
+    name: 'Doanh thu theo ngày',
+    description: 'Thống kê doanh thu và số hóa đơn theo từng ngày (30 ngày gần nhất)',
+    sql: `SELECT 
+  CAST(created_at AS DATE) AS [Ngày],
+  SUM(total_amount) AS [Tổng Doanh Thu],
+  COUNT(*) AS [Số Hóa Đơn]
+FROM Invoice
+WHERE invoice_status = 'PAID'
+  AND created_at >= DATEADD(DAY, -30, GETDATE())
+GROUP BY CAST(created_at AS DATE)
+ORDER BY [Ngày] DESC`
+  },
+  {
+    name: 'Sản phẩm bán chạy',
+    description: 'Top 10 sản phẩm có số lượng bán nhiều nhất (30 ngày gần nhất)',
+    sql: `SELECT TOP 10
+  p.product_name AS [Tên Sản Phẩm],
+  SUM(ii.quantity) AS [Số Lượng Bán],
+  SUM(ii.quantity * ii.price) AS [Doanh Thu]
+FROM InvoiceItem ii
+JOIN Product p ON ii.product_id = p.id
+JOIN Invoice i ON ii.invoice_id = i.id
+WHERE i.invoice_status = 'PAID'
+  AND i.created_at >= DATEADD(DAY, -30, GETDATE())
+GROUP BY p.product_name
+ORDER BY [Số Lượng Bán] DESC`
+  },
+  {
+    name: 'Khách hàng thân thiết',
+    description: 'Top 10 khách hàng có tổng chi tiêu cao nhất',
+    sql: `SELECT TOP 10
+  c.full_name AS [Tên Khách Hàng],
+  c.phone_number AS [Số Điện Thoại],
+  COUNT(i.id) AS [Số Lần Đặt],
+  SUM(i.total_amount) AS [Tổng Chi Tiêu]
+FROM Customer c
+JOIN Invoice i ON c.id = i.customer_id
+WHERE i.invoice_status = 'PAID'
+GROUP BY c.full_name, c.phone_number
+ORDER BY [Tổng Chi Tiêu] DESC`
+  },
+  {
+    name: 'Trạng thái bàn hiện tại',
+    description: 'Xem trạng thái hiện tại của tất cả các bàn',
+    sql: `SELECT 
+  table_number AS [Số Bàn],
+  capacity AS [Sức Chứa],
+  CASE status
+    WHEN 'AVAILABLE' THEN N'Trống'
+    WHEN 'OCCUPIED' THEN N'Đang Dùng'
+    WHEN 'RESERVED' THEN N'Đã Đặt'
+    WHEN 'CLEANING' THEN N'Đang Dọn'
+    ELSE N'Không Xác Định'
+  END AS [Trạng Thái]
+FROM DiningTable
+ORDER BY table_number`
+  },
+  {
+    name: 'Doanh thu theo kênh',
+    description: 'Thống kê doanh thu theo từng kênh bán hàng',
+    sql: `SELECT 
+  CASE invoice_channel
+    WHEN 'WALK_IN' THEN N'Khách Vãng Lai'
+    WHEN 'ONLINE_RESERVATION' THEN N'Đặt Bàn Online'
+    WHEN 'PHONE_RESERVATION' THEN N'Đặt Bàn Điện Thoại'
+    ELSE N'Khác'
+  END AS [Kênh],
+  COUNT(*) AS [Số Hóa Đơn],
+  SUM(total_amount) AS [Doanh Thu]
+FROM Invoice
+WHERE invoice_status = 'PAID'
+GROUP BY invoice_channel
+ORDER BY [Doanh Thu] DESC`
+  }
+]
+
+// Query History
+const queryHistory = ref<Array<{sql: string, timestamp: number, executionTime: number}>>([])
+const showHistoryDropdown = ref(false)
+const MAX_HISTORY_ITEMS = 20
+
+// Copy to clipboard
+const showCopySuccess = ref(false)
 
 // AI Assistant State
 const aiQuestion = ref('')
@@ -918,6 +1325,58 @@ const aiLoading = ref(false)
 const aiError = ref<string | null>(null)
 const aiResponse = ref<AiQueryResponse | null>(null)
 const aiExecuting = ref(false)
+const showAiSql = ref(false)
+const showHistory = ref(false)
+
+interface AiHistoryItem {
+  id: number
+  question: string
+  response: AiQueryResponse
+  timestamp: number
+}
+
+const HISTORY_KEY = 'ai_query_history'
+const MAX_HISTORY = 20
+
+const loadHistory = (): AiHistoryItem[] => {
+  try {
+    return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]')
+  } catch { return [] }
+}
+
+const aiHistory = ref<AiHistoryItem[]>(loadHistory())
+
+const saveHistory = () => {
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(aiHistory.value))
+}
+
+const formatHistoryTime = (timestamp: number): string => {
+  const d = new Date(timestamp)
+  const now = Date.now()
+  const diff = now - timestamp
+  if (diff < 60000) return 'Vừa xong'
+  if (diff < 3600000) return `${Math.floor(diff / 60000)} phút trước`
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)} giờ trước`
+  return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+}
+
+const restoreFromHistory = (item: AiHistoryItem) => {
+  aiQuestion.value = item.question
+  aiResponse.value = item.response
+  aiQueryResult.value = null
+  showHistory.value = false
+  showAiSql.value = false
+}
+
+const deleteHistoryItem = (id: number) => {
+  aiHistory.value = aiHistory.value.filter(h => h.id !== id)
+  saveHistory()
+}
+
+const clearHistory = () => {
+  aiHistory.value = []
+  localStorage.removeItem(HISTORY_KEY)
+}
 const aiQueryResult = ref<QueryResponse | null>(null)
 
 // Save Query Dialog
@@ -991,6 +1450,10 @@ const askAiQuestion = async () => {
 
     const result = await queryBuilderService.generateSqlFromQuestion(request)
     aiResponse.value = result
+    // Lưu vào lịch sử
+    aiHistory.value.unshift({ id: Date.now(), question: aiQuestion.value, response: result, timestamp: Date.now() })
+    if (aiHistory.value.length > MAX_HISTORY) aiHistory.value = aiHistory.value.slice(0, MAX_HISTORY)
+    saveHistory()
   } catch (err: any) {
     aiError.value = err.response?.data?.message || 'Lỗi khi tạo SQL từ câu hỏi'
     console.error('AI query generation error:', err)
@@ -1063,6 +1526,9 @@ const executeQuery = async () => {
     const result = await queryBuilderService.executeQuery(request)
     queryResult.value = result
     currentVisualizationType.value = saveVisualizationType.value
+    
+    // Save to history
+    saveToHistory(sqlQuery.value, result.executionTimeMs)
     
     // Render chart if visualization type is not TABLE
     if (currentVisualizationType.value !== 'TABLE') {
@@ -1439,10 +1905,187 @@ const getVisualizationIcon = (type: string): string => {
   }
 }
 
+// ========================================
+// SQL EDITOR IMPROVEMENTS - NEW FUNCTIONS
+// ========================================
+
+// Load database schema
+const loadDatabaseSchema = async () => {
+  loadingSchema.value = true
+  try {
+    databaseTables.value = await queryBuilderService.getAllTables()
+  } catch (err: any) {
+    console.error('Load schema error:', err)
+  } finally {
+    loadingSchema.value = false
+  }
+}
+
+// Toggle table expansion
+const toggleTableExpansion = (tableName: string) => {
+  if (expandedTables.value.has(tableName)) {
+    expandedTables.value.delete(tableName)
+  } else {
+    expandedTables.value.add(tableName)
+  }
+}
+
+// Insert text into editor at cursor position
+const insertIntoEditor = (text: string) => {
+  if (!sqlTextarea.value) return
+  
+  const textarea = sqlTextarea.value
+  const start = textarea.selectionStart
+  const end = textarea.selectionEnd
+  const currentValue = sqlQuery.value
+  
+  sqlQuery.value = currentValue.substring(0, start) + text + currentValue.substring(end)
+  
+  nextTick(() => {
+    textarea.focus()
+    const newPosition = start + text.length
+    textarea.setSelectionRange(newPosition, newPosition)
+  })
+}
+
+// Filtered tables based on search
+const filteredTables = computed(() => {
+  if (!schemaSearchQuery.value.trim()) return databaseTables.value
+  
+  const search = schemaSearchQuery.value.toLowerCase()
+  return databaseTables.value.filter(table => {
+    const tableMatch = table.tableName.toLowerCase().includes(search)
+    const columnMatch = table.columns.some(col => 
+      col.columnName.toLowerCase().includes(search)
+    )
+    return tableMatch || columnMatch
+  })
+})
+
+// Load SQL template
+const loadTemplate = (template: typeof sqlTemplates[0]) => {
+  sqlQuery.value = template.sql
+  showTemplatesDropdown.value = false
+}
+
+// Format SQL code
+const formatSqlCode = () => {
+  if (!sqlQuery.value.trim()) return
+  
+  try {
+    sqlQuery.value = formatSql(sqlQuery.value, {
+      language: 'tsql',
+      tabWidth: 2,
+      keywordCase: 'upper'
+    })
+  } catch (err) {
+    console.error('Format error:', err)
+  }
+}
+
+// Copy SQL to clipboard
+const copySqlToClipboard = async () => {
+  if (!sqlQuery.value.trim()) return
+  
+  try {
+    await navigator.clipboard.writeText(sqlQuery.value)
+    showCopySuccess.value = true
+    setTimeout(() => {
+      showCopySuccess.value = false
+    }, 2000)
+  } catch (err) {
+    console.error('Copy error:', err)
+  }
+}
+
+// Copy results as CSV
+const copyResultsAsCSV = async () => {
+  if (!queryResult.value) return
+  
+  try {
+    const headers = queryResult.value.columns.map(col => col.displayName).join(',')
+    const rows = queryResult.value.rows.map(row => 
+      queryResult.value!.columns.map(col => {
+        const value = row[col.name]
+        return typeof value === 'string' && value.includes(',') 
+          ? `"${value}"` 
+          : value
+      }).join(',')
+    )
+    
+    const csv = [headers, ...rows].join('\n')
+    await navigator.clipboard.writeText(csv)
+    
+    showCopySuccess.value = true
+    setTimeout(() => {
+      showCopySuccess.value = false
+    }, 2000)
+  } catch (err) {
+    console.error('Copy CSV error:', err)
+  }
+}
+
+// Load query history from localStorage
+const loadQueryHistory = () => {
+  try {
+    const stored = localStorage.getItem('queryHistory')
+    if (stored) {
+      queryHistory.value = JSON.parse(stored)
+    }
+  } catch (err) {
+    console.error('Load history error:', err)
+  }
+}
+
+// Save query to history
+const saveToHistory = (sql: string, executionTime: number) => {
+  const newItem = {
+    sql,
+    timestamp: Date.now(),
+    executionTime
+  }
+  
+  queryHistory.value = [newItem, ...queryHistory.value].slice(0, MAX_HISTORY_ITEMS)
+  
+  try {
+    localStorage.setItem('queryHistory', JSON.stringify(queryHistory.value))
+  } catch (err) {
+    console.error('Save history error:', err)
+  }
+}
+
+// Load query from history
+const loadFromHistory = (historyItem: typeof queryHistory.value[0]) => {
+  sqlQuery.value = historyItem.sql
+  showHistoryDropdown.value = false
+}
+
+// Clear query history
+const clearQueryHistory = () => {
+  queryHistory.value = []
+  try {
+    localStorage.removeItem('queryHistory')
+  } catch (err) {
+    console.error('Clear history error:', err)
+  }
+  showHistoryDropdown.value = false
+}
+
+// Clear SQL editor
+const clearSqlEditor = () => {
+  sqlQuery.value = ''
+  error.value = null
+  queryResult.value = null
+}
+
 // Load saved queries when component mounts or when switching to saved tab
 onMounted(() => {
   // Always load saved queries on mount for dashboard
   loadSavedQueries()
+  // Load database schema for SQL Editor
+  loadDatabaseSchema()
+  // Load query history from localStorage
+  loadQueryHistory()
 })
 
 onUnmounted(() => {
@@ -2025,7 +2668,8 @@ const toggleEditMode = () => {
 
 .sql-textarea {
   width: 100%;
-  min-height: 300px;
+  min-height: 150px;
+  max-height: 250px;
   padding: 20px;
   font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
   font-size: 14px;
@@ -2034,6 +2678,7 @@ const toggleEditMode = () => {
   resize: vertical;
   background: #1e293b;
   color: #e2e8f0;
+  overflow-y: auto;
 }
 
 .sql-textarea:focus {
@@ -2978,12 +3623,126 @@ const toggleEditMode = () => {
 }
 
 .ai-header {
-  margin-bottom: 32px;
+  margin-bottom: 16px;
   padding: 24px;
   background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
   border-radius: 12px;
   border: 2px solid rgba(102, 126, 234, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
+
+.btn-history-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: white;
+  color: #667eea;
+  border: 1.5px solid #667eea;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s, color 0.2s;
+}
+.btn-history-toggle:hover {
+  background: #667eea;
+  color: white;
+}
+
+.ai-history-panel {
+  margin-bottom: 20px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.ai-history-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: #f7f8fc;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #4a5568;
+}
+
+.btn-clear-history {
+  font-size: 12px;
+  color: #e53e3e;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.btn-clear-history:hover { background: #fff5f5; }
+
+.ai-history-empty {
+  padding: 16px;
+  font-size: 13px;
+  color: #a0aec0;
+  text-align: center;
+}
+
+.ai-history-list {
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.ai-history-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.ai-history-item:last-child { border-bottom: none; }
+.ai-history-item:hover { background: #f7f8fc; }
+
+.ai-history-item-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.ai-history-question {
+  margin: 0 0 2px 0;
+  font-size: 13px;
+  color: #2d3748;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ai-history-time {
+  font-size: 11px;
+  color: #a0aec0;
+}
+
+.btn-delete-history {
+  flex-shrink: 0;
+  margin-left: 8px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: none;
+  background: none;
+  color: #a0aec0;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn-delete-history:hover { background: #fed7d7; color: #e53e3e; }
 
 .ai-header-content {
   display: flex;
@@ -3136,7 +3895,25 @@ const toggleEditMode = () => {
 
 .ai-sql-actions {
   display: flex;
+  align-items: center;
   gap: 8px;
+}
+
+.sql-toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #667eea;
+  user-select: none;
+}
+
+.sql-toggle-checkbox {
+  width: 15px;
+  height: 15px;
+  accent-color: #667eea;
+  cursor: pointer;
 }
 
 .btn-ai-action {
@@ -4105,5 +4882,418 @@ const toggleEditMode = () => {
   }
 }
 
+/* ========================================
+   SQL EDITOR IMPROVEMENTS - NEW STYLES
+   ======================================== */
+
+/* SQL Editor Layout */
+.sql-editor-layout {
+  display: flex;
+  gap: 0;
+  min-height: 400px;
+}
+
+/* Schema Sidebar */
+.schema-sidebar {
+  width: 280px;
+  background: #f8f9fa;
+  border-right: 1px solid #e0e0e0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.schema-header {
+  padding: 16px;
+  border-bottom: 1px solid #e0e0e0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.schema-header h4 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.schema-search {
+  padding: 12px 16px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.schema-search-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 13px;
+  transition: border-color 0.2s;
+}
+
+.schema-search-input:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.schema-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  color: #999;
+}
+
+.schema-loading p {
+  margin-top: 12px;
+  font-size: 13px;
+}
+
+.tables-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.table-item {
+  margin-bottom: 4px;
+}
+
+.table-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+
+.table-header:hover {
+  background: #e8eaf0;
+}
+
+.expand-icon {
+  transition: transform 0.2s;
+  flex-shrink: 0;
+  color: #666;
+}
+
+.expand-icon.expanded {
+  transform: rotate(90deg);
+}
+
+.table-name {
+  font-weight: 600;
+  font-size: 13px;
+  color: #2c3e50;
+  flex: 1;
+  cursor: pointer;
+}
+
+.table-name:hover {
+  color: #667eea;
+  text-decoration: underline;
+}
+
+.column-count {
+  font-size: 11px;
+  color: #999;
+  background: #e8eaf0;
+  padding: 2px 6px;
+  border-radius: 10px;
+}
+
+.columns-list {
+  padding-left: 32px;
+  margin-top: 4px;
+}
+
+.column-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.column-item:hover {
+  background: #e8eaf0;
+}
+
+.key-icon {
+  color: #f39c12;
+  flex-shrink: 0;
+}
+
+.column-name {
+  font-size: 12px;
+  color: #34495e;
+  flex: 1;
+}
+
+.column-type {
+  font-size: 10px;
+  color: #999;
+  text-transform: uppercase;
+  background: #f0f2f5;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* Editor Main Area */
+.editor-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Toolbar */
+.editor-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: #f8f9fa;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: #2c3e50;
+}
+
+.btn-toolbar:hover:not(:disabled) {
+  background: #e8eaf0;
+  border-color: #667eea;
+  color: #667eea;
+}
+
+.btn-toolbar:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.toolbar-divider {
+  width: 1px;
+  height: 24px;
+  background: #e0e0e0;
+  margin: 0 4px;
+}
+
+/* Dropdowns */
+.dropdown-wrapper {
+  position: relative;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  z-index: 1000;
+  min-width: 320px;
+  max-height: 400px;
+  display: flex;
+  flex-direction: column;
+}
+
+.dropdown-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid #e0e0e0;
+  font-weight: 600;
+  font-size: 13px;
+  color: #2c3e50;
+}
+
+.dropdown-body {
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.template-item,
+.history-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+  text-align: left;
+  width: 100%;
+  border: none;
+  background: none;
+  font-size: 13px;
+  color: #2c3e50;
+}
+
+.template-item:hover,
+.history-item:hover {
+  background: #f0f2f5;
+}
+
+.history-sql {
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  color: #2c3e50;
+  margin-bottom: 4px;
+  word-break: break-all;
+}
+
+.history-meta {
+  display: flex;
+  gap: 12px;
+  font-size: 11px;
+  color: #999;
+}
+
+/* Copy Success Toast */
+.copy-success-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: #10b981;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+  animation: slideIn 0.3s ease;
+  z-index: 9999;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(100px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Show/Hide Sidebar Button */
+.btn-show-sidebar {
+  padding: 8px;
+  background: #f8f9fa;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-right: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-show-sidebar:hover {
+  background: #e8eaf0;
+  border-color: #667eea;
+}
+
+.btn-close-sidebar {
+  padding: 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #999;
+  transition: color 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-close-sidebar:hover {
+  color: #e74c3c;
+}
+
+/* Results Actions */
+.results-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+  gap: 16px;
+}
+
+.results-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.btn-copy-results {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: #f8f9fa;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: #2c3e50;
+  font-weight: 500;
+}
+
+.btn-copy-results:hover {
+  background: #e8eaf0;
+  border-color: #667eea;
+  color: #667eea;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+  .schema-sidebar {
+    width: 240px;
+  }
+}
+
+@media (max-width: 768px) {
+  .sql-editor-layout {
+    flex-direction: column;
+  }
+  
+  .schema-sidebar {
+    width: 100%;
+    max-height: 300px;
+  }
+  
+  .editor-toolbar {
+    flex-wrap: wrap;
+  }
+  
+  .dropdown-menu {
+    min-width: 280px;
+  }
+}
+
 </style>
+
 

@@ -123,6 +123,42 @@ export const dashboardService = {
     if (endDate) params.endDate = endDate
     const response = await axiosInstance.get('/api/dashboard/revenue-chart', { params })
     return response.data.data
+  },
+
+  async downloadDashboardExcel(startDate: string, endDate: string): Promise<void> {
+    const response = await axiosInstance.get('/api/dashboard/export/excel', {
+      params: { startDate, endDate },
+      responseType: 'blob'
+    })
+    const url = window.URL.createObjectURL(new Blob([response.data]))
+    const link = document.createElement('a')
+    link.href = url
+    const filename = response.headers['content-disposition']
+      ?.split('filename=')[1]
+      ?.replace(/"/g, '') || `dashboard-${new Date().toISOString().split('T')[0]}.xlsx`
+    link.setAttribute('download', filename)
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.URL.revokeObjectURL(url)
+  },
+
+  async downloadDashboardPdf(startDate: string, endDate: string): Promise<void> {
+    const response = await axiosInstance.get('/api/dashboard/export/pdf', {
+      params: { startDate, endDate },
+      responseType: 'blob'
+    })
+    const url = window.URL.createObjectURL(new Blob([response.data]))
+    const link = document.createElement('a')
+    link.href = url
+    const filename = response.headers['content-disposition']
+      ?.split('filename=')[1]
+      ?.replace(/"/g, '') || `dashboard-${new Date().toISOString().split('T')[0]}.pdf`
+    link.setAttribute('download', filename)
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.URL.revokeObjectURL(url)
   }
 }
 

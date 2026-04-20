@@ -290,5 +290,45 @@ export const queryBuilderService = {
 
   async removeLayout(savedQueryId: number): Promise<void> {
     await axiosInstance.delete(`/api/query-builder/dashboard/layouts/${savedQueryId}`)
+  },
+
+  // ============================================
+  // CUSTOM DASHBOARD EXPORT
+  // ============================================
+
+  async downloadCustomDashboardExcel(dashboardId: number): Promise<void> {
+    const response = await axiosInstance.get(
+      `/api/query-builder/dashboards/${dashboardId}/export/excel`,
+      { responseType: 'blob' }
+    )
+    const url = window.URL.createObjectURL(new Blob([response.data]))
+    const link = document.createElement('a')
+    link.href = url
+    const filename = response.headers['content-disposition']
+      ?.split('filename=')[1]
+      ?.replace(/"/g, '') || `custom-dashboard-${new Date().toISOString().split('T')[0]}.xlsx`
+    link.setAttribute('download', filename)
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.URL.revokeObjectURL(url)
+  },
+
+  async downloadCustomDashboardPdf(dashboardId: number): Promise<void> {
+    const response = await axiosInstance.get(
+      `/api/query-builder/dashboards/${dashboardId}/export/pdf`,
+      { responseType: 'blob' }
+    )
+    const url = window.URL.createObjectURL(new Blob([response.data]))
+    const link = document.createElement('a')
+    link.href = url
+    const filename = response.headers['content-disposition']
+      ?.split('filename=')[1]
+      ?.replace(/"/g, '') || `custom-dashboard-${new Date().toISOString().split('T')[0]}.pdf`
+    link.setAttribute('download', filename)
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.URL.revokeObjectURL(url)
   }
 }
