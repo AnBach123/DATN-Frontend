@@ -36,7 +36,7 @@
         </svg>
         Truy vấn trực quan
       </button> -->
-      <button 
+      <!-- <button 
         class="tab-button" 
         :class="{ active: activeTab === 'sql' }"
         @click="handleTabChange('sql')"
@@ -46,7 +46,7 @@
           <polyline points="8 6 2 12 8 18"/>
         </svg>
         SQL Editor
-      </button>
+      </button> -->
       <button 
         class="tab-button" 
         :class="{ active: activeTab === 'saved' }"

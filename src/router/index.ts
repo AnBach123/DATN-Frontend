@@ -37,6 +37,9 @@ import ReportView from '@/views/admin/ReportView.vue'
 import AuditLogView from '@/views/admin/AuditLogView.vue'
 import QueryBuilderView from '@/views/admin/QueryBuilderView.vue'
 import CustomDashboardView from '@/views/admin/CustomDashboardView.vue'
+import BlogView from '@/views/admin/BlogView.vue'
+import BlogListView from '@/views/blog/BlogListView.vue'
+import BlogDetailView from '@/views/blog/BlogDetailView.vue'
 
 // Route guard helper
 function checkRole(allowedRoles: string[]) {
@@ -97,6 +100,8 @@ const router = createRouter({
         { path: 'profile', name: 'profile', component: ProfileView },
         { path: 'review', name: 'review', component: ReviewPage },
         { path: 'reviews', name: 'all-reviews', component: AllReviewsView },
+        { path: 'posts', name: 'blog-list', component: BlogListView },
+        { path: 'posts/:id', name: 'blog-detail', component: BlogDetailView },
       ],
     },
 
@@ -194,6 +199,11 @@ const router = createRouter({
       path: 'audit-logs',
       name: 'admin-audit-logs',
       component: AuditLogView,
+    },
+    {
+      path: 'blog',
+      name: 'admin-blog',
+      component: BlogView,
     },
     {
       path: '',

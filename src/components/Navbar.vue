@@ -30,7 +30,10 @@
           <li class="nav-item">
             <RouterLink class="nav-link" to="/review">Đánh giá</RouterLink>
           </li>
-        
+          <li class="nav-item">
+            <RouterLink class="nav-link" to="/posts">Bài viết</RouterLink>
+          </li>
+
         </ul>
 
         <div class="nav-actions">
