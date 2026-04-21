@@ -59,14 +59,7 @@
               />
             </div>
 
-            <div class="col-md-6">
-              <label class="form-label">Ưu đãi</label>
-              <select v-model="promotionType" class="form-select form-select-lg" required>
-                <option value="">Chọn ưu đãi</option>
-                <option v-for="p in promotions" :key="p" :value="p">{{ p }}</option>
-              </select>
             </div>
-          </div>
 
           <div class="mt-3">
             <label class="form-label">Ghi chú</label>
@@ -101,7 +94,6 @@ const phone = ref('')
 const date = ref('')
 const time = ref('')
 const guestCount = ref<number | null>(null)
-const promotionType = ref('')
 const note = ref('')
 
 const phoneError = ref(false)
@@ -112,16 +104,11 @@ const router = useRouter()
 
 const today = new Date().toISOString().split('T')[0]
 
-const promotions = [
-  'Ưu đãi sinh nhật 10% tổng hóa đơn',
-  'Có mã ưu đãi riêng',
-  'Đầy tiền không cần ưu đãi',
-]
-
 const timeSlots = computed(() => {
   const slots: string[] = []
-  for (let h = 10; h <= 22; h++) {
+  for (let h = 9; h <= 22; h++) {
     for (let m = 0; m < 60; m += 10) {
+      if (h === 22 && m > 0) break
       const hour = String(h).padStart(2, '0')
       const minute = String(m).padStart(2, '0')
       slots.push(`${hour}:${minute}`)
@@ -151,11 +138,6 @@ const submitReservation = async () => {
     return
   }
 
-  if (!promotionType.value) {
-    msg.value = 'Vui lòng chọn ưu đãi'
-    return
-  }
-
   loadingSubmit.value = true
   try {
     const reservedAt = buildReservedAt()
@@ -165,7 +147,6 @@ const submitReservation = async () => {
       guestCount: guestCount.value,
       reservedAt,
       note: note.value,
-      promotionType: promotionType.value,
     }
 
     const res = await createReservation(payload)

@@ -257,10 +257,6 @@
               <span class="detail-value">{{ formatDateTime(selectedReservation.reservedAt) }}</span>
             </div>
             <div class="detail-row">
-              <span class="detail-label">Ưu đãi</span>
-              <span class="detail-value">{{ selectedReservation.promotionType }}</span>
-            </div>
-            <div class="detail-row">
               <span class="detail-label">Ghi chú khách</span>
               <span class="detail-value">{{ selectedReservation.note }}</span>
             </div>

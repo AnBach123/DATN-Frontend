@@ -136,7 +136,7 @@
               </div>
 
               <div v-else class="history-list">
-                <div class="history-item" v-for="item in invoiceHistory" :key="item.id">
+                <div class="history-item" v-for="item in pagedInvoices" :key="item.id">
                   <div>
                     <h5>Mã hóa đơn: {{ item.code }}</h5>
                     <p class="date">📅 {{ formatDate(item.date) }}</p>
@@ -144,6 +144,18 @@
 
                   <div>
                     <p class="money">{{ formatMoney(item.total) }}</p>
+                  </div>
+
+                  <div class="points-col">
+                    <span v-if="item.earnedPoints > 0" class="point-tag earned">
+                      +{{ item.earnedPoints }} điểm
+                    </span>
+                    <span v-if="item.usedPoints > 0" class="point-tag used">
+                      -{{ item.usedPoints }} điểm
+                    </span>
+                    <span v-if="item.earnedPoints === 0 && item.usedPoints === 0" class="point-tag none">
+                      0 điểm
+                    </span>
                   </div>
 
                   <div>
@@ -157,6 +169,29 @@
                       Xem chi tiết
                     </button>
                   </div>
+                </div>
+
+                <!-- PAGINATION -->
+                <div class="invoice-pagination" v-if="totalInvoicePages > 1">
+                  <button
+                    class="page-btn"
+                    :disabled="invoicePage === 1"
+                    @click="invoicePage--"
+                  >‹</button>
+
+                  <button
+                    v-for="p in totalInvoicePages"
+                    :key="p"
+                    class="page-btn"
+                    :class="{ active: p === invoicePage }"
+                    @click="invoicePage = p"
+                  >{{ p }}</button>
+
+                  <button
+                    class="page-btn"
+                    :disabled="invoicePage === totalInvoicePages"
+                    @click="invoicePage++"
+                  >›</button>
                 </div>
               </div>
             </div>
@@ -341,6 +376,8 @@ type RecentInvoice = {
   total: number
   status: string
   date: string
+  earnedPoints: number
+  usedPoints: number
 }
 
 type InvoiceItem = {
@@ -387,6 +424,8 @@ const passwordForm = ref({
 })
 
 const invoiceHistory = ref<any[]>([])
+const invoicePage = ref(1)
+const INVOICE_PAGE_SIZE = 5
 
 const showInvoiceModal = ref(false)
 const selectedInvoice = ref<RecentInvoice | null>(null)
@@ -395,6 +434,15 @@ const loadingInvoiceDetail = ref(false)
 
 /* ================= COMPUTED ================= */
 const avatarText = computed(() => profile.value?.fullName?.charAt(0).toUpperCase() || 'U')
+
+const totalInvoicePages = computed(() =>
+  Math.ceil(invoiceHistory.value.length / INVOICE_PAGE_SIZE)
+)
+
+const pagedInvoices = computed(() => {
+  const start = (invoicePage.value - 1) * INVOICE_PAGE_SIZE
+  return invoiceHistory.value.slice(start, start + INVOICE_PAGE_SIZE)
+})
 
 const memberLevel = computed(() => {
   const points = profile.value?.loyaltyPoints || 0
@@ -443,17 +491,28 @@ const progressPercent = computed(() => {
 })
 
 /* ================= HELPERS ================= */
+
+// Parse "dd-MM-yyyy HH:mm:ss" hoặc ISO — backend trả dd-MM-yyyy HH:mm:ss
+const parseBackendDate = (value: string): Date => {
+  // Format: dd-MM-yyyy HH:mm:ss
+  const ddmmyyyy = value.match(/^(\d{2})-(\d{2})-(\d{4})([ T](\d{2}):(\d{2})(?::(\d{2}))?)?/)
+  if (ddmmyyyy) {
+    const [, dd, mm, yyyy, , hh = '00', min = '00', ss = '00'] = ddmmyyyy
+    return new Date(`${yyyy}-${mm}-${dd}T${hh}:${min}:${ss}`)
+  }
+  return new Date(value)
+}
+
 const formatDate = (date?: string | null) => {
   if (!date) return ''
-  const d = new Date(date)
+  const d = parseBackendDate(date)
   return isNaN(d.getTime()) ? '' : d.toLocaleDateString('vi-VN')
 }
 
 const formatDateTime = (time?: string) => {
   if (!time) return ''
-
-  const date = new Date(time)
-
+  const date = parseBackendDate(time)
+  if (isNaN(date.getTime())) return time
   return date.toLocaleString('vi-VN', {
     hour: '2-digit',
     minute: '2-digit',
@@ -582,8 +641,12 @@ const loadInvoices = async () => {
         code: item.invoiceCode,
         total: item.finalAmount || 0,
         status: item.status,
-        date: item.reservedAt
+        date: item.reservedAt,
+        earnedPoints: item.earnedPoints || 0,
+        usedPoints: item.usedPoints || 0,
       }))
+      .sort((a: RecentInvoice, b: RecentInvoice) => parseBackendDate(b.date).getTime() - parseBackendDate(a.date).getTime())
+    invoicePage.value = 1
   } catch (err) {
     console.error('Load invoice error:', err)
   }
@@ -981,8 +1044,8 @@ input:focus {
 /* ================= HISTORY ================= */
 .history-item {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr auto;
-  gap: 20px;
+  grid-template-columns: 2fr 1fr auto 1fr auto;
+  gap: 16px;
   align-items: center;
   padding: 15px 20px;
   background: #fff3ea;
@@ -998,9 +1061,40 @@ input:focus {
   word-break: break-word;
 }
 
-.history-item > div:nth-child(2),
-.history-item > div:nth-child(3) {
+.history-item > div:nth-child(2) {
   text-align: center;
+}
+
+.points-col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+}
+
+.point-tag {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.point-tag.earned {
+  background: #e8f7ee;
+  color: #1c8c4d;
+}
+
+.point-tag.used {
+  background: #ffeaea;
+  color: #a80000;
+}
+
+.point-tag.none {
+  background: #f3f3f3;
+  color: #aaa;
+  font-weight: 500;
 }
 
 .date {
@@ -1213,6 +1307,46 @@ input:focus {
   transform: scale(0.96);
 }
 
+/* ================= PAGINATION ================= */
+.invoice-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  margin-top: 20px;
+}
+
+.page-btn {
+  min-width: 36px;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid #e5d6c8;
+  border-radius: 8px;
+  background: #fff;
+  color: #5a3b2e;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.page-btn:hover:not(:disabled) {
+  background: #a80000;
+  color: #fff;
+  border-color: #a80000;
+}
+
+.page-btn.active {
+  background: #a80000;
+  color: #fff;
+  border-color: #a80000;
+}
+
+.page-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
 /* ================= MOBILE ================= */
 @media (max-width: 992px) {
   .profile-card {
@@ -1228,7 +1362,7 @@ input:focus {
   }
 
   .history-item {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
   }
 }
   .loyalty-header,

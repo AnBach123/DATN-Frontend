@@ -45,10 +45,6 @@
             <span class="label">Ngày & giờ đến</span>
             <span class="value">{{ formatDateTime(result.reservedAt) }}</span>
           </div>
-          <div class="row">
-            <span class="label">Ưu đãi</span>
-            <span class="value">{{ result.promotionType }}</span>
-          </div>
           <div class="row" v-if="result.note">
             <span class="label">Ghi chú khách</span>
             <span class="value">{{ result.note }}</span>

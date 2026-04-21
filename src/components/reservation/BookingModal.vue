@@ -48,21 +48,14 @@
         <div class="grid">
           <div class="form-group">
             <label>Số lượng khách</label>
-            <input 
-              v-model.number="guestCount" 
-              type="number" 
-              min="1" 
-              max="302" 
+            <input
+              v-model.number="guestCount"
+              type="number"
+              min="1"
+              max="302"
               placeholder="Nhập số khách"
-              required 
+              required
             />
-          </div>
-          <div class="form-group">
-            <label>Ưu đãi</label>
-            <select v-model="promotionType" required>
-              <option value="">Chọn ưu đãi</option>
-              <option v-for="p in promotions" :key="p" :value="p">{{ p }}</option>
-            </select>
           </div>
         </div>
 
@@ -107,19 +100,12 @@ const { isOpen, presetNote, close, openCustom } = useBookingStore()
 const date = ref('')
 const time = ref('')
 const guestCount = ref<number | null>(null)
-const promotionType = ref('')
 const customerNote = ref('')
 const foodNote = ref('')
 const msg = ref('')
 const loadingSubmit = ref(false)
 
 const today = new Date().toISOString().split('T')[0]
-
-const promotions = [
-  'Ưu đãi sinh nhật 10% tổng hóa đơn',
-  'Có mã ưu đãi riêng',
-  'Đầy tiền không cần ưu đãi',
-]
 
 // Lấy thông tin user từ localStorage
 const userInfo = computed(() => {
@@ -150,16 +136,14 @@ const userInfo = computed(() => {
 
 const timeSlots = computed(() => {
   const slots: string[] = []
-  // 9h sáng đến 11h đêm (23:50)
-  for (let h = 9; h <= 23; h++) {
+  for (let h = 9; h <= 22; h++) {
     for (let m = 0; m < 60; m += 10) {
+      if (h === 22 && m > 0) break
       const hour = String(h).padStart(2, '0')
       const minute = String(m).padStart(2, '0')
       slots.push(`${hour}:${minute}`)
     }
   }
-  // Thêm 12h đêm (00:00)
-  slots.push('00:00')
   
   // Lọc bỏ giờ quá khứ nếu chọn ngày hôm nay
   if (date.value) {
@@ -213,11 +197,6 @@ const submitReservation = async () => {
     return
   }
 
-  if (!promotionType.value) {
-    msg.value = 'Vui lòng chọn ưu đãi'
-    return
-  }
-
   loadingSubmit.value = true
   try {
     const reservedAt = buildReservedAt()
@@ -228,7 +207,6 @@ const submitReservation = async () => {
       reservedAt,
       note: customerNote.value,
       foodNote: foodNote.value,
-      promotionType: promotionType.value,
       guestName: null,
       guestPhone: null,
     }
