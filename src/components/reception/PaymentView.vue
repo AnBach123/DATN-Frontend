@@ -87,15 +87,29 @@
             <div class="card pos-card h-100">
               <div class="card-body">
                 <h5 class="section-title">Thuế VAT</h5>
-                <div class="tax-service-info">
-                  <div class="info-row">
-                    <span class="text-muted">VAT (8%): </span>
-                    <strong class="text-dark">{{ formatMoney(vatAmount) }}</strong>
+                <div class="vat-grid">
+                  <!-- Dòng 1: tổng tiền -->
+                  <div class="vat-row-item">
+                    <span class="vat-label">Tổng đồ ăn</span>
+                    <span class="vat-amount">{{ formatMoney(payment?.foodSubtotal || 0) }}</span>
                   </div>
-                  <div class="info-row mt-2 pt-2" style="border-top: 1px solid #dee2e6;">
-                    <span class="fw-semibold">Tổng thuế: </span>
-                    <strong class="text-primary">{{ formatMoney(vatAmount) }}</strong>
+                  <div class="vat-row-item">
+                    <span class="vat-label">Tổng đồ uống</span>
+                    <span class="vat-amount">{{ formatMoney(payment?.drinkSubtotal || 0) }}</span>
                   </div>
+                  <!-- Dòng 2: VAT -->
+                  <div class="vat-row-item vat-rate-row">
+                    <span class="vat-rate-label">Thuế VAT {{ payment?.vatPercent || 8 }}%</span>
+                    <span class="vat-rate-amount">{{ formatMoney(foodVatAmount) }}</span>
+                  </div>
+                  <div class="vat-row-item vat-rate-row">
+                    <span class="vat-rate-label">Thuế VAT {{ payment?.drinkVatPercent || 10 }}%</span>
+                    <span class="vat-rate-amount">{{ formatMoney(drinkVatAmount) }}</span>
+                  </div>
+                </div>
+                <div class="vat-total-row">
+                  <span class="fw-semibold">Tổng thuế</span>
+                  <strong class="text-primary">{{ formatMoney(vatAmount) }}</strong>
                 </div>
               </div>
             </div>
@@ -110,13 +124,17 @@
                     v-model.number="usePoints"
                     type="number"
                     min="0"
-                    :max="payment.loyaltyPoints"
+                    :max="Math.min(payment.loyaltyPoints, payment.maxPointsAllowed ?? 0)"
                     class="form-control"
                     placeholder="Nhập số điểm"
                   />
                   <button class="btn btn-outline-primary" @click="useMaxPoints">Dùng tối đa</button>
                 </div>
                 <div class="mt-2 small text-muted">
+                  Điểm hiện có: <strong class="text-dark">{{ payment.loyaltyPoints }}</strong>
+                  &nbsp;|&nbsp; Tối đa được dùng: <strong class="text-warning">{{ payment.maxPointsAllowed ?? 0 }}</strong> điểm
+                </div>
+                <div class="mt-1 small text-muted">
                   Giảm từ điểm: <strong class="text-dark">{{ formatMoney(pointsDiscount) }}</strong>
                 </div>
               </div>
@@ -256,8 +274,14 @@
               <div>
                 <span>Giảm từ điểm</span><strong>-{{ formatMoney(pointsDiscount) }}</strong>
               </div>
-              <div>
-                <span>VAT (8%)</span><strong>+{{ formatMoney(vatAmount) }}</strong>
+              <div v-if="foodVatAmount > 0">
+                <span>VAT đồ ăn ({{ payment?.vatPercent || 8 }}%)</span><strong>+{{ formatMoney(foodVatAmount) }}</strong>
+              </div>
+              <div v-if="drinkVatAmount > 0">
+                <span>VAT đồ uống ({{ payment?.drinkVatPercent || 10 }}%)</span><strong>+{{ formatMoney(drinkVatAmount) }}</strong>
+              </div>
+              <div v-if="vatAmount > 0 && foodVatAmount > 0 && drinkVatAmount > 0">
+                <span>Tổng VAT</span><strong>+{{ formatMoney(vatAmount) }}</strong>
               </div>
               <div class="total-line">
                 <span>TỔNG THANH TOÁN</span><strong>{{ formatMoney(totalPayable) }}</strong>
@@ -558,8 +582,11 @@ type Payment = {
     applicableItemName?: string
   }[]
   subtotal: number
+  foodSubtotal: number          // subtotal of non-DRINK items — food VAT base (8%)
+  drinkSubtotal: number         // subtotal of DRINK items — drink VAT base (10%)
   itemVoucherDiscount: number
   vatPercent: number
+  drinkVatPercent?: number
   serviceFeePercent: number
   pointValue: number
   // Auto-applied invoice voucher fields
@@ -570,6 +597,7 @@ type Payment = {
   autoAppliedVoucherDiscount?: number
   // Pre-calculated totalPayable from backend (with points = 0)
   totalPayable?: number
+  maxPointsAllowed?: number  // giới hạn điểm được dùng (maxPercent% của tổng bill)
 }
 
 const payment = ref<Payment | null>(null)
@@ -885,13 +913,24 @@ const baseAfterVoucher = computed(() => {
   return Math.max(0, subtotal.value - itemVoucherDiscount.value - invoiceVoucherDiscount.value)
 })
 
-// CRITICAL FIX: VAT and service fee are calculated on baseAfterVoucher (BEFORE points)
-// Points are a payment method, not a discount, so tax is calculated before points
-const vatAmount = computed(() => {
+// VAT 8% applies to food items
+const foodVatAmount = computed(() => {
   if (!payment.value) return 0
-  const vatPercent = payment.value.vatPercent || 8
-  return Math.floor((baseAfterVoucher.value * vatPercent) / 100)
+  const foodVatPercent = payment.value.vatPercent || 8
+  const foodSubtotal = payment.value.foodSubtotal || 0
+  return Math.floor((foodSubtotal * foodVatPercent) / 100)
 })
+
+// VAT 10% applies to drink items
+const drinkVatAmount = computed(() => {
+  if (!payment.value) return 0
+  const drinkVatPct = payment.value.drinkVatPercent || 10
+  const drinkSubtotal = payment.value.drinkSubtotal || 0
+  return Math.floor((drinkSubtotal * drinkVatPct) / 100)
+})
+
+// Combined VAT (food 8% + drink 10%)
+const vatAmount = computed(() => foodVatAmount.value + drinkVatAmount.value)
 
 const serviceFeeAmount = computed(() => {
   if (!payment.value) return 0
@@ -904,15 +943,14 @@ const totalPayableBeforePoints = computed(() => {
   return Math.max(0, baseAfterVoucher.value + vatAmount.value + serviceFeeAmount.value)
 })
 
-// Points discount (applied AFTER calculating tax)
+// Points discount — capped at maxPointsAllowed (% of total bill) to prevent free meals
 const pointsDiscount = computed(() => {
   if (!payment.value) return 0
   const pointValue = payment.value.pointValue || 1000
-  const maxByPoints = Math.max(0, usePoints.value) * pointValue
-  
-  // Points can only reduce up to totalPayableBeforePoints
-  const maxAllowed = totalPayableBeforePoints.value
-  return Math.max(0, Math.min(maxByPoints, maxAllowed))
+  const maxPointsAllowed = payment.value.maxPointsAllowed ?? 0
+  // Actual points used cannot exceed maxPointsAllowed
+  const actualPoints = Math.min(Math.max(0, usePoints.value), maxPointsAllowed)
+  return actualPoints * pointValue
 })
 
 // Final amount customer needs to pay (after points)
@@ -988,7 +1026,9 @@ const loadPayment = async () => {
 
 const useMaxPoints = () => {
   if (!payment.value) return
-  usePoints.value = payment.value.loyaltyPoints || 0
+  const maxAllowed = payment.value.maxPointsAllowed ?? 0
+  // Cap at both customer's actual points and the allowed limit for this bill
+  usePoints.value = Math.min(payment.value.loyaltyPoints || 0, maxAllowed)
 }
 
 // Generate MoMo QR code for payment
@@ -1973,7 +2013,8 @@ const printInvoice = async () => {
           <div><span>Giảm voucher món</span><span>-${formatMoney(itemVoucherDiscount.value)}</span></div>
           <div><span>Giảm voucher hóa đơn</span><span>-${formatMoney(invoiceVoucherDiscount.value)}</span></div>
           <div><span>Giảm từ điểm</span><span>-${formatMoney(pointsDiscount.value)}</span></div>
-          <div><span>VAT (8%)</span><span>+${formatMoney(vatAmount.value)}</span></div>
+          ${foodVatAmount.value > 0 ? `<div><span>VAT đồ ăn (${payment.value?.vatPercent || 8}%)</span><span>+${formatMoney(foodVatAmount.value)}</span></div>` : ''}
+          ${drinkVatAmount.value > 0 ? `<div><span>VAT đồ uống (${payment.value?.drinkVatPercent || 10}%)</span><span>+${formatMoney(drinkVatAmount.value)}</span></div>` : ''}
           <div class="total"><span>TỔNG THANH TOÁN</span><span>${formatMoney(totalPayable.value)}</span></div>
         </div>
         <div class="voucher">
@@ -2028,6 +2069,11 @@ const printInvoiceWithData = (
   const printedAt = new Date().toLocaleString('vi-VN', { hour12: false })
   const printTitle = 'HÓA ĐƠN THANH TOÁN'
   const paymentLabel = 'Chuyển khoản'
+  // Recalculate split VAT from saved payment data
+  const savedFoodVatPct = savedPayment.vatPercent || 8
+  const savedDrinkVatPct = savedPayment.drinkVatPercent || 10
+  const savedFoodVatAmount = Math.floor(((savedPayment.foodSubtotal || 0) * savedFoodVatPct) / 100)
+  const savedDrinkVatAmount = Math.floor(((savedPayment.drinkSubtotal || 0) * savedDrinkVatPct) / 100)
   const paymentSummary = `${paymentLabel}: ${formatMoney(savedTotalPayable)}`
 
   const rows = items
@@ -2142,7 +2188,8 @@ const printInvoiceWithData = (
           <div><span>Giảm voucher món</span><span>-${formatMoney(savedItemVoucherDiscount)}</span></div>
           <div><span>Giảm voucher hóa đơn</span><span>-${formatMoney(savedInvoiceVoucherDiscount)}</span></div>
           <div><span>Giảm từ điểm</span><span>-${formatMoney(savedPointsDiscount)}</span></div>
-          <div><span>VAT (8%)</span><span>+${formatMoney(savedVatAmount)}</span></div>
+          ${savedFoodVatAmount > 0 ? `<div><span>VAT đồ ăn (${savedFoodVatPct}%)</span><span>+${formatMoney(savedFoodVatAmount)}</span></div>` : ''}
+          ${savedDrinkVatAmount > 0 ? `<div><span>VAT đồ uống (${savedDrinkVatPct}%)</span><span>+${formatMoney(savedDrinkVatAmount)}</span></div>` : ''}
           <div class="total"><span>TỔNG THANH TOÁN</span><span>${formatMoney(savedTotalPayable)}</span></div>
         </div>
         <div class="voucher">
@@ -2267,6 +2314,56 @@ const formatDateTime = (value: string) => {
   font-size: 20px;
   color: #0f172a;
   margin-bottom: 12px;
+}
+
+/* VAT card 2-column layout */
+.vat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 16px;
+}
+
+.vat-row-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+}
+
+.vat-label {
+  font-size: 13px;
+  color: #64748b;
+}
+
+.vat-amount {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.vat-rate-row {
+  border-top: 1px dashed #e2e8f0;
+  padding-top: 5px;
+}
+
+.vat-rate-label {
+  font-size: 13px;
+  color: #64748b;
+}
+
+.vat-rate-amount {
+  font-size: 14px;
+  font-weight: 600;
+  color: lch(2.63% 3.55 84.86)5.23);
+}
+
+.vat-total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #dee2e6;
 }
 
 .info-grid {

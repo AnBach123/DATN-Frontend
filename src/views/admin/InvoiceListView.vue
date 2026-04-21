@@ -67,7 +67,7 @@
             <th>Tạm tính</th>
             <th>Giảm giá</th>
             <th>Phí DV</th>
-            <th>Thuế</th>
+            <th>VAT</th>
             <th @click="handleSort('finalAmount')">
               Tổng tiền
               <span v-if="filters.sortBy === 'finalAmount'">{{ filters.sortDirection === 'asc' ? '↑' : '↓' }}</span>
@@ -250,10 +250,35 @@
                 <span class="payment-label">Phí dịch vụ:</span>
                 <span class="payment-value">{{ formatCurrency(selectedInvoice.serviceFee) }}</span>
               </div>
-              <div class="payment-row">
-                <span class="payment-label">Thuế:</span>
-                <span class="payment-value">{{ formatCurrency(selectedInvoice.tax) }}</span>
-              </div>
+              <!-- VAT breakdown from invoiceDetail -->
+              <template v-if="invoiceDetail && (invoiceDetail.foodSubtotal != null || invoiceDetail.drinkSubtotal != null)">
+                <div class="payment-row vat-sub-row" v-if="(invoiceDetail.foodSubtotal ?? 0) > 0">
+                  <span class="payment-label">Tổng đồ ăn:</span>
+                  <span class="payment-value">{{ formatCurrency(invoiceDetail.foodSubtotal ?? 0) }}</span>
+                </div>
+                <div class="payment-row vat-sub-row" v-if="(invoiceDetail.foodSubtotal ?? 0) > 0">
+                  <span class="payment-label">VAT đồ ăn ({{ invoiceDetail.vatPercent ?? invoiceDetail.taxPercent ?? 8 }}%):</span>
+                  <span class="payment-value">{{ formatCurrency(Math.floor(((invoiceDetail.foodSubtotal ?? 0) * (invoiceDetail.vatPercent ?? invoiceDetail.taxPercent ?? 8)) / 100)) }}</span>
+                </div>
+                <div class="payment-row vat-sub-row" v-if="(invoiceDetail.drinkSubtotal ?? 0) > 0">
+                  <span class="payment-label">Tổng đồ uống:</span>
+                  <span class="payment-value">{{ formatCurrency(invoiceDetail.drinkSubtotal ?? 0) }}</span>
+                </div>
+                <div class="payment-row vat-sub-row" v-if="(invoiceDetail.drinkSubtotal ?? 0) > 0">
+                  <span class="payment-label">VAT đồ uống ({{ invoiceDetail.drinkVatPercent ?? 10 }}%):</span>
+                  <span class="payment-value">{{ formatCurrency(Math.floor(((invoiceDetail.drinkSubtotal ?? 0) * (invoiceDetail.drinkVatPercent ?? 10)) / 100)) }}</span>
+                </div>
+                <div class="payment-row">
+                  <span class="payment-label">Tổng VAT:</span>
+                  <span class="payment-value">{{ formatCurrency(selectedInvoice.tax) }}</span>
+                </div>
+              </template>
+              <template v-else>
+                <div class="payment-row">
+                  <span class="payment-label">Tổng VAT:</span>
+                  <span class="payment-value">{{ formatCurrency(selectedInvoice.tax) }}</span>
+                </div>
+              </template>
               <div class="payment-row total-row">
                 <span class="payment-label">Tổng cộng:</span>
                 <span class="payment-value">{{ formatCurrency(selectedInvoice.finalAmount) }}</span>
@@ -382,7 +407,7 @@ const visiblePages = computed(() => {
   const pages: number[] = []
   const maxVisible = 5
   let start = Math.max(1, currentPage.value - Math.floor(maxVisible / 2) + 1)
-  let end = Math.min(totalPages.value, start + maxVisible - 1)
+  const end = Math.min(totalPages.value, start + maxVisible - 1)
   
   if (end - start < maxVisible - 1) {
     start = Math.max(1, end - maxVisible + 1)
@@ -1205,5 +1230,16 @@ onMounted(() => {
   font-size: 20px;
   font-weight: 800;
   color: #667eea;
+}
+
+.vat-sub-row .payment-label {
+  color: #64748b;
+  font-size: 13px;
+  padding-left: 12px;
+}
+
+.vat-sub-row .payment-value {
+  color: #64748b;
+  font-size: 13px;
 }
 </style>

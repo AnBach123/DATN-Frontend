@@ -213,10 +213,14 @@ export interface InvoiceDetail {
   }>
   totalPayable: number | null
   subtotal: number
+  foodSubtotal: number | null       // subtotal of non-drink items — food VAT base (8%)
+  drinkSubtotal: number | null      // subtotal of drink items — drink VAT base (10%)
   itemVoucherDiscount: number | null
   manualDiscountPercent: number | null
   manualDiscountAmount: number | null
-  taxPercent: number | null
+  taxPercent: number | null         // food VAT percent (8%)
+  vatPercent: number | null         // food VAT percent (alias)
+  drinkVatPercent: number | null    // drink VAT percent (10%)
   serviceFeePercent: number | null
   pointValue: number | null
 }
