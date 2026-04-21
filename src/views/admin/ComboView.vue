@@ -26,6 +26,7 @@
         <thead>
           <tr>
             <th>ID</th>
+            <th>Mã combo</th>
             <th>Tên combo</th>
             <th>Giá</th>
             <th>Số món</th>
@@ -37,15 +38,16 @@
 
         <tbody>
           <tr v-if="loading">
-            <td colspan="6" class="loading-cell">Đang tải...</td>
+            <td colspan="8" class="loading-cell">Đang tải...</td>
           </tr>
 
           <tr v-else-if="combos.length === 0">
-            <td colspan="6" class="empty-cell">Không có combo</td>
+            <td colspan="8" class="empty-cell">Không có combo</td>
           </tr>
 
           <tr v-else v-for="c in combos" :key="c.id">
             <td>{{ c.id }}</td>
+            <td class="code-cell">{{ c.comboCode || '—' }}</td>
             <td class="name">{{ c.comboName }}</td>
             <td>{{ formatCurrency(c.comboPrice) }}</td>
             <td>{{ c.itemCount || 0 }} món</td>
@@ -114,6 +116,17 @@
             </div>
 
             <div class="form-group full">
+              <label>Mã combo</label>
+              <input
+                v-model="newCombo.comboCode"
+                placeholder="Để trống sẽ tự động tạo mã..."
+                :disabled="isEdit"
+                @input="newCombo.comboCode = newCombo.comboCode.toUpperCase()"
+                class="uppercase-input"
+              />
+            </div>
+
+            <div class="form-group full">
               <label>Giá combo</label>
               <div class="price-section">
                 <input 
@@ -176,7 +189,7 @@
                   style="display: none"
                 />
                 <button type="button" class="upload-btn" @click="$refs.imageInput.click()">
-                  📷 Chọn ảnh
+                  Chọn ảnh
                 </button>
                 <div v-if="imagePreview" class="image-preview">
                   <img :src="imagePreview" alt="Preview" />
@@ -274,6 +287,7 @@ const showAddModal = ref(false)
 
 const newCombo = ref({
   comboName: '',
+  comboCode: '',
   comboPrice: 0,
   description: '',
   isActive: true
@@ -411,11 +425,12 @@ const openAddModal = () => {
 
   newCombo.value = {
     comboName: '',
+    comboCode: '',
     comboPrice: 0,
     description: '',
     isActive: true
   }
-  
+
   selectedProducts.value = []
   imageFile.value = null
   imagePreview.value = null
@@ -436,6 +451,7 @@ const openEdit = async (combo: any) => {
 
   newCombo.value = {
     comboName: combo.comboName,
+    comboCode: combo.comboCode || '',
     comboPrice: combo.comboPrice,
     description: combo.description,
     isActive: combo.isActive
@@ -729,6 +745,14 @@ onMounted(() => {
   font-weight: 600;
 }
 
+.uppercase-input {
+  text-transform: uppercase;
+}
+
+.uppercase-input::placeholder {
+  text-transform: none;
+}
+
 .description-cell {
   max-width: 200px;
   white-space: nowrap;
@@ -927,13 +951,21 @@ onMounted(() => {
 }
 
 .upload-btn {
-  padding: 10px 16px;
-  background: #4299e1;
-  color: white;
-  border: none;
+  padding: 9px 20px;
+  background: white;
+  color: #667eea;
+  border: 2px solid #667eea;
   border-radius: 10px;
   cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.25s;
   width: fit-content;
+}
+
+.upload-btn:hover {
+  background: #667eea;
+  color: white;
 }
 
 .image-preview {

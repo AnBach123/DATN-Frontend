@@ -48,7 +48,7 @@
               </div>
               <div>
                 <span>Thời gian vào bàn</span
-                ><strong>{{ formatDateTime(payment.reservedAt) }}</strong>
+                ><strong>{{ formatDateTime(payment.checkedInAt || payment.reservedAt) }}</strong>
               </div>
               <div>
                 <span>Mã hóa đơn</span><strong>{{ payment.invoiceCode }}</strong>
@@ -173,6 +173,7 @@
                 <thead>
                   <tr>
                     <th>STT</th>
+                    <th>Mã</th>
                     <th>Tên món</th>
                     <th>Loại</th>
                     <th>Trạng thái</th>
@@ -186,6 +187,7 @@
                 <tbody>
                   <tr v-for="(item, index) in payment.items" :key="item.id">
                     <td>{{ index + 1 }}</td>
+                    <td class="text-muted small">{{ item.code || '—' }}</td>
                     <td class="fw-semibold">
                       {{ item.name }}
                       <div v-if="item.voucherCode" class="small text-success">
@@ -1889,7 +1891,8 @@ const printInvoice = async () => {
   const items = payment.value.items || []
   const voucherName = selectedVoucher.value ? selectedVoucher.value.name : 'Không áp dụng'
   const voucherPercent = selectedVoucher.value ? `${selectedVoucher.value.percent}%` : ''
-  const printedAt = new Date().toLocaleString('vi-VN', { hour12: false })
+  const now = new Date()
+  const printedAt = now.toLocaleTimeString('vi-VN', { hour12: false, hour: '2-digit', minute: '2-digit' }) + ' - ' + now.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
   const printTitle = 'HÓA ĐƠN THANH TOÁN'
   const methodLabelMap: Record<string, string> = {
     CASH: 'Tiền mặt',
@@ -1906,6 +1909,7 @@ const printInvoice = async () => {
       (item, index) => `
         <tr>
           <td>${index + 1}</td>
+          <td>${item.code || '—'}</td>
           <td>${item.name}</td>
           <td>${item.type === 'PRODUCT' ? 'Món' : 'Combo'}</td>
           <td class="num">${item.quantity}</td>
@@ -1991,6 +1995,7 @@ const printInvoice = async () => {
           <thead>
             <tr>
               <th>#</th>
+              <th>Mã</th>
               <th>Món</th>
               <th>Loại</th>
               <th class="num">SL</th>
@@ -2000,7 +2005,7 @@ const printInvoice = async () => {
             </tr>
           </thead>
           <tbody>
-            ${rows || '<tr><td colspan="7">Không có món</td></tr>'}
+            ${rows || '<tr><td colspan="8">Không có món</td></tr>'}
           </tbody>
         </table>
         <div class="voucher">
@@ -2066,7 +2071,8 @@ const printInvoiceWithData = (
   const items = savedPayment.items || []
   const voucherName = savedSelectedVoucher ? savedSelectedVoucher.name : 'Không áp dụng'
   const voucherPercent = savedSelectedVoucher ? `${savedSelectedVoucher.percent}%` : ''
-  const printedAt = new Date().toLocaleString('vi-VN', { hour12: false })
+  const now = new Date()
+  const printedAt = now.toLocaleTimeString('vi-VN', { hour12: false, hour: '2-digit', minute: '2-digit' }) + ' - ' + now.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
   const printTitle = 'HÓA ĐƠN THANH TOÁN'
   const paymentLabel = 'Chuyển khoản'
   // Recalculate split VAT from saved payment data
@@ -2081,6 +2087,7 @@ const printInvoiceWithData = (
       (item, index) => `
         <tr>
           <td>${index + 1}</td>
+          <td>${item.code || '—'}</td>
           <td>${item.name}</td>
           <td>${item.type === 'PRODUCT' ? 'Món' : 'Combo'}</td>
           <td class="num">${item.quantity}</td>
@@ -2166,6 +2173,7 @@ const printInvoiceWithData = (
           <thead>
             <tr>
               <th>#</th>
+              <th>Mã</th>
               <th>Món</th>
               <th>Loại</th>
               <th class="num">SL</th>
@@ -2175,7 +2183,7 @@ const printInvoiceWithData = (
             </tr>
           </thead>
           <tbody>
-            ${rows || '<tr><td colspan="7">Không có món</td></tr>'}
+            ${rows || '<tr><td colspan="8">Không có món</td></tr>'}
           </tbody>
         </table>
         <div class="voucher">
@@ -2231,14 +2239,9 @@ const formatDateTime = (value: string) => {
   if (!value) return ''
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return value
-  return date.toLocaleString('vi-VN', {
-    hour12: false,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+  const time = date.toLocaleTimeString('vi-VN', { hour12: false, hour: '2-digit', minute: '2-digit' })
+  const day = date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  return `${time} - ${day}`
 }
 </script>
 
@@ -2354,7 +2357,7 @@ const formatDateTime = (value: string) => {
 .vat-rate-amount {
   font-size: 14px;
   font-weight: 600;
-  color: lch(2.63% 3.55 84.86)5.23);
+  color: #64748b;
 }
 
 .vat-total-row {

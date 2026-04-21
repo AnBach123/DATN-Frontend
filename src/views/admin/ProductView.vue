@@ -42,6 +42,8 @@
               </span>
             </th>
 
+            <th>Mã SP</th>
+
             <th @click="sortBy('name')">
               Tên
               <span v-if="sortField === 'name'">
@@ -65,11 +67,11 @@
 
         <tbody>
           <tr v-if="loading">
-            <td colspan="8" class="loading-cell">Đang tải...</td>
+            <td colspan="9" class="loading-cell">Đang tải...</td>
           </tr>
 
           <tr v-else-if="products.length === 0">
-            <td colspan="8" class="empty-cell">Không có sản phẩm</td>
+            <td colspan="9" class="empty-cell">Không có sản phẩm</td>
           </tr>
 
           <tr v-else v-for="p in products" :key="p.id">
@@ -84,6 +86,7 @@
               <div v-else class="no-image">📷</div>
             </td>
             <td>{{ p.id }}</td>
+            <td class="code-cell">{{ p.productCode || '—' }}</td>
             <td class="name">{{ p.productName }}</td>
             <td>{{ formatCurrency(p.unitPrice) }}</td>
 
@@ -155,6 +158,17 @@
               <input v-model="newProduct.productName" />
             </div>
 
+            <div class="form-group full">
+              <label>Mã sản phẩm</label>
+              <input
+                v-model="newProduct.productCode"
+                placeholder="Để trống sẽ tự động tạo mã..."
+                :disabled="isEdit"
+                @input="newProduct.productCode = newProduct.productCode.toUpperCase()"
+                class="uppercase-input"
+              />
+            </div>
+
             <div class="form-group">
               <label>Danh mục</label>
               <select v-model="newProduct.productCategory">
@@ -190,7 +204,7 @@
                   style="display: none"
                 />
                 <button type="button" class="upload-btn" @click="triggerImageUpload">
-                  📷 Chọn ảnh
+                  Chọn ảnh
                 </button>
                 <div v-if="imagePreview" class="image-preview">
                   <img :src="imagePreview" alt="Preview" />
@@ -248,6 +262,7 @@ const showAddModal = ref(false)
 
 const newProduct = ref({
   productName: '',
+  productCode: '',
   productCategory: 'RAW_FOOD',
   unitPrice: 0,
   description: '',
@@ -390,12 +405,13 @@ const openAddModal = () => {
 
   newProduct.value = {
     productName: '',
+    productCode: '',
     productCategory: 'RAW_FOOD',
     unitPrice: 0,
     description: '',
     availabilityStatus: 'AVAILABLE'
   }
-  
+
   removeImage()
   showAddModal.value = true
 }
@@ -411,6 +427,7 @@ const openEdit = (product: any) => {
 
   newProduct.value = {
     productName: product.productName,
+    productCode: product.productCode || '',
     productCategory: product.productCategory,
     unitPrice: product.unitPrice,
     description: product.description,
@@ -594,6 +611,14 @@ onMounted(loadProducts)
   font-weight: 600;
 }
 
+.uppercase-input {
+  text-transform: uppercase;
+}
+
+.uppercase-input::placeholder {
+  text-transform: none;
+}
+
 .status {
   padding: 5px 10px;
   border-radius: 10px;
@@ -624,18 +649,21 @@ onMounted(loadProducts)
 }
 
 .upload-btn {
-  padding: 10px 16px;
-  background: #4299e1;
-  color: white;
-  border: none;
-  border-radius: 8px;
+  padding: 9px 20px;
+  background: white;
+  color: #667eea;
+  border: 2px solid #667eea;
+  border-radius: 10px;
   cursor: pointer;
-  font-size: 14px;
-  transition: background 0.3s;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.25s;
+  width: fit-content;
 }
 
 .upload-btn:hover {
-  background: #3182ce;
+  background: #667eea;
+  color: white;
 }
 
 .image-preview {
