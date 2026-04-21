@@ -48,8 +48,9 @@
           <div class="card-body">
             <h3 class="card-title">{{ post.title }}</h3>
             <p class="card-summary">{{ post.summary || truncate(post.content, 120) }}</p>
-            <div class="card-meta">
+            <div class="card-footer">
               <span class="meta-date">{{ formatDate(post.publishedAt || post.createdAt) }}</span>
+              <span class="card-readmore">Xem ngay →</span>
             </div>
           </div>
         </router-link>
@@ -148,7 +149,7 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.blog-page { min-height: 100vh; background: #faf8f5; }
+.blog-page { min-height: 100vh; background: #faf8f5; padding-top: 110px; }
 
 .blog-hero {
   background: linear-gradient(135deg, #7a0000, #c0392b);
@@ -185,10 +186,13 @@ onMounted(async () => {
 .placeholder-img span { color: white; font-size: 22px; font-weight: 700; opacity: 0.6; }
 .card-category { position: absolute; top: 12px; left: 12px; background: rgba(0,0,0,0.55); color: white; padding: 4px 12px; border-radius: 999px; font-size: 11px; font-weight: 600; backdrop-filter: blur(4px); }
 
-.card-body { padding: 18px; }
+.card-body { padding: 18px; display: flex; flex-direction: column; flex: 1; }
+.post-card { display: flex; flex-direction: column; }
 .card-title { font-size: 17px; font-weight: 700; color: #2d2d2d; margin-bottom: 8px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .card-summary { font-size: 13.5px; color: #666; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 14px; }
-.card-meta { display: flex; justify-content: space-between; font-size: 12px; color: #999; }
+.card-footer { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #999; margin-top: auto; }
+.card-readmore { font-size: 13px; font-weight: 600; color: #a80000; transition: 0.2s; }
+.post-card:hover .card-readmore { text-decoration: underline; }
 
 .blog-pagination { display: flex; justify-content: center; gap: 6px; margin-top: 36px; }
 .pg-btn { min-width: 38px; height: 38px; border: 1.5px solid #ddd; border-radius: 8px; background: white; color: #555; font-weight: 600; cursor: pointer; transition: 0.2s; }

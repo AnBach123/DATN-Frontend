@@ -1,5 +1,5 @@
 <template>
-  <nav class="site-nav navbar navbar-expand-lg">
+  <nav class="site-nav navbar navbar-expand-lg" :class="{ 'nav-hidden': navHidden, 'nav-scrolled': navScrolled }">
     <div class="container-fluid nav-shell">
       <RouterLink class="brand" to="/home">
   <img :src="logo" class="brand-logo" />
@@ -20,40 +20,54 @@
 
       <div class="collapse navbar-collapse nav-collapse" id="navbarNav">
         <ul class="nav-list ms-auto">
-
           <li class="nav-item">
-  <RouterLink class="nav-link" to="/home">Trang chủ</RouterLink>
-</li>
-          <li class="nav-item">
-            <RouterLink class="nav-link" to="/menu">Thực đơn</RouterLink>
+            <RouterLink class="nav-link" to="/home">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+              <span>Trang chủ</span>
+            </RouterLink>
           </li>
           <li class="nav-item">
-            <RouterLink class="nav-link" to="/review">Đánh giá</RouterLink>
+            <RouterLink class="nav-link" to="/menu">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>
+              <span>Thực đơn</span>
+            </RouterLink>
           </li>
           <li class="nav-item">
-            <RouterLink class="nav-link" to="/posts">Bài viết</RouterLink>
+            <RouterLink class="nav-link" to="/review">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              <span>Đánh giá</span>
+            </RouterLink>
           </li>
-
+          <li class="nav-item">
+            <RouterLink class="nav-link" to="/posts">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/></svg>
+              <span>Bài viết</span>
+            </RouterLink>
+          </li>
         </ul>
 
         <div class="nav-actions">
-          <button class="btn-reserve" @click="openBooking()">Đặt bàn ngay</button>
+          <button class="btn-reserve" @click="openBooking()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+            Đặt bàn ngay
+          </button>
 
           <!-- PROFILE DROPDOWN -->
           <div class="profile-wrapper" @click.stop="toggleDropdown">
             <div class="profile-trigger">
               <div class="avatar">{{ avatarText }}</div>
               <span class="user-name">{{ fullName }}</span>
-              <span class="arrow">▼</span>
+              <svg class="arrow-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
             </div>
 
             <div v-if="showDropdown" class="profile-dropdown">
               <RouterLink to="/profile" class="dropdown-item" @click="closeDropdown">
-                Profile
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7" r="4"/><path d="M5.5 21a6.5 6.5 0 0 1 13 0"/></svg>
+                Tài khoản
               </RouterLink>
-
-              <RouterLink class="btn-ghost dropdown-item" to="/auth/login" @click="closeDropdown">
-                Logout
+              <RouterLink class="dropdown-item logout" to="/auth/login" @click="closeDropdown">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                Đăng xuất
               </RouterLink>
             </div>
           </div>
@@ -65,16 +79,43 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { useBookingStore } from '@/composables/bookingStore'
 import { getProfile } from '@/services/customer/profileApi' // ✅ THÊM
 import logo from '@/assets/logo.png'
 
 const { open: openBooking } = useBookingStore()
-const router = useRouter()
+const route = useRoute()
+const isHomePage = computed(() => route.path === '/home')
 
 const showDropdown = ref(false)
 const fullName = ref('User')
+
+// ========================
+// NAVBAR HIDE/SHOW ON SCROLL
+// ========================
+const navHidden = ref(false)
+const navScrolled = ref(false)
+let lastScrollY = 0
+
+const handleScroll = () => {
+  const currentY = window.scrollY
+
+  if (isHomePage.value) {
+    // Trang chủ: ẩn/hiện navbar + đổi style
+    if (currentY > 500 && currentY > lastScrollY) {
+      navHidden.value = true
+    } else {
+      navHidden.value = false
+    }
+    navScrolled.value = currentY > 300
+  } else {
+    // Trang khác: luôn hiện, luôn style đậm
+    navHidden.value = false
+    navScrolled.value = true
+  }
+  lastScrollY = currentY
+}
 
 // ========================
 // AVATAR TEXT
@@ -114,12 +155,14 @@ const loadUser = async () => {
 }
 
 onMounted(() => {
-  loadUser() // ✅ gọi API
+  loadUser()
   document.addEventListener('click', handleClickOutside)
+  window.addEventListener('scroll', handleScroll, { passive: true })
 })
 
 onBeforeUnmount(() => {
   document.removeEventListener('click', handleClickOutside)
+  window.removeEventListener('scroll', handleScroll)
 })
 
 // ========================
@@ -137,8 +180,10 @@ const handleClickOutside = (e: MouseEvent) => {
 @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&family=Playfair+Display:wght@600;700&display=swap');
 
 .site-nav {
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
   z-index: 1000;
   background: linear-gradient(
     120deg,
@@ -149,10 +194,43 @@ const handleClickOutside = (e: MouseEvent) => {
   backdrop-filter: blur(6px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.12);
+  transition: background 0.4s ease, box-shadow 0.4s ease, border 0.4s ease;
+}
+
+/* Ẩn: biến mất ngay, không animation */
+.site-nav.nav-hidden {
+  transform: translateY(-100%);
+  transition: transform 0s;
+}
+
+/* Hiện: trượt xuống mượt */
+.site-nav:not(.nav-hidden) {
+  transform: translateY(0);
+  transition: transform 0.4s ease, background 0.4s ease, box-shadow 0.4s ease;
 }
 
 .nav-shell {
-  padding: 14px 28px;
+  transition: padding 0.3s ease;
+}
+
+.site-nav.nav-hidden {
+  transform: translateY(-100%);
+}
+
+/* Ở khu vực hero: trong suốt, nhỏ hơn */
+.site-nav:not(.nav-scrolled) {
+  background: rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(4px);
+  box-shadow: none;
+  border-bottom: none;
+}
+
+.site-nav:not(.nav-scrolled) .nav-shell {
+  padding: 0px 28px;
+}
+
+.nav-shell {
+  padding: 8px 28px;
   align-items: center;
 }
 
@@ -178,18 +256,75 @@ const handleClickOutside = (e: MouseEvent) => {
 
 .nav-list {
   display: flex;
-  gap: 18px;
+  gap: 10px;
   list-style: none;
+  align-items: center;
 }
 
 .nav-link {
-  color: rgba(255, 255, 255, 0.85);
+  display: flex;
+  align-items: center;
+  gap: 0;
+  color: rgba(255, 255, 255, 0.75);
   font-weight: 600;
+  font-size: 16px;
   text-decoration: none;
+  padding: 10px 20px;
+  border-radius: 10px;
+  transition: color 0.3s, background 0.3s;
+  position: relative;
+  overflow: hidden;
+}
+
+.nav-link svg {
+  position: absolute;
+  left: 10px;
+  opacity: 0;
+  transition: opacity 0.3s, transform 0.3s;
+  transform: translateX(-8px);
+}
+
+.nav-link span {
+  transition: transform 0.3s;
 }
 
 .nav-link:hover {
-  color: #fff;
+  color: #ffd700;
+  background: rgba(255, 215, 0, 0.08);
+}
+
+.nav-link:hover svg {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.nav-link:hover span {
+  transform: translateX(10px);
+}
+
+.nav-link.router-link-active {
+  color: #ffd700;
+}
+
+.nav-link.router-link-active svg {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.nav-link.router-link-active span {
+  transform: translateX(10px);
+}
+
+.nav-link.router-link-active::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 20px;
+  height: 3px;
+  background: #ffd700;
+  border-radius: 999px;
 }
 
 .nav-actions {
@@ -248,31 +383,54 @@ const handleClickOutside = (e: MouseEvent) => {
 }
 
 .dropdown-item {
-  padding: 10px 14px;
+  padding: 10px 16px;
   cursor: pointer;
   color: #333;
   text-decoration: none;
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 0.2s;
 }
 
 .dropdown-item:hover {
-  background: #f5f5f5;
+  background: #f8f4f0;
+  color: #a80000;
 }
 
-.logout {
-  color: red;
+.dropdown-item.logout {
+  color: #a80000;
+  border-top: 1px solid #f0ebe5;
+}
+.dropdown-item.logout:hover {
+  background: #fff0f0;
 }
 
 /* ===== BUTTON ===== */
 .btn-reserve {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   border: none;
-  background: linear-gradient(135deg, #f7c782 0%, #f2b565 100%);
+  background: linear-gradient(135deg, #ffd700, #f2b565);
   color: #3a1f12;
-  padding: 10px 22px;
+  padding: 9px 22px;
   border-radius: 999px;
   font-weight: 700;
+  font-size: 14px;
   cursor: pointer;
+  transition: all 0.25s;
+  box-shadow: 0 2px 10px rgba(242, 181, 101, 0.3);
 }
+.btn-reserve:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(242, 181, 101, 0.45);
+}
+
+.arrow-icon { opacity: 0.6; transition: transform 0.2s; }
+.profile-wrapper:hover .arrow-icon { opacity: 1; }
 
 .nav-collapse {
   overflow: visible !important;

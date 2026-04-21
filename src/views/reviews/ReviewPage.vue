@@ -3,7 +3,7 @@ import ReviewSection from '@/components/reviews/ReviewSection.vue'
 </script>
 
 <template>
-  <div class="container mt-5">
+  <div class="container" style="padding-top: 110px;">
     <ReviewSection />
   </div>
 </template>

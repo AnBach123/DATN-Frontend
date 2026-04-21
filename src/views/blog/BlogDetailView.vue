@@ -141,11 +141,11 @@ const loadPost = async (id: number) => {
     const allPosts: Post[] = await getPublishedPosts()
     const others = allPosts.filter((p: Post) => p.id !== id)
 
-    // Sidebar: 5 bài mới nhất (đã sort từ API)
-    latestPosts.value = allPosts.slice(0, 5)
+    // Sidebar: 5 bài mới nhất có ảnh
+    latestPosts.value = allPosts.filter((p: Post) => p.thumbnailUrl).slice(0, 5)
 
-    // Dưới bài viết: các bài khác (trừ bài hiện tại), tối đa 6
-    otherPosts.value = others.slice(0, 6)
+    // Dưới bài viết: các bài khác có ảnh (trừ bài hiện tại), tối đa 6
+    otherPosts.value = others.filter((p: Post) => p.thumbnailUrl).slice(0, 6)
   } catch (e) {
     console.error('Lỗi tải bài viết:', e)
   } finally {
@@ -167,6 +167,7 @@ onMounted(() => {
 .blog-detail-page {
   min-height: 100vh;
   background: #faf8f5;
+  padding-top: 90px;
 }
 
 .loading-wrap {

@@ -418,6 +418,7 @@ products.value = productData.map((p: any) => ({
   min-height: 100vh;
   overflow: hidden;
   background: #5a1515;
+  padding-top: 113px;
   color: #fff;
   font-family: 'Manrope', sans-serif;
 }

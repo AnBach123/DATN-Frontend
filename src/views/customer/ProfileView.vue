@@ -743,6 +743,7 @@ onMounted(loadProfile)
   background: #5a1515;
   position: relative;
   overflow: hidden;
+  padding-top: 114px;
   font-family: 'Manrope', sans-serif;
 }
 

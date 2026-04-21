@@ -153,6 +153,7 @@ onMounted(load)
 .all-reviews-page {
   min-height: 100vh;
   padding: 0;
+  padding-top: 100px;
   background: linear-gradient(180deg, #5a1515 0%, #7b2323 50%, #5a1515 100%);
   font-family: 'Manrope', sans-serif;
 }

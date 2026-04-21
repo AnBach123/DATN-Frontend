@@ -95,6 +95,7 @@ const goHome = () => {
   display: flex;
   align-items: center;
   justify-content: center;
+  padding-top: 90px;
   padding: 24px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
