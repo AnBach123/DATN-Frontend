@@ -103,9 +103,11 @@ import { DatePicker as VDatePicker } from 'v-calendar'
 import { useRouter } from 'vue-router'
 import { createReservation } from '@/services/reservationApi'
 import { useBookingStore } from '@/composables/bookingStore'
+import { useCartStore } from '@/composables/cartStore'
 
 const router = useRouter()
 const { isCustomOpen, presetNote, closeCustom, open } = useBookingStore()
+const { clearCart } = useCartStore()
 
 const fullName = ref('')
 const phone = ref('')
@@ -213,6 +215,7 @@ const submitReservation = async () => {
     const data = res.data?.data
     if (!data) { msg.value = 'Đặt bàn thất bại'; return }
     sessionStorage.setItem('reservationSuccess', JSON.stringify(data))
+    clearCart()
     closeCustom()
     router.push('/reservation/success')
   } catch (e: unknown) {
