@@ -30,34 +30,13 @@
             <h4 class="customer-name">{{ profile?.fullName || 'Khách hàng' }}</h4>
             <p class="email">{{ profile?.email || 'Chưa có email' }}</p>
 
-            <div class="loyalty-card">
-  <div class="loyalty-header">
-    <span class="loyalty-label">⭐ Điểm thành viên</span>
-    <span class="loyalty-rank">{{ memberLevel }}</span>
-  </div>
-
-  <div class="loyalty-score">
-    <strong>{{ profile?.loyaltyPoints || 0 }}</strong>
-    <span>điểm</span>
-  </div>
-
-  <div class="progress-bar-custom">
-    <div
-      class="progress-fill"
-      :style="{ width: progressPercent + '%' }"
-    ></div>
-  </div>
-
-  <div class="loyalty-footer">
-    <small>{{ progressPercent.toFixed(0) }}% tiến tới hạng tiếp theo</small>
-
-    <small v-if="nextLevelTarget">
-      Còn {{ pointsToNextLevel }} điểm để đạt {{ nextLevelTarget }} điểm
-    </small>
-
-    <small v-else>Đã đạt hạng cao nhất</small>
-  </div>
-</div>
+            <div class="loyalty-simple">
+              <span class="loyalty-icon">🪙</span>
+              <div>
+                <strong>{{ profile?.loyaltyPoints || 0 }} điểm</strong>
+                <small>Điểm tích lũy</small>
+              </div>
+            </div>
             <div class="quick-menu">
               <button
                 :class="['quick-btn', activeTab === 'profile' ? 'active' : '']"
@@ -118,10 +97,6 @@
                   <input :value="formatDate(profile?.createdAt)" disabled />
                 </div>
 
-                <div class="form-group">
-                  <label>Hạng thành viên</label>
-                  <input :value="memberLevel" disabled />
-                </div>
               </div>
 
               <button class="btn-save" type="submit">CẬP NHẬT THÔNG TIN</button>
@@ -444,52 +419,6 @@ const pagedInvoices = computed(() => {
   return invoiceHistory.value.slice(start, start + INVOICE_PAGE_SIZE)
 })
 
-const memberLevel = computed(() => {
-  const points = profile.value?.loyaltyPoints || 0
-
-  if (points >= 2000) return 'Hạng Kim Cương'
-  if (points >= 1000) return 'Hạng Bạch Kim'
-  if (points >= 500) return 'Hạng Vàng'
-  if (points >= 200) return 'Hạng Bạc'
-  return 'Hạng Đồng'
-})
-
-const nextLevelTarget = computed(() => {
-  const points = profile.value?.loyaltyPoints || 0
-
-  if (points < 200) return 200
-  if (points < 500) return 500
-  if (points < 1000) return 1000
-  if (points < 2000) return 2000
-  return null
-})
-
-const pointsToNextLevel = computed(() => {
-  if (!nextLevelTarget.value) return 0
-  return nextLevelTarget.value - (profile.value?.loyaltyPoints || 0)
-})
-const progressPercent = computed(() => {
-  const points = profile.value?.loyaltyPoints || 0
-
-  if (points < 200) {
-    return Math.min((points / 200) * 100, 100)
-  }
-
-  if (points < 500) {
-    return Math.min(((points - 200) / (500 - 200)) * 100, 100)
-  }
-
-  if (points < 1000) {
-    return Math.min(((points - 500) / (1000 - 500)) * 100, 100)
-  }
-
-  if (points < 2000) {
-    return Math.min(((points - 1000) / (2000 - 1000)) * 100, 100)
-  }
-
-  return 100
-})
-
 /* ================= HELPERS ================= */
 
 // Parse "dd-MM-yyyy HH:mm:ss" hoặc ISO — backend trả dd-MM-yyyy HH:mm:ss
@@ -740,85 +669,76 @@ onMounted(loadProfile)
 /* ================= PAGE ================= */
 .profile-page {
   min-height: 100vh;
-  background: #5a1515;
+  background: #f7f4f0;
   position: relative;
   overflow: hidden;
-  padding-top: 114px;
+  padding-top: 135px;
   font-family: 'Manrope', sans-serif;
 }
 
-.profile-page::before {
-  content: '';
-  position: absolute;
-  inset: -8%;
-  background-image: url('https://images.unsplash.com/photo-1555992336-03a23c7b20ee');
-  background-size: cover;
-  background-position: center;
-  filter: blur(10px);
-  opacity: 0.25;
-  z-index: 0;
-}
-
 .overlay {
-  position: relative;
-  z-index: 1;
-  background: rgba(0, 0, 0, 0.65);
   min-height: 100vh;
   padding: 0;
 }
 
 .profile-wrapper {
-  width: 100%;
-  margin: 0;
+  max-width: 1140px;
+  margin: 0 auto;
+  padding: 0 20px 40px;
 }
 
 /* ================= HEADER ================= */
 .title {
-  color: #ffffff;
+  font-family: 'Playfair Display', serif;
+  color: #1a1a1a;
   font-weight: 800;
-  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  font-size: 26px;
 }
 
 .subtitle {
-  color: rgba(255, 255, 255, 0.95);
-  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  color: #999;
+  font-size: 14px;
 }
 
 /* ================= MAIN LAYOUT ================= */
 .profile-card {
   display: flex;
-  width: 100%;
-  min-height: calc(100vh - 120px);
-  background: #fff7f0;
+  max-width: 1100px;
+  margin: 0 auto;
+  min-height: calc(100vh - 200px);
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid #ede8e0;
 }
 
 .profile-left {
-  width: 300px;
-  background: linear-gradient(180deg, #a80000, #8d0000);
+  width: 280px;
+  background: #a80000;
   color: white;
-  padding: 36px 24px;
+  padding: 28px 20px;
 }
 
 .profile-right {
   flex: 1;
-  padding: 32px;
-  background: #fafafa;
-
+  padding: 28px;
+  background: #faf8f5;
   display: flex;
-  align-items: center;      
-  justify-content: center;  
+  align-items: flex-start;
+  justify-content: center;
 }
 .profile-right .content-card {
   width: 100%;
-  max-width: 980px;
+  max-width: 700px;
 }
 
 /* ================= LABEL ================= */
 label {
   font-weight: 600;
-  color: #5a3b2e;
-  margin-bottom: 6px;
+  color: #5a4a38;
+  margin-bottom: 4px;
   display: block;
+  font-size: 13px;
 }
 
 /* ================= AVATAR ================= */
@@ -864,88 +784,15 @@ label {
 
 
 /* ================= LOYALTY ================= */
-.loyalty-card {
-  margin-top: 24px;
-  padding: 20px 18px;
-  border-radius: 20px;
-  background: linear-gradient(135deg, rgba(255,255,255,0.18), rgba(255,255,255,0.08));
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255,255,255,0.18);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.18);
+.loyalty-simple {
+  display: flex; align-items: center; gap: 12px;
+  margin-top: 18px; padding: 14px 16px;
+  background: rgba(255,255,255,0.12); border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.15);
 }
-
-.loyalty-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 14px;
-  gap: 10px;
-}
-
-.loyalty-label {
-  font-size: 14px;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.95);
-}
-
-.loyalty-rank {
-  background: rgba(255, 255, 255, 0.18);
-  color: #fff6cc;
-  padding: 6px 12px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 700;
-  white-space: nowrap;
-  border: 1px solid rgba(255,255,255,0.2);
-}
-
-.loyalty-score {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  margin-bottom: 16px;
-}
-
-.loyalty-score strong {
-  font-size: 34px;
-  font-weight: 800;
-  color: #ffffff;
-  line-height: 1;
-}
-
-.loyalty-score span {
-  font-size: 14px;
-  color: rgba(255,255,255,0.85);
-  font-weight: 600;
-}
-
-.progress-bar-custom {
-  width: 100%;
-  height: 12px;
-  background: rgba(255, 255, 255, 0.22);
-  border-radius: 999px;
-  overflow: hidden;
-  position: relative;
-  margin-bottom: 12px;
-}
-
-.progress-fill {
-  height: 100%;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #ffd54f, #ffb300);
-  transition: width 0.4s ease;
-  box-shadow: 0 0 12px rgba(255, 213, 79, 0.45);
-}
-
-.loyalty-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
-  font-size: 12px;
-  color: rgba(255,255,255,0.82);
-  flex-wrap: wrap;
-}
+.loyalty-icon { font-size: 24px; }
+.loyalty-simple strong { display: block; font-size: 18px; color: #ffd700; }
+.loyalty-simple small { font-size: 11px; color: rgba(255,255,255,0.7); }
 
 /* ================= QUICK MENU ================= */
 .quick-menu {
@@ -996,10 +843,10 @@ label {
 
 /* ================= CARD ================= */
 .content-card {
-  background: #fff;
-  border-radius: 20px;
-  padding: 28px;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.1);
+  background: white;
+  border-radius: 14px;
+  padding: 24px;
+  border: 1px solid #ede8e0;
 }
 
 
@@ -1012,34 +859,35 @@ label {
 
 input {
   width: 100%;
-  padding: 14px 16px;
-  border-radius: 14px;
-  border: 1px solid #e5d6c8;
-  background: #ffffff;
-  transition: all 0.25s ease;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1.5px solid #e0d6ca;
+  background: #fff;
+  transition: 0.2s;
   font-size: 14px;
 }
 
 input:focus {
   outline: none;
   border-color: #a80000;
-  box-shadow: 0 0 0 3px rgba(168, 0, 0, 0.12);
 }
 
 .btn-save {
-  margin-top: 20px;
+  margin-top: 18px;
   width: 100%;
-  background: linear-gradient(135deg, #a80000, #d10000);
+  background: #a80000;
   color: white;
-  padding: 14px;
-  border-radius: 14px;
+  padding: 12px;
+  border-radius: 999px;
   font-weight: 700;
+  font-size: 14px;
   transition: 0.2s;
+  border: none;
+  cursor: pointer;
 }
 
 .btn-save:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 20px rgba(168, 0, 0, 0.25);
+  background: #8b0000;
 }
 
 /* ================= HISTORY ================= */

@@ -64,12 +64,21 @@
         :src="getImage(item)"
         @error="onImgError"
       />
+      <div v-if="getDiscount(item)" class="m-sticker">
+        <span class="sticker-text">GIẢM<br/>{{ getDiscount(item)!.discountPercent }}%</span>
+      </div>
 
       <div class="menu-info">
         <h3>{{ item.productName }}</h3>
 
         <div class="menu-bottom">
-          <span class="price">{{ formatPrice(item.unitPrice) }}</span>
+          <div class="menu-price-row">
+            <template v-if="getDiscount(item)">
+              <span class="price-old">{{ formatPrice(item.unitPrice) }}</span>
+              <span class="price">{{ formatPrice(calcDiscountPrice(item.unitPrice, getDiscount(item)!.discountPercent)) }}</span>
+            </template>
+            <span v-else class="price">{{ formatPrice(item.unitPrice) }}</span>
+          </div>
           <button class="btn-add" @click.stop="addItem(item)">Ghi chú món</button>
         </div>
       </div>
@@ -78,10 +87,12 @@
 </div>
     </section>
 
-    <button class="mini-cart" v-if="totalQty > 0" @click="openCart = true">
-      <div class="mini-count">{{ totalQty }} món</div>
-      <div class="mini-total">{{ formatPrice(totalPrice) }}</div>
-    </button>
+    <transition name="cart-pop">
+      <button class="mini-cart" v-if="totalQty > 0 && showCartBtn" @click="openCart = true">
+        <div class="mini-count">{{ totalQty }} món</div>
+        <div class="mini-total">{{ formatPrice(totalPrice) }}</div>
+      </button>
+    </transition>
 
     <div v-if="openCart" class="cart-overlay" @click.self="openCart = false">
       <div class="cart-panel">
@@ -158,9 +169,16 @@
       <!-- GIÁ + VAT + SỐ LƯỢNG -->
       <div class="detail-price-row">
         <div class="detail-price-left">
-          <span class="detail-price">
-            {{ detailType === 'combo' ? formatPrice(selectedItem.comboPrice) : formatPrice(selectedItem.unitPrice) }}
-          </span>
+          <div class="detail-prices">
+            <template v-if="detailType === 'product' && getDiscount(selectedItem)">
+              <span class="detail-price-old">{{ formatPrice(selectedItem.unitPrice) }}</span>
+              <span class="detail-price">{{ formatPrice(calcDiscountPrice(selectedItem.unitPrice, getDiscount(selectedItem)!.discountPercent)) }}</span>
+              <span class="detail-discount-tag">-{{ getDiscount(selectedItem)!.discountPercent }}%</span>
+            </template>
+            <span v-else class="detail-price">
+              {{ detailType === 'combo' ? formatPrice(selectedItem.comboPrice) : formatPrice(selectedItem.unitPrice) }}
+            </span>
+          </div>
           <span class="detail-vat">Giá chưa gồm VAT</span>
         </div>
         <div class="detail-qty">
@@ -201,8 +219,10 @@
 import { computed, onMounted, ref } from 'vue'
 import { getActiveProducts } from '@/services/productApi'
 import { useBookingStore } from '@/composables/bookingStore'
+import { useCartStore } from '@/composables/cartStore'
 import { getActiveProductCombos } from '@/services/productComboApi'
 import { getPrimaryComboImage } from '@/services/imageApi'
+import { getVoucherProducts } from '@/services/voucherApi'
 
 interface Product {
   id: number
@@ -221,8 +241,14 @@ interface Combo {
 }
 
 const combos = ref<Combo[]>([])
+const productVouchers = ref<any[]>([])
 
 const { open: openBookingModal } = useBookingStore()
+
+const getDiscount = (item: Product) => {
+  return productVouchers.value.find((v: any) => v.productId === item.id) || null
+}
+const calcDiscountPrice = (price: number, percent: number) => Math.round(price * (100 - percent) / 100)
 
 const products = ref<Product[]>([])
 const loading = ref(true)
@@ -262,63 +288,16 @@ const filteredProducts = computed(() => {
   return products.value.filter((p) => p.productCategory === activeCategory.value)
 })
 
-const cart = ref<Record<number, { product: Product; qty: number }>>({})
+const { cartItems, totalQty, totalPrice, addItem, increase, decrease, removeItem, clearCart, buildFoodNote } = useCartStore()
 const openCart = ref(false)
+const showCartBtn = ref(false)
 
-const cartItems = computed(() =>
-  Object.values(cart.value).map((c) => ({
-    id: c.product.id,
-    productName: c.product.productName,
-    unitPrice: c.product.unitPrice,
-    qty: c.qty,
-  }))
-)
-
-const totalQty = computed(() => cartItems.value.reduce((s, i) => s + i.qty, 0))
-const totalPrice = computed(() => cartItems.value.reduce((s, i) => s + i.qty * i.unitPrice, 0))
-
-const addItem = (product: Product) => {
-  const exist = cart.value[product.id]
-  if (exist) {
-    exist.qty += 1
-  } else {
-    cart.value[product.id] = { product, qty: 1 }
-  }
-}
 const addCombo = (combo: Combo) => {
-  const fakeProduct = {
+  addItem({
     id: combo.id + 100000,
     productName: combo.comboName,
     unitPrice: combo.comboPrice,
-  }
-
-  addItem(fakeProduct as any)
-}
-
-const increase = (id: number) => {
-  const item = cart.value[id]
-  if (item) item.qty += 1
-}
-
-const decrease = (id: number) => {
-  const item = cart.value[id]
-  if (!item) return
-  item.qty -= 1
-  if (item.qty <= 0) delete cart.value[id]
-}
-
-const removeItem = (id: number) => {
-  delete cart.value[id]
-}
-
-const clearCart = () => {
-  cart.value = {}
-}
-
-const buildFoodNote = () => {
-  if (cartItems.value.length === 0) return ''
-  const lines = cartItems.value.map((i) => `${i.productName} x ${i.qty}`)
-  return `Món đặt tham khảo: ${lines.join(', ')}`
+  })
 }
 
 const openBooking = () => {
@@ -427,6 +406,14 @@ products.value = productData.map((p: any) => ({
   } finally {
     loading.value = false
   }
+
+  try {
+    const pv = (await getVoucherProducts()) || []
+    const today = new Date().toISOString().split('T')[0]
+    productVouchers.value = pv.filter((v: any) => v.isActive && v.remainingQuantity > 0 && (!v.validTo || v.validTo >= today))
+  } catch {}
+
+  setTimeout(() => { showCartBtn.value = true }, 300)
 })
 </script>
 
@@ -528,7 +515,8 @@ products.value = productData.map((p: any) => ({
   background: white;
   color: #2a1f1a;
   border-radius: 14px;
-  overflow: hidden;
+  overflow: visible;
+  position: relative;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
   border: 1px solid #eee8e0;
   display: flex;
@@ -537,10 +525,47 @@ products.value = productData.map((p: any) => ({
   cursor: pointer;
 }
 
+.menu-img { border-radius: 14px 14px 0 0; overflow: hidden; }
+
 .menu-card:hover {
   transform: translateY(-3px);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
 }
+
+.m-sticker {
+  position: absolute; top: -14px; right: -14px;
+  width: 76px; height: 76px;
+  background: #e53e3e;
+  display: flex; align-items: center; justify-content: center;
+  clip-path: polygon(
+    50% 0%, 63% 10%, 80% 2%, 78% 20%, 98% 28%,
+    88% 42%, 100% 56%, 85% 62%, 90% 80%,
+    74% 78%, 65% 95%, 50% 84%, 35% 95%,
+    26% 78%, 10% 80%, 15% 62%, 0% 56%,
+    12% 42%, 2% 28%, 22% 20%, 20% 2%, 37% 10%
+  );
+  z-index: 2;
+}
+.m-sticker::after {
+  content: '';
+  position: absolute; inset: 3px;
+  background: #ffe100;
+  clip-path: polygon(
+    50% 0%, 63% 10%, 80% 2%, 78% 20%, 98% 28%,
+    88% 42%, 100% 56%, 85% 62%, 90% 80%,
+    74% 78%, 65% 95%, 50% 84%, 35% 95%,
+    26% 78%, 10% 80%, 15% 62%, 0% 56%,
+    12% 42%, 2% 28%, 22% 20%, 20% 2%, 37% 10%
+  );
+}
+.sticker-text {
+  position: relative; z-index: 1;
+  font-size: 14px; font-weight: 900; color: #e53e3e;
+  text-align: center; line-height: 1.2;
+}
+
+.menu-price-row { display: flex; align-items: center; gap: 6px; }
+.price-old { font-size: 13px; color: #aaa; text-decoration: line-through; }
 
 .menu-img {
   height: 180px;
@@ -613,6 +638,14 @@ products.value = productData.map((p: any) => ({
 
 .mini-total {
   color: #ffd700;
+}
+
+.cart-pop-enter-active { animation: popIn 0.4s ease; }
+.cart-pop-leave-active { animation: popIn 0.3s ease reverse; }
+@keyframes popIn {
+  0% { transform: translateY(-50%) scale(0); opacity: 0; }
+  60% { transform: translateY(-50%) scale(1.1); opacity: 1; }
+  100% { transform: translateY(-50%) scale(1); }
 }
 
 .cart-overlay {
@@ -837,11 +870,19 @@ products.value = productData.map((p: any) => ({
   margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #f0ebe5;
 }
 .detail-price-left { display: flex; flex-direction: column; gap: 2px; }
+.detail-prices { display: flex; align-items: center; gap: 8px; }
 .detail-price {
   font-size: 22px; font-weight: 800; color: #a80000;
 }
+.detail-price-old {
+  font-size: 15px; color: #aaa; text-decoration: line-through;
+}
+.detail-discount-tag {
+  padding: 3px 10px; background: #e53e3e; color: white;
+  border-radius: 6px; font-size: 13px; font-weight: 800;
+}
 .detail-vat {
-  font-size: 12px; color: #999; font-style: italic;
+  font-size: 12px; color: #999; font-style: italic; display: block; margin-top: 2px;
 }
 
 .detail-category {

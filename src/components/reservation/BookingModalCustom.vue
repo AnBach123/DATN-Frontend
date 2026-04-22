@@ -1,52 +1,45 @@
 <template>
-  <div v-if="isCustomOpen" class="booking-overlay" @click.self="closeCustom">
-    <div class="booking-panel">
-      <div class="booking-header">
-        <h3>Đặt bàn với thông tin khác</h3>
-        <button class="icon-btn" @click="closeCustom">×</button>
+  <div v-if="isCustomOpen" class="bk-overlay" @click.self="closeCustom">
+    <div class="bk-panel">
+      <!-- HEADER -->
+      <div class="bk-header">
+        <div class="bk-header-left">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+          <h3>Đặt bàn với thông tin khác</h3>
+        </div>
+        <button class="bk-close" @click="closeCustom">&times;</button>
       </div>
 
-      <form @submit.prevent="submitReservation">
-        <!-- Thông tin liên hệ - Có thể chỉnh sửa -->
-        <div class="info-section">
-          <div class="section-header">
-            <span class="section-title">Thông tin liên hệ</span>
-            <a 
-              href="#" 
-              class="back-link"
-              @click.prevent="backToMainForm"
-            >
-              Dùng thông tin tài khoản
-            </a>
+      <form @submit.prevent="submitReservation" class="bk-body">
+        <!-- THÔNG TIN LIÊN HỆ -->
+        <div class="bk-info">
+          <div class="bk-info-head">
+            <span>Thông tin người dùng bữa</span>
+            <a href="#" @click.prevent="backToMainForm">Dùng thông tin tài khoản</a>
           </div>
-          <div class="form-group">
-            <label>Họ và tên</label>
-            <input 
-              v-model="fullName" 
-              type="text" 
-              placeholder="Nhập họ và tên"
-              required 
-            />
-          </div>
-          <div class="form-group">
-            <label>Số điện thoại</label>
-            <input 
-              v-model="phone" 
-              type="tel" 
-              placeholder="Nhập số điện thoại"
-              :class="{ 'error-input': phoneError }"
-              required 
-            />
-            <span v-if="phoneError" class="text-danger">Số điện thoại phải có 10 chữ số</span>
+          <div class="bk-grid">
+            <div class="bk-field">
+              <label>Họ và tên</label>
+              <input v-model="fullName" type="text" placeholder="Nhập họ và tên" required />
+            </div>
+            <div class="bk-field">
+              <label>Số điện thoại</label>
+              <input v-model="phone" type="tel" placeholder="Nhập số điện thoại" :class="{ 'bk-error-input': phoneError }" required />
+              <small v-if="phoneError" class="bk-field-error">Số điện thoại phải có 10 chữ số</small>
+            </div>
           </div>
         </div>
 
-        <div class="grid">
-          <div class="form-group">
+        <!-- NGÀY + GIỜ -->
+        <div class="bk-grid">
+          <div class="bk-field">
             <label>Ngày đặt</label>
-            <input v-model="date" type="date" :min="today" required />
+            <div class="bk-date-wrap">
+              <input v-model="date" type="date" :min="today" required class="bk-date-input" />
+              <span class="bk-date-display" v-if="date">{{ formatDateDisplay(date) }}</span>
+            </div>
           </div>
-          <div class="form-group">
+          <div class="bk-field">
             <label>Giờ đến</label>
             <select v-model="time" required>
               <option value="">Chọn giờ</option>
@@ -55,42 +48,27 @@
           </div>
         </div>
 
-        <div class="grid">
-          <div class="form-group">
-            <label>Số lượng khách</label>
-            <input 
-              v-model.number="guestCount" 
-              type="number" 
-              min="1" 
-              max="302" 
-              placeholder="Nhập số khách"
-              required 
-            />
-          </div>
+        <!-- SỐ KHÁCH -->
+        <div class="bk-field">
+          <label>Số lượng khách</label>
+          <input v-model.number="guestCount" type="number" min="1" max="302" placeholder="Nhập số khách" required />
         </div>
 
-        <div v-if="foodNote" class="form-group">
+        <!-- MÓN ĐẶT TRƯỚC -->
+        <div v-if="foodNote" class="bk-field">
           <label>Món đặt trước (tham khảo)</label>
-          <textarea
-            :value="foodNote"
-            rows="3"
-            readonly
-            class="readonly-textarea"
-          ></textarea>
+          <textarea :value="foodNote" rows="3" readonly class="bk-readonly"></textarea>
         </div>
 
-        <div class="form-group">
-          <label>Ghi chú của khách</label>
-          <textarea
-            v-model="customerNote"
-            rows="3"
-            placeholder="Ví dụ: cần ghép bàn, có trẻ em..."
-          ></textarea>
+        <!-- GHI CHÚ -->
+        <div class="bk-field">
+          <label>Ghi chú</label>
+          <textarea v-model="customerNote" rows="3" placeholder="Ví dụ: cần ghép bàn, có trẻ em..."></textarea>
         </div>
 
-        <div v-if="msg" class="text-danger">{{ msg }}</div>
+        <div v-if="msg" class="bk-error">{{ msg }}</div>
 
-        <button class="btn-primary" :disabled="loadingSubmit">
+        <button class="bk-submit" :disabled="loadingSubmit">
           {{ loadingSubmit ? 'Đang đặt bàn...' : 'Xác nhận đặt bàn' }}
         </button>
       </form>
@@ -120,53 +98,40 @@ const loadingSubmit = ref(false)
 
 const today = new Date().toISOString().split('T')[0]
 
-// Lấy thông tin user từ localStorage để lấy customer_id
 const userInfo = computed(() => {
   try {
     const user = JSON.parse(localStorage.getItem('user') || '{}')
-    return {
-      fullName: user.fullName || '',
-      phoneNumber: user.phoneNumber || ''
-    }
+    return { fullName: user.fullName || '', phoneNumber: user.phoneNumber || '' }
   } catch {
     return { fullName: '', phoneNumber: '' }
   }
 })
+
+const formatDateDisplay = (val: string) => {
+  if (!val) return ''
+  const [y, m, d] = val.split('-')
+  return `${d}/${m}/${y}`
+}
 
 const timeSlots = computed(() => {
   const slots: string[] = []
   for (let h = 9; h <= 22; h++) {
     for (let m = 0; m < 60; m += 10) {
       if (h === 22 && m > 0) break
-      const hour = String(h).padStart(2, '0')
-      const minute = String(m).padStart(2, '0')
-      slots.push(`${hour}:${minute}`)
+      slots.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`)
     }
   }
-  
-  // Lọc bỏ giờ quá khứ nếu chọn ngày hôm nay
   if (date.value) {
     const selectedDate = new Date(date.value)
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    const todayDate = new Date()
+    todayDate.setHours(0, 0, 0, 0)
     selectedDate.setHours(0, 0, 0, 0)
-    
-    // Nếu chọn ngày hôm nay, chỉ hiện giờ từ hiện tại trở đi
-    if (selectedDate.getTime() === today.getTime()) {
+    if (selectedDate.getTime() === todayDate.getTime()) {
       const now = new Date()
-      const currentHour = now.getHours()
-      const currentMinute = now.getMinutes()
-      
-      return slots.filter(slot => {
-        const [h, m] = slot.split(':').map(Number)
-        if (h === undefined || m === undefined) return false
-        const slotTime = h * 60 + m
-        const currentTime = currentHour * 60 + currentMinute
-        return slotTime > currentTime
-      })
+      const cur = now.getHours() * 60 + now.getMinutes()
+      return slots.filter(s => { const [h, m] = s.split(':').map(Number); return h * 60 + m > cur })
     }
   }
-  
   return slots
 })
 
@@ -177,56 +142,35 @@ const buildReservedAt = () => {
   return `${date.value}T${time.value}`
 }
 
-const backToMainForm = () => {
-  closeCustom()
-  open(foodNote.value)
-}
+const backToMainForm = () => { closeCustom(); open(foodNote.value) }
 
 watch(isCustomOpen, (val) => {
   if (!val) return
-  msg.value = ''
-  phoneError.value = false
-  loadingSubmit.value = false
-  customerNote.value = ''
-  foodNote.value = presetNote.value || ''
-  fullName.value = ''
-  phone.value = ''
+  msg.value = ''; phoneError.value = false; loadingSubmit.value = false
+  customerNote.value = ''; foodNote.value = presetNote.value || ''
+  fullName.value = ''; phone.value = ''
 })
 
 const submitReservation = async () => {
   msg.value = ''
-
-  if (!validatePhone()) {
-    phoneError.value = true
-    return
-  }
+  if (!validatePhone()) { phoneError.value = true; return }
   phoneError.value = false
-
-  if (!guestCount.value || !date.value || !time.value) {
-    msg.value = 'Vui lòng chọn ngày, giờ và số khách'
-    return
-  }
+  if (!guestCount.value || !date.value || !time.value) { msg.value = 'Vui lòng chọn ngày, giờ và số khách'; return }
 
   loadingSubmit.value = true
   try {
-    const reservedAt = buildReservedAt()
-    const payload = {
+    const res = await createReservation({
       fullName: userInfo.value.fullName,
       phoneNumber: userInfo.value.phoneNumber,
       guestCount: guestCount.value,
-      reservedAt,
+      reservedAt: buildReservedAt(),
       note: customerNote.value,
       foodNote: foodNote.value,
       guestName: fullName.value,
       guestPhone: phone.value,
-    }
-
-    const res = await createReservation(payload)
+    })
     const data = res.data?.data
-    if (!data) {
-      msg.value = 'Đặt bàn thất bại'
-      return
-    }
+    if (!data) { msg.value = 'Đặt bàn thất bại'; return }
     sessionStorage.setItem('reservationSuccess', JSON.stringify(data))
     closeCustom()
     router.push('/reservation/success')
@@ -240,151 +184,71 @@ const submitReservation = async () => {
 </script>
 
 <style scoped>
-.booking-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1200;
+.bk-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+  display: flex; align-items: center; justify-content: center; z-index: 1200;
 }
 
-.booking-panel {
-  width: min(760px, 94vw);
-  background: #fff;
-  color: #2a1f1a;
-  border-radius: 18px;
-  padding: 24px;
-  max-height: 85vh;
-  overflow: auto;
+.bk-panel {
+  width: min(500px, 94vw); background: #faf8f5; border-radius: 18px;
+  max-height: 90vh; overflow: auto;
 }
 
-.booking-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 10px;
+.bk-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 16px 22px; background: #a80000; border-radius: 18px 18px 0 0;
+}
+.bk-header-left { display: flex; align-items: center; gap: 8px; }
+.bk-header h3 { margin: 0; font-size: 18px; font-weight: 800; color: white; }
+.bk-close {
+  width: 30px; height: 30px; border-radius: 50%; border: none;
+  background: rgba(255,255,255,0.2); color: white; font-size: 18px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+.bk-close:hover { background: rgba(255,255,255,0.35); }
+
+.bk-body { padding: 20px 22px 22px; }
+
+.bk-info {
+  background: white; border-radius: 10px; padding: 14px; border: 1px solid #ede8e0; margin-bottom: 16px;
+}
+.bk-info-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.bk-info-head span { font-size: 13px; font-weight: 700; color: #1a1a1a; }
+.bk-info-head a { font-size: 12px; color: #a80000; text-decoration: none; font-weight: 600; }
+.bk-info-head a:hover { text-decoration: underline; }
+
+.bk-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+.bk-field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+.bk-field label { font-size: 12px; font-weight: 600; color: #5a4a38; }
+
+.bk-field input, .bk-field select, .bk-field textarea {
+  border: 1.5px solid #e0d6ca; border-radius: 8px; padding: 9px 12px;
+  font-size: 14px; font-family: inherit; transition: 0.2s;
+}
+.bk-field input:focus, .bk-field select:focus, .bk-field textarea:focus {
+  border-color: #a80000; outline: none;
 }
 
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-bottom: 12px;
+.bk-error-input { border-color: #dc3545 !important; }
+.bk-field-error { color: #dc3545; font-size: 11px; }
+
+.bk-date-wrap { position: relative; }
+.bk-date-input { width: 100%; }
+.bk-date-display {
+  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  font-size: 13px; font-weight: 600; color: #a80000; pointer-events: none;
 }
 
-.form-group input,
-.form-group select,
-.form-group textarea {
-  border: 1px solid #ddd;
-  border-radius: 12px;
-  padding: 10px 12px;
-}
+.bk-readonly { background: #f8f5f0; cursor: not-allowed; color: #888; }
 
-.form-group input.error-input {
-  border-color: #dc3545;
-}
+.bk-error { color: #dc3545; font-size: 13px; margin-bottom: 10px; }
 
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 12px;
+.bk-submit {
+  width: 100%; border: none; background: #a80000; color: white;
+  padding: 12px; border-radius: 999px; font-weight: 700; font-size: 15px;
+  cursor: pointer; transition: 0.2s;
 }
-
-.icon-btn {
-  border: none;
-  background: #eee;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  cursor: pointer;
-}
-
-.btn-primary {
-  width: 100%;
-  border: none;
-  background: #f0b66a;
-  padding: 10px 20px;
-  border-radius: 999px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
-}
-
-.btn-primary:hover:not(:disabled) {
-  transform: translateY(-1px);
-  background: #f4c07a;
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.18);
-}
-
-.btn-primary:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.readonly-textarea {
-  background-color: #f5f5f5;
-  cursor: not-allowed;
-  color: #666;
-}
-
-.info-section {
-  background: #f8f9fa;
-  padding: 16px;
-  border-radius: 12px;
-  margin-bottom: 16px;
-}
-
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-.section-title {
-  font-weight: 600;
-  font-size: 0.95rem;
-  color: #2a1f1a;
-}
-
-.back-link {
-  color: #f0b66a;
-  font-size: 0.875rem;
-  text-decoration: none;
-  font-weight: 500;
-  transition: color 0.2s;
-}
-
-.back-link:hover {
-  color: #d89d4f;
-  text-decoration: underline;
-}
-
-.account-info {
-  background: #fff3e0;
-  padding: 12px 16px;
-  border-radius: 8px;
-  margin-bottom: 16px;
-  border-left: 4px solid #f0b66a;
-}
-
-.account-label {
-  font-size: 0.875rem;
-  color: #6c757d;
-  margin-bottom: 4px;
-}
-
-.account-value {
-  font-weight: 600;
-  color: #2a1f1a;
-  font-size: 0.95rem;
-}
-
-.text-danger {
-  color: #dc3545;
-  font-size: 0.875rem;
-  margin-bottom: 12px;
-}
+.bk-submit:hover:not(:disabled) { background: #8b0000; }
+.bk-submit:disabled { opacity: 0.4; cursor: not-allowed; }
 </style>
