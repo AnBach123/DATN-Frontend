@@ -140,7 +140,7 @@ onBeforeUnmount(() => window.removeEventListener('scroll', handleScroll))
 
 /* SCROLL TOP */
 .scroll-top {
-  position: fixed; bottom: 24px; right: 24px; z-index: 999;
+  position: fixed; bottom: 31px; right: 90px; z-index: 1101;
   width: 42px; height: 42px; border-radius: 50%; border: none;
   background: #c8a87c; color: white; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
