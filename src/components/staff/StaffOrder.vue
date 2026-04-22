@@ -22,26 +22,53 @@
       </div>
 
       <!-- GHI CHÚ MÓN TỪ KHÁCH -->
-      <div v-if="invoiceInfo?.foodNote && !foodNoteDismissed" class="food-note-banner">
+      <div v-if="invoiceInfo?.foodNote" class="food-note-banner" :class="{ 'fn-done': foodNoteState !== 'pending' }">
         <div class="fn-header">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e8a835" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
           <strong>Khách ghi chú món đặt trước</strong>
-          <button class="fn-dismiss" @click="foodNoteDismissed = true">&times;</button>
+          <span v-if="foodNoteState === 'ordered'" class="fn-state-tag fn-ordered-tag">Đã order</span>
+          <span v-else-if="foodNoteState === 'skipped'" class="fn-state-tag fn-skipped-tag">Đã bỏ qua</span>
         </div>
-        <div class="fn-items">
-          <div class="fn-item" v-for="(item, idx) in parsedFoodNotes" :key="idx">
-            <label class="fn-check">
-              <input type="checkbox" v-model="item.selected" />
-              <span>{{ item.text }}</span>
-            </label>
+
+        <!-- PENDING: checkbox + nút -->
+        <template v-if="foodNoteState === 'pending'">
+          <div class="fn-items">
+            <div class="fn-item" v-for="(item, idx) in parsedFoodNotes" :key="idx">
+              <label class="fn-check">
+                <input type="checkbox" v-model="item.selected" />
+                <span>{{ item.text }}</span>
+              </label>
+            </div>
           </div>
-        </div>
-        <div class="fn-actions">
-          <button class="fn-btn fn-add" @click="addFoodNotes" :disabled="selectedFoodNotes.length === 0">
-            Order {{ selectedFoodNotes.length }} món đã chọn
-          </button>
-          <button class="fn-btn fn-skip" @click="foodNoteDismissed = true">Bỏ qua</button>
-        </div>
+          <div class="fn-actions">
+            <button class="fn-btn fn-add" @click="addFoodNotes" :disabled="selectedFoodNotes.length === 0">
+              Order {{ selectedFoodNotes.length }} món đã chọn
+            </button>
+            <button class="fn-btn fn-skip" @click="skipFoodNotes">Bỏ qua</button>
+          </div>
+        </template>
+
+        <!-- ORDERED: hiện dấu tích/x -->
+        <template v-else-if="foodNoteState === 'ordered'">
+          <div class="fn-items">
+            <div class="fn-item" v-for="(item, idx) in parsedFoodNotes" :key="idx">
+              <span class="fn-result" :class="item.selected ? 'fn-ok' : 'fn-no'">
+                <span v-if="item.selected" class="fn-icon-ok">✓</span>
+                <span v-else class="fn-icon-no">✗</span>
+                {{ item.text }}
+              </span>
+            </div>
+          </div>
+        </template>
+
+        <!-- SKIPPED: danh sách text thường -->
+        <template v-else-if="foodNoteState === 'skipped'">
+          <div class="fn-items">
+            <div class="fn-item" v-for="(item, idx) in parsedFoodNotes" :key="idx">
+              <span class="fn-plain">{{ item.text }}</span>
+            </div>
+          </div>
+        </template>
       </div>
 
       <!-- HEADER -->
@@ -192,7 +219,10 @@ const tableNames = computed(() => {
 })
 
 // ===== GHI CHÚ MÓN =====
-const foodNoteDismissed = ref(false)
+const getFoodNoteKey = () => `byhat_foodnote_${invoiceId.value}`
+const foodNoteState = ref<'pending' | 'ordered' | 'skipped'>(
+  (sessionStorage.getItem(`byhat_foodnote_0`) as any) || 'pending'
+)
 
 interface FoodNoteItem { text: string; selected: boolean; productName: string; quantity: number }
 
@@ -213,6 +243,11 @@ const parseFoodNote = (note: string) => {
       quantity: match ? parseInt(match[2]) : 1
     }
   })
+}
+
+const skipFoodNotes = () => {
+  foodNoteState.value = 'skipped'
+  sessionStorage.setItem(getFoodNoteKey(), 'skipped')
 }
 
 const addFoodNotes = async () => {
@@ -243,7 +278,11 @@ const addFoodNotes = async () => {
 
   try {
     await addItemsToInvoice(invoiceId.value, items)
-    foodNoteDismissed.value = true
+    foodNoteState.value = 'ordered'
+    sessionStorage.setItem(getFoodNoteKey(), 'ordered')
+    // Lưu trạng thái selected từng món
+    const selections = parsedFoodNotes.value.map(i => i.selected)
+    sessionStorage.setItem(getFoodNoteKey() + '_sel', JSON.stringify(selections))
     alert(`Đã order ${items.length} món từ ghi chú khách!`)
     // Reload trang
     router.go(0)
@@ -351,6 +390,22 @@ async function loadInvoiceInfo() {
     // Parse ghi chú món nếu có
     if (invoiceInfo.value?.foodNote) {
       parseFoodNote(invoiceInfo.value.foodNote)
+      const saved = sessionStorage.getItem(getFoodNoteKey())
+      if (saved === 'ordered' || saved === 'skipped') {
+        foodNoteState.value = saved
+        // Restore trạng thái selected từng món
+        const selJson = sessionStorage.getItem(getFoodNoteKey() + '_sel')
+        if (selJson) {
+          try {
+            const selections = JSON.parse(selJson) as boolean[]
+            parsedFoodNotes.value.forEach((item, idx) => {
+              if (idx < selections.length) item.selected = selections[idx] ?? true
+            })
+          } catch { /* ignore */ }
+        }
+      } else {
+        foodNoteState.value = 'pending'
+      }
     }
 
     if (!invoiceInfo.value) {
@@ -618,6 +673,18 @@ function formatPrice(price: number) {
 .fn-add:disabled { opacity: 0.4; cursor: not-allowed; }
 .fn-skip { background: #eee; color: #666; }
 .fn-skip:hover { background: #ddd; }
+
+.fn-done { border-color: #ddd; background: #fafafa; }
+.fn-state-tag { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 999px; margin-left: auto; }
+.fn-ordered-tag { background: #d1fae5; color: #065f46; }
+.fn-skipped-tag { background: #f3f4f6; color: #888; }
+
+.fn-result { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.fn-ok { color: #065f46; }
+.fn-no { color: #991b1b; text-decoration: line-through; opacity: 0.6; }
+.fn-icon-ok { color: #10b981; font-weight: 800; font-size: 16px; }
+.fn-icon-no { color: #dc3545; font-weight: 800; font-size: 16px; }
+.fn-plain { font-size: 14px; color: #888; }
 
 .header-section {
   display: flex;
