@@ -1814,8 +1814,27 @@ const checkoutWithAutoPrint = async (
 }
 
 const cancelInvoice = async () => {
-  if (!tableIdInput.value) return
-  
+  if (!tableIdInput.value || !payment.value) return
+
+  // Check: chỉ cho hủy khi tất cả món đều ORDERED (bếp chưa làm)
+  const items = payment.value.items || []
+  const hasProcessed = items.some((item: any) =>
+    item.status === 'IN_PROGRESS' || item.status === 'DONE' || item.status === 'SERVED'
+  )
+
+  if (hasProcessed) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Không thể hủy hóa đơn',
+      html: `
+        <p style="margin-top: 10px;">Hóa đơn có món đang được chế biến hoặc đã hoàn thành.</p>
+        <p style="font-size: 13px; color: #666;">Chỉ có thể hủy khi tất cả món còn ở trạng thái "Đã đặt" (chưa được bếp xử lý).</p>
+      `,
+      confirmButtonColor: '#a80000',
+    })
+    return
+  }
+
   // Confirmation dialog before canceling
   const result = await Swal.fire({
     icon: 'warning',

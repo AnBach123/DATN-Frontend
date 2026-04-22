@@ -21,6 +21,29 @@
         </div>
       </div>
 
+      <!-- GHI CHÚ MÓN TỪ KHÁCH -->
+      <div v-if="invoiceInfo?.foodNote && !foodNoteDismissed" class="food-note-banner">
+        <div class="fn-header">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e8a835" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <strong>Khách ghi chú món đặt trước</strong>
+          <button class="fn-dismiss" @click="foodNoteDismissed = true">&times;</button>
+        </div>
+        <div class="fn-items">
+          <div class="fn-item" v-for="(item, idx) in parsedFoodNotes" :key="idx">
+            <label class="fn-check">
+              <input type="checkbox" v-model="item.selected" />
+              <span>{{ item.text }}</span>
+            </label>
+          </div>
+        </div>
+        <div class="fn-actions">
+          <button class="fn-btn fn-add" @click="addFoodNotes" :disabled="selectedFoodNotes.length === 0">
+            Order {{ selectedFoodNotes.length }} món đã chọn
+          </button>
+          <button class="fn-btn fn-skip" @click="foodNoteDismissed = true">Bỏ qua</button>
+        </div>
+      </div>
+
       <!-- HEADER -->
       <div class="header-section">
         <div>
@@ -168,6 +191,67 @@ const tableNames = computed(() => {
   return invoiceInfo.value.tables.map(t => t.tableName).join(', ')
 })
 
+// ===== GHI CHÚ MÓN =====
+const foodNoteDismissed = ref(false)
+
+interface FoodNoteItem { text: string; selected: boolean; productName: string; quantity: number }
+
+const parsedFoodNotes = ref<FoodNoteItem[]>([])
+
+const selectedFoodNotes = computed(() => parsedFoodNotes.value.filter(i => i.selected))
+
+const parseFoodNote = (note: string) => {
+  // Format: "Món đặt tham khảo: Tên món x 2, Tên món 2 x 1"
+  const clean = note.replace(/^Món đặt tham khảo:\s*/i, '')
+  const items = clean.split(',').map(s => s.trim()).filter(Boolean)
+  parsedFoodNotes.value = items.map(item => {
+    const match = item.match(/^(.+?)\s*x\s*(\d+)$/i)
+    return {
+      text: item,
+      selected: true,
+      productName: match ? match[1].trim() : item,
+      quantity: match ? parseInt(match[2]) : 1
+    }
+  })
+}
+
+const addFoodNotes = async () => {
+  if (selectedFoodNotes.value.length === 0) return
+
+  const items: OrderItemRequest[] = []
+
+  for (const fn of selectedFoodNotes.value) {
+    // Tìm product/combo match theo tên
+    const product = products.value.find((p: any) =>
+      p.productName.toLowerCase() === fn.productName.toLowerCase()
+    )
+    const combo = combos.value.find((c: any) =>
+      c.comboName?.toLowerCase() === fn.productName.toLowerCase()
+    )
+
+    if (product) {
+      items.push({ itemType: 'PRODUCT', productId: product.id ?? product.productId, quantity: fn.quantity })
+    } else if (combo) {
+      items.push({ itemType: 'COMBO', productComboId: combo.id, quantity: fn.quantity })
+    }
+  }
+
+  if (items.length === 0) {
+    alert('Không tìm thấy sản phẩm phù hợp với ghi chú')
+    return
+  }
+
+  try {
+    await addItemsToInvoice(invoiceId.value, items)
+    foodNoteDismissed.value = true
+    alert(`Đã order ${items.length} món từ ghi chú khách!`)
+    // Reload trang
+    router.go(0)
+  } catch (e: any) {
+    alert(e?.response?.data?.message || 'Order thất bại')
+  }
+}
+
 // Get current staff ID from JWT token or localStorage
 function getCurrentStaffId(): number | null {
   try {
@@ -263,7 +347,12 @@ async function loadInvoiceInfo() {
     // Get all in-progress invoices and find the matching one
     const invoices = await getInProgressInvoices()
     invoiceInfo.value = invoices.find(inv => inv.invoiceId === invoiceId.value) || null
-    
+
+    // Parse ghi chú món nếu có
+    if (invoiceInfo.value?.foodNote) {
+      parseFoodNote(invoiceInfo.value.foodNote)
+    }
+
     if (!invoiceInfo.value) {
       alert('Không tìm thấy hóa đơn')
       router.push({ name: 'staff-tables' })
@@ -501,6 +590,35 @@ function formatPrice(price: number) {
 }
 
 /* HEADER */
+/* ===== FOOD NOTE BANNER ===== */
+.food-note-banner {
+  background: #fffbf0; border: 2px solid #e8a835; border-radius: 12px;
+  padding: 16px; margin-bottom: 16px;
+}
+.fn-header {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 12px;
+}
+.fn-header strong { flex: 1; font-size: 15px; color: #1a1a1a; }
+.fn-dismiss {
+  width: 26px; height: 26px; border-radius: 50%; border: none;
+  background: #f0e8d8; color: #999; font-size: 16px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.fn-items { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+.fn-item { padding: 8px 12px; background: white; border-radius: 8px; border: 1px solid #ede8e0; }
+.fn-check { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; }
+.fn-check input { accent-color: #a80000; cursor: pointer; width: 16px; height: 16px; }
+.fn-actions { display: flex; gap: 8px; }
+.fn-btn {
+  padding: 8px 20px; border-radius: 999px; font-weight: 700; font-size: 13px;
+  cursor: pointer; transition: 0.2s; border: none;
+}
+.fn-add { background: #a80000; color: white; }
+.fn-add:hover { background: #8b0000; }
+.fn-add:disabled { opacity: 0.4; cursor: not-allowed; }
+.fn-skip { background: #eee; color: #666; }
+.fn-skip:hover { background: #ddd; }
+
 .header-section {
   display: flex;
   justify-content: space-between;

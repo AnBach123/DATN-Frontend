@@ -39,6 +39,7 @@ export interface InvoiceGroup {
   tables: TableInfo[]
   servingStaffId?: number | null
   servingStaffName?: string | null
+  foodNote?: string | null
 }
 
 export interface InvoiceItemResponse {

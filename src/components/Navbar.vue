@@ -52,6 +52,14 @@
             Đặt bàn ngay
           </button>
 
+          <!-- ĐƠN ĐẶT BÀN -->
+          <RouterLink to="/my-reservations" class="nav-rsv-btn" title="Đơn đặt bàn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+            </svg>
+            <span v-if="rsvCount > 0" class="rsv-badge">{{ rsvCount }}</span>
+          </RouterLink>
+
           <!-- PROFILE DROPDOWN -->
           <div class="profile-wrapper" @click.stop="toggleDropdown">
             <div class="profile-trigger">
@@ -81,7 +89,8 @@
 import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useBookingStore } from '@/composables/bookingStore'
-import { getProfile } from '@/services/customer/profileApi' // ✅ THÊM
+import { getProfile } from '@/services/customer/profileApi'
+import axiosInstance from '@/services/axiosInstance'
 import logo from '@/assets/logo.png'
 
 const { open: openBooking } = useBookingStore()
@@ -89,6 +98,17 @@ const route = useRoute()
 const isHomePage = computed(() => route.path === '/home')
 
 const showDropdown = ref(false)
+const rsvCount = ref(0)
+
+const loadRsvCount = async () => {
+  try {
+    const res = await axiosInstance.get('/api/invoice/my')
+    const pending = (res.data || []).filter((i: any) =>
+      i.reservedAt && ['PENDING_CONFIRMATION', 'RESERVED', 'CONFIRMED'].includes(i.status)
+    )
+    rsvCount.value = pending.length
+  } catch { rsvCount.value = 0 }
+}
 const fullName = ref('User')
 
 // ========================
@@ -156,6 +176,7 @@ const loadUser = async () => {
 
 onMounted(() => {
   loadUser()
+  loadRsvCount()
   document.addEventListener('click', handleClickOutside)
   window.addEventListener('scroll', handleScroll, { passive: true })
 })
@@ -409,6 +430,22 @@ const handleClickOutside = (e: MouseEvent) => {
 }
 
 /* ===== BUTTON ===== */
+.nav-rsv-btn {
+  position: relative; border: none; background: rgba(255,255,255,0.12);
+  color: white; width: 36px; height: 36px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: 0.2s;
+}
+.nav-rsv-btn:hover { background: rgba(255,255,255,0.25); }
+
+.rsv-badge {
+  position: absolute; top: -4px; right: -4px;
+  min-width: 18px; height: 18px; border-radius: 999px;
+  background: #ffd700; color: #1a1a1a; font-size: 11px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0 4px;
+}
+
 .btn-reserve {
   display: flex;
   align-items: center;

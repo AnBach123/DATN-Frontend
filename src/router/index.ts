@@ -40,6 +40,7 @@ import CustomDashboardView from '@/views/admin/CustomDashboardView.vue'
 import BlogView from '@/views/admin/BlogView.vue'
 import BlogListView from '@/views/blog/BlogListView.vue'
 import BlogDetailView from '@/views/blog/BlogDetailView.vue'
+import MyReservationsView from '@/views/customer/MyReservationsView.vue'
 
 // Route guard helper
 function checkRole(allowedRoles: string[]) {
@@ -102,6 +103,7 @@ const router = createRouter({
         { path: 'reviews', name: 'all-reviews', component: AllReviewsView },
         { path: 'posts', name: 'blog-list', component: BlogListView },
         { path: 'posts/:id', name: 'blog-detail', component: BlogDetailView },
+        { path: 'my-reservations', name: 'my-reservations', component: MyReservationsView },
       ],
     },
 

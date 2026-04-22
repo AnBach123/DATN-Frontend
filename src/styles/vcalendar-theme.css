@@ -1,0 +1,151 @@
+/* ===== V-CALENDAR CUSTOM THEME - BYHAT ===== */
+
+/* Popover */
+.vc-popover-content {
+  border-radius: 14px !important;
+  box-shadow: 0 10px 32px rgba(0,0,0,0.12) !important;
+  border: 1px solid #e0dbd4 !important;
+  background: white !important;
+}
+
+/* Container */
+.vc-container {
+  font-family: 'Manrope', sans-serif !important;
+  border: none !important;
+  background: white !important;
+}
+
+
+/* Header: tháng năm */
+.vc-header {
+  padding: 16px 14px 12px !important;
+  margin-bottom: 15px !important;
+}
+
+.vc-title {
+  font-weight: 700 !important;
+  font-size: 15px !important;
+  color: #333 !important;
+}
+
+/* Mũi tên */
+.vc-arrow {
+  color: #555 !important;
+  border-radius: 6px !important;
+  width: 30px !important;
+  height: 30px !important;
+}
+.vc-arrow:hover {
+  background: #f5f0eb !important;
+  color: #a80000 !important;
+}
+
+/* Thứ trong tuần */
+.vc-weekday {
+  color: #888 !important;
+  font-weight: 600 !important;
+  font-size: 12px !important;
+  padding: 8px 0 4px !important;
+}
+
+/* Weeks */
+.vc-weeks {
+  padding: 4px 10px 12px !important;
+}
+
+/* Ngày bình thường */
+.vc-day-content {
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  border-radius: 8px !important;
+  width: 36px !important;
+  height: 36px !important;
+  line-height: 36px !important;
+  transition: all 0.15s !important;
+  color: #333 !important;
+}
+
+.vc-day-content:hover {
+  background: #f5f0eb !important;
+  color: #a80000 !important;
+}
+
+/* Ngày hôm nay - viền nhẹ */
+.vc-day.is-today .vc-day-content {
+  border: 2px solid #a80000 !important;
+  color: #a80000 !important;
+  font-weight: 700 !important;
+  background: transparent !important;
+}
+
+/* ===== NGÀY ĐƯỢC CHỌN ===== */
+.vc-highlight {
+  border-radius: 8px !important;
+}
+
+.vc-highlight-bg-solid {
+  background: #a80000 !important;
+  border-radius: 8px !important;
+}
+
+.vc-highlight-content-solid,
+.vc-highlight-content-solid:hover {
+  color: white !important;
+  font-weight: 700 !important;
+  background: transparent !important;
+}
+
+/* Khi ngày hôm nay cũng là ngày được chọn */
+.vc-day.is-today .vc-highlight-content-solid {
+  border: none !important;
+  color: white !important;
+}
+
+/* Disabled (quá khứ) */
+.vc-day-content.vc-disabled {
+  opacity: 0.25 !important;
+  color: #ccc !important;
+}
+
+/* Ngày ngoài tháng */
+.vc-day.is-not-in-month .vc-day-content {
+  color: #ccc !important;
+}
+
+/* ===== NAV (chọn tháng/năm) ===== */
+.vc-nav-popover-container {
+  border-radius: 12px !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.1) !important;
+}
+
+.vc-nav-title {
+  color: #333 !important;
+  font-weight: 700 !important;
+}
+
+.vc-nav-item {
+  border-radius: 8px !important;
+  font-weight: 500 !important;
+  font-size: 12px !important;
+}
+
+.vc-pane {
+  min-width: 320px !important;
+}
+
+.vc-nav-item.is-active {
+  background: #a80000 !important;
+  color: white !important;
+}
+
+.vc-nav-item:hover {
+  background: #f5f0eb !important;
+  color: #a80000 !important;
+}
+
+.vc-nav-arrow {
+  color: #555 !important;
+}
+.vc-nav-arrow:hover {
+  background: #f5f0eb !important;
+}

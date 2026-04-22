@@ -5,7 +5,7 @@
       class="sidebar-toggle" 
       @click="toggleSidebar"
       :class="{ 'has-notifications': notifications.length > 0 }"
-      :title="isOpen ? 'Đóng' : 'Mở thông báo no-show'"
+      :title="isOpen ? 'Đóng' : 'Thông báo'"
     >
       <i :class="isOpen ? 'bi bi-chevron-right' : 'bi bi-chevron-left'"></i>
       <span v-if="notifications.length > 0 && !isOpen" class="notification-badge">{{ notifications.length }}</span>
@@ -15,8 +15,8 @@
     <div class="noshow-notification-panel">
       <div class="notification-header">
         <h3>
-          <i class="bi bi-person-x-fill me-2"></i>
-          Khách không đến
+          <i class="bi bi-bell-fill me-2"></i>
+          Thông báo
         </h3>
         <span class="notification-count" :class="{ 'has-notifications': notifications.length > 0 }">
           {{ notifications.length }}
@@ -29,7 +29,7 @@
 
       <div v-if="notifications.length === 0" class="no-notifications">
         <i class="bi bi-check-circle"></i>
-        <p>Không có thông báo no-show</p>
+        <p>Không có thông báo mới</p>
       </div>
 
       <div v-else class="notification-list">
@@ -41,7 +41,9 @@
           <div class="notification-content">
             <div class="reservation-info">
               <strong>{{ notification.reservationCode }}</strong>
-              <span class="status-badge">Đã hủy tự động</span>
+              <span class="status-badge" :class="notification.notificationType === 'CUSTOMER_CANCELLED' ? 'badge-cancel' : 'badge-noshow'">
+                {{ notification.notificationType === 'CUSTOMER_CANCELLED' ? 'Khách tự hủy' : 'Không đến' }}
+              </span>
             </div>
             
             <div class="customer-info">
@@ -174,7 +176,8 @@ const handleNewNotification = (notification: NoShowNotification) => {
     
     // Show browser notification if supported
     if ('Notification' in window && Notification.permission === 'granted') {
-      new Notification('Khách không đến', {
+      const title = notification.notificationType === 'CUSTOMER_CANCELLED' ? 'Khách hủy đơn đặt bàn' : 'Khách không đến'
+      new Notification(title, {
         body: `${notification.customerName} - ${notification.reservationCode}`,
         icon: '/favicon.ico'
       });
@@ -547,13 +550,14 @@ onUnmounted(() => {
 }
 
 .status-badge {
-  background: #dc3545;
   color: white;
   padding: 4px 10px;
   border-radius: 8px;
   font-size: 11px;
   font-weight: 700;
 }
+.badge-noshow { background: #dc3545; }
+.badge-cancel { background: #e8a835; color: #1a1a1a; }
 
 .customer-info,
 .phone-info,

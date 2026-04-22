@@ -34,17 +34,27 @@
         <div class="bk-grid">
           <div class="bk-field">
             <label>Ngày đặt</label>
-            <div class="bk-date-wrap">
-              <input v-model="date" type="date" :min="today" required class="bk-date-input" />
-              <span class="bk-date-display" v-if="date">{{ formatDateDisplay(date) }}</span>
-            </div>
+            <button type="button" class="bk-date-btn" @click="showCalendar = true">
+              {{ dateObj ? dateObj.toLocaleDateString('vi-VN', { day: '2-digit', month: 'long', year: 'numeric' }) : 'Chọn ngày' }}
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+            </button>
           </div>
           <div class="bk-field">
             <label>Giờ đến</label>
-            <select v-model="time" required>
-              <option value="">Chọn giờ</option>
-              <option v-for="t in timeSlots" :key="t" :value="t">{{ t }}</option>
-            </select>
+            <div class="bk-time-wrap">
+              <button type="button" class="bk-date-btn" @click="showTime = !showTime">
+                {{ time || 'Chọn giờ' }}
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              </button>
+              <div v-if="showTime" class="bk-time-dropdown">
+                <div
+                  v-for="t in timeSlots" :key="t"
+                  class="bk-time-option"
+                  :class="{ active: t === time }"
+                  @click="time = t; showTime = false"
+                >{{ t }}</div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -73,11 +83,23 @@
         </button>
       </form>
     </div>
+
+    <!-- CALENDAR POPUP -->
+    <div v-if="showCalendar" class="cal-overlay" @click.self="showCalendar = false">
+      <div class="cal-modal">
+        <VDatePicker v-model="dateObj" :min-date="new Date()" :locale="'vi'" @dayclick="showCalendar = false" expanded />
+        <div class="cal-footer">
+          <button type="button" class="cal-btn" @click="dateObj = new Date(); showCalendar = false">Hôm nay</button>
+          <button type="button" class="cal-btn" @click="showCalendar = false">Đóng</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { DatePicker as VDatePicker } from 'v-calendar'
 import { useRouter } from 'vue-router'
 import { createReservation } from '@/services/reservationApi'
 import { useBookingStore } from '@/composables/bookingStore'
@@ -87,7 +109,9 @@ const { isCustomOpen, presetNote, closeCustom, open } = useBookingStore()
 
 const fullName = ref('')
 const phone = ref('')
-const date = ref('')
+const today = new Date().toISOString().split('T')[0]
+const date = ref(today)
+const dateObj = ref<Date>(new Date())
 const time = ref('')
 const guestCount = ref<number | null>(null)
 const customerNote = ref('')
@@ -95,8 +119,8 @@ const foodNote = ref('')
 const msg = ref('')
 const phoneError = ref(false)
 const loadingSubmit = ref(false)
-
-const today = new Date().toISOString().split('T')[0]
+const showCalendar = ref(false)
+const showTime = ref(false)
 
 const userInfo = computed(() => {
   try {
@@ -107,11 +131,7 @@ const userInfo = computed(() => {
   }
 })
 
-const formatDateDisplay = (val: string) => {
-  if (!val) return ''
-  const [y, m, d] = val.split('-')
-  return `${d}/${m}/${y}`
-}
+
 
 const timeSlots = computed(() => {
   const slots: string[] = []
@@ -128,7 +148,7 @@ const timeSlots = computed(() => {
     selectedDate.setHours(0, 0, 0, 0)
     if (selectedDate.getTime() === todayDate.getTime()) {
       const now = new Date()
-      const cur = now.getHours() * 60 + now.getMinutes()
+      const cur = now.getHours() * 60 + now.getMinutes() + 30
       return slots.filter(s => { const [h, m] = s.split(':').map(Number); return h * 60 + m > cur })
     }
   }
@@ -142,6 +162,15 @@ const buildReservedAt = () => {
   return `${date.value}T${time.value}`
 }
 
+watch(dateObj, (val) => {
+  if (val) {
+    const y = val.getFullYear()
+    const m = String(val.getMonth() + 1).padStart(2, '0')
+    const d = String(val.getDate()).padStart(2, '0')
+    date.value = `${y}-${m}-${d}`
+  }
+})
+
 const backToMainForm = () => { closeCustom(); open(foodNote.value) }
 
 watch(isCustomOpen, (val) => {
@@ -149,10 +178,22 @@ watch(isCustomOpen, (val) => {
   msg.value = ''; phoneError.value = false; loadingSubmit.value = false
   customerNote.value = ''; foodNote.value = presetNote.value || ''
   fullName.value = ''; phone.value = ''
+  dateObj.value = new Date()
+  date.value = new Date().toISOString().split('T')[0]
+  showCalendar.value = false
+  showTime.value = false
 })
 
 const submitReservation = async () => {
   msg.value = ''
+
+  const cooldown = localStorage.getItem('byhat_cancel_cooldown')
+  if (cooldown && Date.now() < Number(cooldown)) {
+    const mins = Math.ceil((Number(cooldown) - Date.now()) / 60000)
+    msg.value = `Bạn vừa hủy đơn đặt bàn. Vui lòng chờ thêm ${mins} phút để đặt bàn mới.`
+    return
+  }
+
   if (!validatePhone()) { phoneError.value = true; return }
   phoneError.value = false
   if (!guestCount.value || !date.value || !time.value) { msg.value = 'Vui lòng chọn ngày, giờ và số khách'; return }
@@ -241,6 +282,48 @@ const submitReservation = async () => {
 }
 
 .bk-readonly { background: #f8f5f0; cursor: not-allowed; color: #888; }
+
+.bk-date-btn {
+  width: 100%; display: flex; justify-content: space-between; align-items: center;
+  border: 1.5px solid #e0d6ca; border-radius: 8px; padding: 9px 12px;
+  font-size: 14px; font-family: inherit; background: white; cursor: pointer;
+  color: #333; transition: 0.2s;
+}
+.bk-date-btn:hover { border-color: #a80000; }
+.bk-date-btn svg { color: #a80000; flex-shrink: 0; }
+
+/* TIME DROPDOWN */
+.bk-time-wrap { position: relative; }
+.bk-time-dropdown {
+  position: absolute; top: 100%; left: 0; right: 0; z-index: 10;
+  background: white; border: 1.5px solid #e0d6ca; border-radius: 8px;
+  margin-top: 4px; max-height: 200px; overflow-y: auto;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+}
+.bk-time-option {
+  padding: 8px 14px; font-size: 14px; cursor: pointer; transition: 0.15s;
+}
+.bk-time-option:hover { background: #f5f0eb; color: #a80000; }
+.bk-time-option.active { background: #a80000; color: white; font-weight: 700; }
+
+.cal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+  display: flex; align-items: center; justify-content: center; z-index: 1300;
+}
+.cal-modal {
+  background: white; border-radius: 14px; overflow: hidden;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.18);
+}
+.cal-footer {
+  display: flex; justify-content: center; gap: 10px; padding: 10px 16px 16px;
+  border-top: 1px solid #f0ebe5;
+}
+.cal-btn {
+  padding: 8px 20px; border: 1.5px solid #d0c8be; border-radius: 8px;
+  background: white; color: #555; font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: 0.2s;
+}
+.cal-btn:hover { border-color: #a80000; color: #a80000; }
 
 .bk-error { color: #dc3545; font-size: 13px; margin-bottom: 10px; }
 
