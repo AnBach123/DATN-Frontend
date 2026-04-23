@@ -829,7 +829,7 @@ onMounted(() => {
     tableIdInput.value = props.initialTableId
     loadPayment()
   }
-  
+
   // Check if reset query param is present
   if (route.query.reset === 'true') {
     payment.value = null
@@ -1624,10 +1624,10 @@ const checkout = async () => {
     // Reset form
     payment.value = null
     tableIdInput.value = null
-    
+
     // Emit payment complete event
     emit('paymentComplete')
-    
+
   } catch (error: any) {
     let errorMessage = 'Có lỗi xảy ra khi thanh toán'
     
@@ -1794,10 +1794,10 @@ const checkoutWithAutoPrint = async (
     // Reset form
     payment.value = null
     tableIdInput.value = null
-    
+
     // Emit payment complete event
     emit('paymentComplete')
-    
+
   } catch (error: any) {
     Swal.fire({
       icon: 'error',
@@ -1871,6 +1871,7 @@ const cancelInvoice = async () => {
       timerProgressBar: true,
     })
     payment.value = null
+    tableIdInput.value = null
     emit('cancelComplete')
   } catch (error: any) {
     Swal.fire({

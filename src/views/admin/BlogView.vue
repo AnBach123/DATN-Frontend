@@ -11,8 +11,10 @@
         <input v-model="searchKeyword" placeholder="Tìm tiêu đề bài viết..." class="search-input" @input="handleSearch" />
         <select v-model="filterStatus" class="filter-select" @change="applyFilter">
           <option value="">Tất cả</option>
-          <option value="published">Đã xuất bản</option>
-          <option value="draft">Bản nháp</option>
+          <option value="PUBLISHED">Đã xuất bản</option>
+          <option value="SCHEDULED">Đã lên lịch</option>
+          <option value="DRAFT">Bản nháp</option>
+          <option value="EXPIRED">Đã hết hạn</option>
         </select>
         <select v-model="filterCategory" class="filter-select" @change="applyFilter">
           <option value="">Tất cả danh mục</option>
@@ -37,15 +39,16 @@
             <th>Lượt xem</th>
             <th>Ngày tạo</th>
             <th>Trạng thái</th>
+            <th>Thời hạn</th>
             <th>Hành động</th>
           </tr>
         </thead>
         <tbody>
           <tr v-if="loading">
-            <td colspan="9" class="loading-cell">Đang tải...</td>
+            <td colspan="10" class="loading-cell">Đang tải...</td>
           </tr>
           <tr v-else-if="pagedPosts.length === 0">
-            <td colspan="9" class="empty-cell">Không có bài viết</td>
+            <td colspan="10" class="empty-cell">Không có bài viết</td>
           </tr>
           <tr v-else v-for="post in pagedPosts" :key="post.id">
             <td>{{ post.id }}</td>
@@ -61,9 +64,18 @@
             <td class="text-center">{{ post.viewCount }}</td>
             <td>{{ formatDate(post.createdAt) }}</td>
             <td>
-              <span :class="['status', post.isPublished ? 'published' : 'draft']">
-                {{ post.isPublished ? 'Đã xuất bản' : 'Bản nháp' }}
+              <span :class="['status', statusClass(post.status)]">
+                {{ statusLabel(post.status) }}
               </span>
+            </td>
+            <td class="schedule-cell">
+              <div v-if="post.status === 'SCHEDULED'" class="schedule-info">
+                <span class="schedule-icon">⏰</span> {{ formatDateTime(post.scheduledPublishAt) }}
+              </div>
+              <div v-else-if="post.expiresAt" class="schedule-info" :class="{ 'expired': post.status === 'EXPIRED' }">
+                <span class="schedule-icon">⏳</span> {{ formatDateTime(post.expiresAt) }}
+              </div>
+              <span v-else class="no-expiry">Vô thời hạn</span>
             </td>
             <td>
               <div class="action-btns">
@@ -114,15 +126,50 @@
 
             <div class="form-group">
               <label>Trạng thái</label>
-              <select v-model="form.isPublished">
+              <select v-model="form.isPublished" :disabled="publishMode === 'schedule'">
                 <option :value="true">Xuất bản</option>
                 <option :value="false">Bản nháp</option>
               </select>
+              <span v-if="publishMode === 'schedule'" class="field-hint">Sẽ tự xuất bản khi đến giờ</span>
             </div>
 
             <div class="form-group full">
               <label>Tóm tắt</label>
               <textarea v-model="form.summary" rows="2" placeholder="Tóm tắt ngắn gọn nội dung bài viết..."></textarea>
+            </div>
+
+            <div class="form-group full schedule-section">
+              <label class="section-label">Lịch đăng bài</label>
+              <div class="publish-modes">
+                <label class="radio-option">
+                  <input type="radio" v-model="publishMode" value="now" />
+                  <span>Đăng ngay / quản lý thủ công</span>
+                </label>
+                <label class="radio-option">
+                  <input type="radio" v-model="publishMode" value="schedule" />
+                  <span>Lên lịch đăng</span>
+                </label>
+              </div>
+
+              <div v-if="publishMode === 'schedule'" class="schedule-grid">
+                <div class="form-group">
+                  <label>Thời gian đăng bài <span class="required">*</span></label>
+                  <input type="datetime-local" v-model="form.scheduledPublishAt" :min="minDateTime" />
+                </div>
+              </div>
+
+              <div class="expiry-toggle">
+                <label class="checkbox-option">
+                  <input type="checkbox" v-model="hasExpiry" />
+                  <span>Đặt hạn kết thúc</span>
+                </label>
+              </div>
+              <div v-if="hasExpiry" class="schedule-grid">
+                <div class="form-group">
+                  <label>Hạn kết thúc</label>
+                  <input type="datetime-local" v-model="form.expiresAt" :min="minExpiryDateTime" />
+                </div>
+              </div>
             </div>
 
             <div class="form-group full">
@@ -188,6 +235,8 @@ import { ref, computed, onMounted } from 'vue'
 import * as blogApi from '@/services/blogApi'
 import axiosInstance from '@/services/axiosInstance'
 
+type PostStatus = 'DRAFT' | 'SCHEDULED' | 'PUBLISHED' | 'EXPIRED'
+
 type Post = {
   id: number
   title: string
@@ -198,9 +247,12 @@ type Post = {
   author: string
   isPublished: boolean
   viewCount: number
+  status: PostStatus
   createdAt: string
   updatedAt: string
   publishedAt: string
+  scheduledPublishAt: string | null
+  expiresAt: string | null
 }
 
 const allPosts = ref<Post[]>([])
@@ -226,7 +278,25 @@ const form = ref({
   content: '',
   thumbnailUrl: '',
   category: 'Tin tức',
-  isPublished: false
+  isPublished: false,
+  scheduledPublishAt: '' as string,
+  expiresAt: '' as string
+})
+
+const publishMode = ref<'now' | 'schedule'>('now')
+const hasExpiry = ref(false)
+
+// Giới hạn tối thiểu cho datetime-local là hiện tại + 1 phút
+const toLocalInputValue = (date: Date): string => {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+const minDateTime = computed(() => toLocalInputValue(new Date(Date.now() + 60_000)))
+const minExpiryDateTime = computed(() => {
+  if (publishMode.value === 'schedule' && form.value.scheduledPublishAt) {
+    return form.value.scheduledPublishAt
+  }
+  return toLocalInputValue(new Date(Date.now() + 60_000))
 })
 
 const imageInput = ref<HTMLInputElement | null>(null)
@@ -264,15 +334,64 @@ const pagedPosts = computed(() => {
   return filteredPosts.value.slice(start, start + PAGE_SIZE)
 })
 
-const formatDate = (dateStr: string) => {
-  if (!dateStr) return ''
-  const d = new Date(dateStr)
-  if (isNaN(d.getTime())) {
-    const m = dateStr.match(/^(\d{2})-(\d{2})-(\d{4})/)
-    if (m) return `${m[1]}/${m[2]}/${m[3]}`
-    return dateStr
+// Backend format: "dd-MM-yyyy HH:mm:ss" (timezone Asia/Ho_Chi_Minh)
+const parseBackendDate = (dateStr: string): Date | null => {
+  if (!dateStr) return null
+  const m = dateStr.match(/^(\d{2})-(\d{2})-(\d{4})(?:[ T](\d{2}):(\d{2}):(\d{2}))?/)
+  if (!m) {
+    const d = new Date(dateStr)
+    return isNaN(d.getTime()) ? null : d
   }
+  const [, dd, mm, yyyy, hh = '0', mi = '0', ss = '0'] = m
+  return new Date(+yyyy, +mm - 1, +dd, +hh, +mi, +ss)
+}
+
+const formatDate = (dateStr: string) => {
+  const d = parseBackendDate(dateStr)
+  if (!d) return dateStr || ''
   return d.toLocaleDateString('vi-VN')
+}
+
+const formatDateTime = (dateStr: string | null | undefined) => {
+  if (!dateStr) return ''
+  const d = parseBackendDate(dateStr)
+  if (!d) return dateStr
+  return d.toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+}
+
+const statusLabel = (status?: PostStatus): string => {
+  switch (status) {
+    case 'PUBLISHED': return 'Đã xuất bản'
+    case 'SCHEDULED': return 'Đã lên lịch'
+    case 'EXPIRED': return 'Đã hết hạn'
+    case 'DRAFT':
+    default: return 'Bản nháp'
+  }
+}
+
+const statusClass = (status?: PostStatus): string => {
+  switch (status) {
+    case 'PUBLISHED': return 'published'
+    case 'SCHEDULED': return 'scheduled'
+    case 'EXPIRED': return 'expired'
+    case 'DRAFT':
+    default: return 'draft'
+  }
+}
+
+// Chuyển chuỗi "dd-MM-yyyy HH:mm:ss" từ backend → giá trị input datetime-local "yyyy-MM-ddTHH:mm"
+const backendToLocalInput = (dateStr: string | null | undefined): string => {
+  if (!dateStr) return ''
+  const d = parseBackendDate(dateStr)
+  if (!d) return ''
+  return toLocalInputValue(d)
+}
+
+// Chuyển giá trị input datetime-local (local time) → ISO UTC cho backend
+const localInputToIso = (localStr: string): string | null => {
+  if (!localStr) return null
+  const d = new Date(localStr)
+  return isNaN(d.getTime()) ? null : d.toISOString()
 }
 
 const loadPosts = async () => {
@@ -293,10 +412,8 @@ const applyFilter = () => {
     result = result.filter(p => p.title.toLowerCase().includes(kw))
   }
 
-  if (filterStatus.value === 'published') {
-    result = result.filter(p => p.isPublished)
-  } else if (filterStatus.value === 'draft') {
-    result = result.filter(p => !p.isPublished)
+  if (filterStatus.value) {
+    result = result.filter(p => p.status === filterStatus.value)
   }
 
   if (filterCategory.value) {
@@ -315,7 +432,13 @@ const handleSearch = () => {
 const openAddModal = () => {
   isEdit.value = false
   editingId.value = null
-  form.value = { title: '', summary: '', content: '', thumbnailUrl: '', category: 'Tin tức', isPublished: false }
+  form.value = {
+    title: '', summary: '', content: '', thumbnailUrl: '',
+    category: 'Tin tức', isPublished: true,
+    scheduledPublishAt: '', expiresAt: ''
+  }
+  publishMode.value = 'now'
+  hasExpiry.value = false
   imageFiles.value = []
   imagePreviews.value = []
   showModal.value = true
@@ -330,8 +453,12 @@ const openEdit = async (post: Post) => {
     content: post.content,
     thumbnailUrl: post.thumbnailUrl || '',
     category: post.category || 'Tin tức',
-    isPublished: post.isPublished
+    isPublished: post.isPublished,
+    scheduledPublishAt: backendToLocalInput(post.scheduledPublishAt),
+    expiresAt: backendToLocalInput(post.expiresAt)
   }
+  publishMode.value = post.status === 'SCHEDULED' ? 'schedule' : 'now'
+  hasExpiry.value = !!post.expiresAt
   imageFiles.value = []
   imagePreviews.value = []
 
@@ -352,15 +479,62 @@ const handleSubmit = async () => {
     alert('Vui lòng nhập tiêu đề và nội dung')
     return
   }
+
+  // Chuẩn hoá lịch đăng / hạn kết thúc
+  let scheduledIso: string | null = null
+  let expiresIso: string | null = null
+
+  if (publishMode.value === 'schedule') {
+    if (!form.value.scheduledPublishAt) {
+      alert('Vui lòng chọn thời gian đăng bài')
+      return
+    }
+    scheduledIso = localInputToIso(form.value.scheduledPublishAt)
+    if (!scheduledIso || new Date(scheduledIso).getTime() <= Date.now()) {
+      alert('Thời gian đăng bài phải ở tương lai')
+      return
+    }
+  }
+
+  if (hasExpiry.value) {
+    if (!form.value.expiresAt) {
+      alert('Vui lòng chọn hạn kết thúc hoặc bỏ tick "Đặt hạn kết thúc"')
+      return
+    }
+    expiresIso = localInputToIso(form.value.expiresAt)
+    if (!expiresIso) {
+      alert('Hạn kết thúc không hợp lệ')
+      return
+    }
+    const expiresMs = new Date(expiresIso).getTime()
+    const lowerBound = scheduledIso ? new Date(scheduledIso).getTime() : Date.now()
+    if (expiresMs <= lowerBound) {
+      alert('Hạn kết thúc phải sau ' + (scheduledIso ? 'thời gian đăng bài' : 'hiện tại'))
+      return
+    }
+  }
+
+  // Nếu lên lịch → luôn lưu dưới dạng chưa xuất bản (scheduler sẽ đăng khi đến giờ)
+  const payload = {
+    title: form.value.title,
+    summary: form.value.summary,
+    content: form.value.content,
+    thumbnailUrl: form.value.thumbnailUrl,
+    category: form.value.category,
+    isPublished: publishMode.value === 'schedule' ? false : form.value.isPublished,
+    scheduledPublishAt: scheduledIso,
+    expiresAt: expiresIso
+  }
+
   submitting.value = true
   try {
     let postId: number
 
     if (isEdit.value) {
-      const updated = await blogApi.updatePost(editingId.value!, form.value)
+      const updated = await blogApi.updatePost(editingId.value!, payload)
       postId = updated.id
     } else {
-      const created = await blogApi.createPost(form.value)
+      const created = await blogApi.createPost(payload)
       postId = created.id
     }
 
@@ -423,13 +597,19 @@ const generateWithAI = async () => {
       body
     })
 
-    if (!response.ok) throw new Error('API lỗi')
+    if (!response.ok) {
+      const errText = await response.text().catch(() => '')
+      throw new Error(`HTTP ${response.status}: ${errText || 'không rõ lỗi'}`)
+    }
 
     const reader = response.body?.getReader()
     const decoder = new TextDecoder()
     if (!reader) throw new Error('Không thể đọc stream')
 
     let buffer = ''
+    let isErrorEvent = false
+    let aiErrorMessage = ''
+
     while (true) {
       const { done, value } = await reader.read()
       if (done) break
@@ -440,22 +620,47 @@ const generateWithAI = async () => {
 
       for (const line of lines) {
         const trimmed = line.trim()
+        // Detect SSE event: error
+        if (trimmed.startsWith('event:')) {
+          isErrorEvent = trimmed.substring(6).trim() === 'error'
+          continue
+        }
         if (!trimmed.startsWith('data:')) continue
         const chunk = trimmed.substring(5)
         if (chunk === '[DONE]') continue
+
+        if (isErrorEvent) {
+          aiErrorMessage += chunk
+          continue
+        }
         // Backend gửi \n dạng escaped \\n, cần chuyển lại
         form.value.content += chunk.replace(/\\n/g, '\n')
       }
+    }
+
+    if (aiErrorMessage) {
+      throw new Error(aiErrorMessage)
+    }
+
+    if (!form.value.content.trim()) {
+      throw new Error('AI không trả về nội dung (stream rỗng)')
     }
 
     // Auto-fill summary nếu chưa có
     if (!form.value.summary && form.value.content) {
       form.value.summary = form.value.content.substring(0, 150).replace(/\n/g, ' ') + '...'
     }
-  } catch {
-    form.value.content = generateFallbackContent(form.value.title, form.value.category)
-    if (!form.value.summary) {
-      form.value.summary = form.value.content.substring(0, 150).replace(/\n/g, ' ') + '...'
+  } catch (err: any) {
+    console.error('[AI generate] lỗi:', err)
+    const reason = err?.message || 'Không rõ lý do'
+    const useFallback = confirm(
+      `Lỗi gọi AI: ${reason}\n\nDùng mẫu viết sẵn thay thế? (Nhấn Cancel để tự viết tay)`
+    )
+    if (useFallback) {
+      form.value.content = generateFallbackContent(form.value.title, form.value.category)
+      if (!form.value.summary) {
+        form.value.summary = form.value.content.substring(0, 150).replace(/\n/g, ' ') + '...'
+      }
     }
   } finally {
     aiLoading.value = false
@@ -497,9 +702,17 @@ onMounted(loadPosts)
 
 .title-cell { font-weight: 600; max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .category-tag { padding: 4px 10px; background: #eef2ff; color: #667eea; border-radius: 999px; font-size: 12px; font-weight: 600; }
-.status { padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+.status { padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
 .status.published { background: #c6f6d5; color: #22543d; }
 .status.draft { background: #fefcbf; color: #744210; }
+.status.scheduled { background: #bee3f8; color: #2a4365; }
+.status.expired { background: #e2e8f0; color: #4a5568; }
+
+.schedule-cell { font-size: 12px; color: #4a5568; white-space: nowrap; }
+.schedule-info { display: inline-flex; align-items: center; gap: 4px; }
+.schedule-info.expired { color: #a0aec0; text-decoration: line-through; }
+.schedule-icon { font-size: 13px; }
+.no-expiry { color: #a0aec0; font-style: italic; }
 
 .text-center { text-align: center; }
 .loading-cell, .empty-cell { text-align: center; padding: 20px; }
@@ -520,6 +733,19 @@ onMounted(loadPosts)
 .form-group.full { grid-column: span 2; }
 .form-group label { font-size: 12px; margin-bottom: 4px; color: #718096; font-weight: 600; }
 .form-group input, .form-group select, .form-group textarea { padding: 10px; border-radius: 10px; border: 1px solid #ddd; font-size: 14px; }
+.form-group input:disabled, .form-group select:disabled { background: #f7fafc; cursor: not-allowed; opacity: 0.7; }
+.field-hint { font-size: 11px; color: #4299e1; margin-top: 3px; font-style: italic; }
+
+/* SCHEDULE SECTION */
+.schedule-section { background: #f7fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px; }
+.section-label { display: block; font-size: 13px; font-weight: 700; color: #2d3748; margin-bottom: 10px; }
+.publish-modes { display: flex; gap: 18px; flex-wrap: wrap; margin-bottom: 12px; }
+.radio-option, .checkbox-option { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #4a5568; cursor: pointer; }
+.radio-option input, .checkbox-option input { cursor: pointer; }
+.schedule-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 10px; }
+.expiry-toggle { margin: 8px 0 6px; }
+.hint-text { font-size: 12px; color: #718096; font-style: italic; }
+.required { color: #e53e3e; }
 
 .content-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
 .content-header label { margin-bottom: 0; }

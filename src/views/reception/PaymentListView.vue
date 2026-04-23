@@ -5,40 +5,30 @@
       <h2>Thanh toán</h2>
     </div>
 
-    <!-- Search by Table ID (hidden when in payment mode) -->
+    <!-- Search by Table Name (hidden when in payment mode) -->
     <div v-if="!showPaymentForm" class="filters-section">
       <div class="filter-row">
         <input
-          v-model.number="searchTableId"
-          type="number"
+          v-model="searchTableName"
+          type="text"
           class="search-input"
-          placeholder="Nhập ID bàn"
-          min="1"
-          @keyup.enter="handleSearch"
+          placeholder="Tìm theo tên bàn..."
         />
-        <button 
-          class="search-btn" 
-          @click="handleSearch"
-          :disabled="loading"
-        >
-          <span v-if="loading" class="spinner-border spinner-border-sm me-2"></span>
-          Tìm kiếm
-        </button>
       </div>
     </div>
 
     <!-- Invoice List (shown when not in payment mode) -->
     <div v-if="!showPaymentForm" class="table-container">
       <div class="table-header">
-        <h5>Danh sách hóa đơn đang phục vụ ({{ invoices.length }})</h5>
+        <h5>Danh sách hóa đơn đang phục vụ ({{ filteredInvoices.length }})</h5>
       </div>
 
       <div v-if="loading" class="empty-state">
         Đang tải...
       </div>
 
-      <div v-else-if="invoices.length === 0" class="empty-state">
-        Không có hóa đơn nào đang phục vụ
+      <div v-else-if="filteredInvoices.length === 0" class="empty-state">
+        {{ searchTableName ? 'Không tìm thấy hóa đơn phù hợp' : 'Không có hóa đơn nào đang phục vụ' }}
       </div>
 
       <table v-else class="invoice-table">
@@ -54,8 +44,8 @@
           </tr>
         </thead>
         <tbody>
-          <tr 
-            v-for="invoice in invoices" 
+          <tr
+            v-for="invoice in filteredInvoices"
             :key="invoice.invoiceId"
             class="clickable-row"
           >
@@ -183,11 +173,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import PaymentViewComponent from '@/components/reception/PaymentView.vue';
 import { paymentService, type InvoiceSummary } from '@/services/paymentService';
 
-const searchTableId = ref<number | null>(null);
+const searchTableName = ref('');
 const loading = ref(false);
 const invoices = ref<InvoiceSummary[]>([]);
 const showDetailModal = ref(false);
@@ -210,24 +200,13 @@ const loadAllInvoices = async () => {
   }
 };
 
-const handleSearch = async () => {
-  if (!searchTableId.value || searchTableId.value < 1) {
-    alert('Vui lòng nhập ID bàn hợp lệ');
-    return;
-  }
-
-  loading.value = true;
-  
-  try {
-    selectedInvoice.value = await paymentService.getInvoiceByTable(searchTableId.value);
-    showDetailModal.value = true;
-  } catch (error: any) {
-    console.error('Search error:', error);
-    alert('Không tìm thấy hóa đơn cho bàn này');
-  } finally {
-    loading.value = false;
-  }
-};
+const filteredInvoices = computed(() => {
+  const keyword = searchTableName.value.trim().toLowerCase();
+  if (!keyword) return invoices.value;
+  return invoices.value.filter(inv =>
+    inv.tables.some(t => t.tableName.toLowerCase().includes(keyword))
+  );
+});
 
 const showInvoiceDetail = (invoice: InvoiceSummary) => {
   selectedInvoice.value = invoice;
