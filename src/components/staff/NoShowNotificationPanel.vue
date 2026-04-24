@@ -41,8 +41,8 @@
           <div class="notification-content">
             <div class="reservation-info">
               <strong>{{ notification.reservationCode }}</strong>
-              <span class="status-badge" :class="notification.notificationType === 'CUSTOMER_CANCELLED' ? 'badge-cancel' : 'badge-noshow'">
-                {{ notification.notificationType === 'CUSTOMER_CANCELLED' ? 'Khách tự hủy' : 'Không đến' }}
+              <span class="status-badge" :class="badgeClass(notification.notificationType)">
+                {{ badgeLabel(notification.notificationType) }}
               </span>
             </div>
             
@@ -176,7 +176,7 @@ const handleNewNotification = (notification: NoShowNotification) => {
     
     // Show browser notification if supported
     if ('Notification' in window && Notification.permission === 'granted') {
-      const title = notification.notificationType === 'CUSTOMER_CANCELLED' ? 'Khách hủy đơn đặt bàn' : 'Khách không đến'
+      const title = browserNotifTitle(notification.notificationType)
       new Notification(title, {
         body: `${notification.customerName} - ${notification.reservationCode}`,
         icon: '/favicon.ico'
@@ -184,6 +184,25 @@ const handleNewNotification = (notification: NoShowNotification) => {
     }
   }
 };
+
+// Helpers phân biệt 3 loại notification: CUSTOMER_CANCELLED / STAFF_CANCELLED / NO_SHOW
+function badgeLabel(type?: string): string {
+  if (type === 'CUSTOMER_CANCELLED') return 'Khách tự hủy'
+  if (type === 'STAFF_CANCELLED') return 'Nhân viên hủy'
+  return 'Không đến'
+}
+
+function badgeClass(type?: string): string {
+  if (type === 'CUSTOMER_CANCELLED') return 'badge-cancel'
+  if (type === 'STAFF_CANCELLED') return 'badge-staff'
+  return 'badge-noshow'
+}
+
+function browserNotifTitle(type?: string): string {
+  if (type === 'CUSTOMER_CANCELLED') return 'Khách hủy đơn đặt bàn'
+  if (type === 'STAFF_CANCELLED') return 'Nhân viên đã hủy đơn'
+  return 'Khách không đến'
+}
 
 // Setup WebSocket
 const setupWebSocket = () => {
@@ -558,6 +577,7 @@ onUnmounted(() => {
 }
 .badge-noshow { background: #dc3545; }
 .badge-cancel { background: #e8a835; color: #1a1a1a; }
+.badge-staff { background: #3182ce; color: #ffffff; }
 
 .customer-info,
 .phone-info,

@@ -41,10 +41,12 @@ export const reservationService = {
     return response.data;
   },
 
+  // Dùng ở màn lễ tân/staff — gắn flag để BE emit STAFF_CANCELLED (không phải khách tự hủy)
   async cancelReservation(invoiceId: number): Promise<any> {
     const response = await axiosInstance.post(
       `/api/reservation/${invoiceId}/cancel`,
-      {}
+      {},
+      { params: { cancelledByStaff: true } }
     );
     return response.data;
   },

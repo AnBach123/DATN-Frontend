@@ -47,9 +47,11 @@ export const reservationApi = {
     return response.data.data
   },
 
-  // Cancel reservation
+  // Cancel reservation — admin chủ động hủy, emit STAFF_CANCELLED
   cancelReservation: async (invoiceId: number): Promise<void> => {
-    await axiosInstance.post(`/api/reservation/${invoiceId}/cancel`)
+    await axiosInstance.post(`/api/reservation/${invoiceId}/cancel`, null, {
+      params: { cancelledByStaff: true },
+    })
   },
 
   // Check-in reservation
