@@ -136,7 +136,8 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
-import { getKitchenGrouped, serveItem, cancelItem } from '@/services/kitchenApi'
+import { getKitchenGrouped, serveItem } from '@/services/kitchenApi'
+import { cancelItemAsStaff } from '@/services/staffOrderApi'
 import { activateDessertItem } from '@/services/staffOrderApi'
 import { DashboardWebSocket } from '@/services/websocket/DashboardWebSocket'
 import Swal from 'sweetalert2'
@@ -253,7 +254,7 @@ async function handleCancel(id: number) {
     if (!result.isConfirmed) return
 
     try {
-      await cancelItem(id)
+      await cancelItemAsStaff(id)
       await fetchData()
       // Update selectedTable
       if (selectedTable.value) {
@@ -315,7 +316,7 @@ async function handleCancel(id: number) {
   const quantityToCancel = result.value
 
   try {
-    await cancelItem(id, quantityToCancel)
+    await cancelItemAsStaff(id, quantityToCancel)
     await fetchData()
     // Update selectedTable
     if (selectedTable.value) {

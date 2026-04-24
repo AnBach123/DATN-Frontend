@@ -16,6 +16,30 @@
       </div>
     </div>
 
+    <!-- CANCEL ITEM MODAL -->
+    <div v-if="ENABLE_CANCEL_ITEM && cancelingItem" class="cancel-modal-backdrop" @click.self="closeCancel">
+      <div class="cancel-modal">
+        <div class="cancel-modal-header">
+          <h3>Hủy món</h3>
+          <button class="cancel-modal-close" @click="closeCancel">✕</button>
+        </div>
+        <div class="cancel-modal-body">
+          <p class="cancel-modal-item">
+            <strong>{{ cancelingItem.itemName }}</strong> × {{ cancelingItem.quantity }}
+          </p>
+          <p class="cancel-modal-hint">Chọn lý do để báo cho nhân viên phục vụ:</p>
+          <div class="cancel-reasons">
+            <button
+              v-for="reason in CANCEL_REASONS"
+              :key="reason"
+              class="cancel-reason-btn"
+              @click="confirmCancel(reason)"
+            >{{ reason }}</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- 2 COLUMNS LAYOUT -->
     <div class="columns-layout">
       <!-- LEFT COLUMN: ORDERED (Chưa làm) - Grid cards by table -->
@@ -30,6 +54,14 @@
               <div class="grid-card-header ordered-header">
                 <span class="table-name">{{ table.tableName }}</span>
                 <span class="item-count">{{ table.items.length }} món</span>
+              </div>
+              <div class="grid-card-progress" :title="`${getProgress(table.tableId).done}/${getProgress(table.tableId).total} món đã xong`">
+                <div class="progress-bar">
+                  <div class="progress-fill" :style="{ width: getProgress(table.tableId).percent + '%' }"></div>
+                </div>
+                <span class="progress-text">
+                  {{ getProgress(table.tableId).done }}/{{ getProgress(table.tableId).total }} xong
+                </span>
               </div>
               <div class="grid-card-body">
                 <div v-for="item in table.items" :key="item.id" class="grid-item" :class="[getAgeClass(item.orderedAt), { 'has-note': !!item.note }]">
@@ -46,9 +78,17 @@
                       <span class="timer-dot"></span>
                       {{ formatElapsed(item.orderedAt) }}
                     </span>
-                    <button class="btn-grid btn-start" @click="handleStart(item.id)">
-                      Thực hiện
-                    </button>
+                    <div class="grid-item-btns">
+                      <button
+                        v-if="ENABLE_CANCEL_ITEM"
+                        class="btn-grid btn-cancel"
+                        @click="openCancel(item)"
+                        title="Hủy món (hết nguyên liệu, không làm được...)"
+                      >Hủy</button>
+                      <button class="btn-grid btn-start" @click="handleStart(item.id)">
+                        Thực hiện
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -71,6 +111,14 @@
                 <span class="table-name">{{ table.tableName }}</span>
                 <span class="item-count">{{ table.items.length }} món</span>
               </div>
+              <div class="grid-card-progress" :title="`${getProgress(table.tableId).done}/${getProgress(table.tableId).total} món đã xong`">
+                <div class="progress-bar">
+                  <div class="progress-fill" :style="{ width: getProgress(table.tableId).percent + '%' }"></div>
+                </div>
+                <span class="progress-text">
+                  {{ getProgress(table.tableId).done }}/{{ getProgress(table.tableId).total }} xong
+                </span>
+              </div>
               <div class="grid-card-body">
                 <div v-for="item in table.items" :key="item.id" class="grid-item" :class="[getAgeClass(item.orderedAt), { 'has-note': !!item.note }]">
                   <div class="grid-item-top">
@@ -86,9 +134,17 @@
                       <span class="timer-dot"></span>
                       {{ formatElapsed(item.orderedAt) }}
                     </span>
-                    <button class="btn-grid btn-done" @click="handleDone(item.id)">
-                      Hoàn thành
-                    </button>
+                    <div class="grid-item-btns">
+                      <button
+                        v-if="ENABLE_CANCEL_ITEM"
+                        class="btn-grid btn-cancel"
+                        @click="openCancel(item)"
+                        title="Hủy món (hết nguyên liệu, không làm được...)"
+                      >Hủy</button>
+                      <button class="btn-grid btn-done" @click="handleDone(item.id)">
+                        Hoàn thành
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -103,9 +159,20 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { getKitchenGrouped, startCooking, doneCooking } from '@/services/kitchenApi'
+import { getKitchenGrouped, startCooking, doneCooking, cancelItem } from '@/services/kitchenApi'
 import { DashboardWebSocket } from '@/services/websocket/DashboardWebSocket'
 import router from '@/router'
+
+// ============================================================
+// 🎛️  FEATURE FLAGS — bật/tắt tính năng ở đây
+// ============================================================
+// ENABLE_CANCEL_ITEM: cho phép bếp hủy món (hết nguyên liệu, không làm được...)
+//   true  → hiện nút "Hủy món" trên mỗi item + popup chọn lý do
+//   false → ẩn hoàn toàn nút, không ảnh hưởng logic khác
+// Hệ thống hiện tại CHƯA quản lý kho nguyên liệu, nên nút này chỉ là
+// công cụ giao tiếp thủ công bếp → staff. Nếu thấy chưa cần thì để false.
+const ENABLE_CANCEL_ITEM = true
+// ============================================================
 
 interface KitchenItem {
   id: number
@@ -141,7 +208,7 @@ function toggleSound() {
   }
 }
 
-// Beep: 2 tiếng ngắn cao độ (800Hz + 1000Hz) để chú ý mà không khó chịu
+// Beep: 2 tiếng ngắn cao độ (880Hz + 1175Hz) để chú ý mà không khó chịu
 function playBeep() {
   if (!soundEnabled.value) return
   try {
@@ -210,6 +277,24 @@ function getAgeClass(orderedAt?: string | null): string {
   return 'age-urgent'
 }
 
+// Progress per bàn: đếm tổng và số DONE, tính %
+// Dùng cho cả 2 cột để hiển thị "2/5 xong"
+interface TableProgress { done: number; total: number; percent: number }
+const progressByTable = computed((): Record<number, TableProgress> => {
+  const map: Record<number, TableProgress> = {}
+  for (const table of tables.value) {
+    const total = table.items.length
+    const done = table.items.filter((i) => i.status === 'DONE').length
+    const percent = total > 0 ? Math.round((done / total) * 100) : 0
+    map[table.tableId] = { done, total, percent }
+  }
+  return map
+})
+
+function getProgress(tableId: number): TableProgress {
+  return progressByTable.value[tableId] || { done: 0, total: 0, percent: 0 }
+}
+
 // Sort bàn theo món cũ nhất trong bàn (bàn chờ lâu nhất lên đầu)
 function sortTablesByOldestItem(tbls: KitchenTable[]): KitchenTable[] {
   return [...tbls].sort((a, b) => {
@@ -271,6 +356,37 @@ async function handleDone(id: number) {
     await fetchKitchen()
   } catch (e) {
     console.error(e)
+  }
+}
+
+// ===== HỦY MÓN =====
+// cancelingItem giữ item đang chờ xác nhận hủy (null = không hiện popup)
+const cancelingItem = ref<KitchenItem | null>(null)
+const CANCEL_REASONS = [
+  'Hết nguyên liệu',
+  'Hết hàng',
+  'Lý do khác',
+]
+
+function openCancel(item: KitchenItem) {
+  cancelingItem.value = item
+}
+
+function closeCancel() {
+  cancelingItem.value = null
+}
+
+async function confirmCancel(reason: string) {
+  if (!cancelingItem.value) return
+  const item = cancelingItem.value
+  try {
+    await cancelItem(item.id, undefined, reason)
+    cancelingItem.value = null
+    await fetchKitchen()
+  } catch (e) {
+    console.error('Hủy món thất bại:', e)
+    const err = e as { response?: { data?: { message?: string } } }
+    alert(err?.response?.data?.message || 'Hủy món thất bại')
   }
 }
 
@@ -499,6 +615,38 @@ onUnmounted(() => {
   font-weight: 500;
 }
 
+.grid-card-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: #f1f3f5;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.progress-bar {
+  flex: 1;
+  height: 6px;
+  background: #dee2e6;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #20c997, #0d9488);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  font-size: 0.72rem;
+  color: #495057;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 .grid-card-body {
   padding: 10px;
   display: flex;
@@ -670,6 +818,125 @@ onUnmounted(() => {
 
 .btn-grid.btn-done:hover {
   background: #157347;
+}
+
+.btn-grid.btn-cancel {
+  background: white;
+  color: #dc3545;
+  border: 1px solid #dc3545;
+}
+
+.btn-grid.btn-cancel:hover {
+  background: #dc3545;
+  color: white;
+}
+
+.grid-item-btns {
+  display: flex;
+  gap: 6px;
+}
+
+/* CANCEL MODAL */
+.cancel-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.15s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.cancel-modal {
+  background: white;
+  border-radius: 10px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  animation: slideUp 0.2s ease;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(12px); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+
+.cancel-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 18px;
+  background: #fff5f5;
+  border-bottom: 1px solid #fecaca;
+}
+
+.cancel-modal-header h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: #991b1b;
+  font-weight: 600;
+}
+
+.cancel-modal-close {
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  cursor: pointer;
+  color: #991b1b;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.cancel-modal-close:hover {
+  background: #fecaca;
+}
+
+.cancel-modal-body {
+  padding: 16px 18px 18px;
+}
+
+.cancel-modal-item {
+  margin: 0 0 10px;
+  font-size: 0.95rem;
+  color: #212529;
+}
+
+.cancel-modal-hint {
+  margin: 0 0 12px;
+  font-size: 0.82rem;
+  color: #6c757d;
+}
+
+.cancel-reasons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cancel-reason-btn {
+  padding: 10px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: white;
+  font-size: 0.9rem;
+  color: #212529;
+  cursor: pointer;
+  text-align: left;
+  font-weight: 500;
+  transition: all 0.15s ease;
+}
+
+.cancel-reason-btn:hover {
+  border-color: #dc3545;
+  background: #fff5f5;
+  color: #991b1b;
 }
 
 /* EMPTY STATE */

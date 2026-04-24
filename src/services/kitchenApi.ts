@@ -97,9 +97,11 @@ export const serveItem = async (id: number) => {
    CANCEL
 ======================== */
 
-export const cancelItem = async (id: number, quantityToCancel?: number) => {
-  const params = quantityToCancel ? { quantityToCancel } : {}
-  
+export const cancelItem = async (id: number, quantityToCancel?: number, reason?: string) => {
+  const params: Record<string, string | number> = {}
+  if (quantityToCancel) params.quantityToCancel = quantityToCancel
+  if (reason && reason.trim()) params.reason = reason.trim()
+
   const res = await axiosInstance.put(`/api/kitchen/items/${id}/cancel`, null, {
     headers: getAuthHeader(),
     params,

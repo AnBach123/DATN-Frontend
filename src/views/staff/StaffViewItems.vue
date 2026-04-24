@@ -72,9 +72,10 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { getInProgressInvoices, getInvoiceItems, type InvoiceGroup, type InvoiceItemResponse } from '@/services/staffOrderApi'
+import { DashboardWebSocket } from '@/services/websocket/DashboardWebSocket'
 
 const router = useRouter()
 const route = useRoute()
@@ -122,6 +123,23 @@ function getCurrentStaffId(): number | null {
   }
 }
 
+let wsClient: DashboardWebSocket | null = null
+
+// Refresh nhẹ: chỉ load lại items + tổng tiền, không re-check invoice/quyền staff
+async function refreshItems() {
+  try {
+    const invoiceId = Number(route.params.invoiceId)
+    if (!invoiceId) return
+    items.value = await getInvoiceItems(invoiceId)
+    // Reload invoice summary để cập nhật subtotal sau khi hủy món
+    const invoices = await getInProgressInvoices()
+    const found = invoices.find(inv => inv.invoiceId === invoiceId)
+    if (found) invoice.value = found
+  } catch (e) {
+    console.error('Refresh items thất bại:', e)
+  }
+}
+
 async function fetchInvoiceData() {
   try {
     loading.value = true
@@ -164,6 +182,23 @@ async function fetchInvoiceData() {
 
 onMounted(() => {
   fetchInvoiceData()
+
+  // Subscribe WS để auto-refresh khi bếp hủy / đổi trạng thái món
+  const token = localStorage.getItem('accessToken') || ''
+  const wsUrl = import.meta.env.VITE_WS_URL || 'http://localhost:8080/ws'
+  wsClient = new DashboardWebSocket(wsUrl)
+  wsClient.subscribeKitchenUpdates((update) => {
+    console.log('📢 Kitchen update (StaffViewItems):', update)
+    refreshItems()
+  })
+  wsClient.connect(token)
+})
+
+onUnmounted(() => {
+  if (wsClient) {
+    wsClient.disconnect()
+    wsClient = null
+  }
 })
 </script>
 

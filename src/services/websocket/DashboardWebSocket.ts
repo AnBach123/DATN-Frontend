@@ -27,6 +27,8 @@ export interface KitchenUpdate {
   itemId?: number;
   itemName?: string;
   itemCount?: number;
+  reason?: string;
+  tableName?: string;
   timestamp: string;
 }
 

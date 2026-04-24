@@ -97,3 +97,15 @@ export const activateDessertItem = async (itemId: number) => {
   )
   return res.data
 }
+
+// Staff hủy món — BE chỉ cho hủy món status ORDERED (chưa vào bếp).
+// Món IN_PROGRESS sẽ bị BE reject — staff phải nhờ bếp.
+export const cancelItemAsStaff = async (itemId: number, quantityToCancel?: number) => {
+  const params = quantityToCancel ? { quantityToCancel } : {}
+  const res = await axiosInstance.put(
+    `/api/staff/items/${itemId}/cancel`,
+    null,
+    { headers: getAuthHeader(), params },
+  )
+  return res.data
+}
