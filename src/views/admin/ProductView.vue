@@ -158,17 +158,6 @@
               <input v-model="newProduct.productName" />
             </div>
 
-            <div class="form-group full">
-              <label>Mã sản phẩm</label>
-              <input
-                v-model="newProduct.productCode"
-                placeholder="Để trống sẽ tự động tạo mã..."
-                :disabled="isEdit"
-                @input="newProduct.productCode = newProduct.productCode.toUpperCase()"
-                class="uppercase-input"
-              />
-            </div>
-
             <div class="form-group">
               <label>Danh mục</label>
               <select v-model="newProduct.productCategory">

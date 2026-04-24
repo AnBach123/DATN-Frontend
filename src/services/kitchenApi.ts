@@ -27,6 +27,7 @@ export interface KitchenItem {
   quantity: number
   status: KitchenStatus
   itemType: string // PRODUCT | COMBO
+  note?: string | null // Ghi chú của khách (không cay, ít muối, dị ứng...)
 }
 
 export interface KitchenTable {

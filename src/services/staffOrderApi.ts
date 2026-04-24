@@ -12,6 +12,7 @@ export interface OrderItemRequest {
   productId?: number
   productComboId?: number
   quantity: number
+  note?: string
 }
 
 export interface StaffTable {

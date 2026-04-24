@@ -24,8 +24,12 @@
                 <span class="item-count">{{ table.items.length }} món</span>
               </div>
               <div class="grid-card-body">
-                <div v-for="item in table.items" :key="item.id" class="grid-item">
+                <div v-for="item in table.items" :key="item.id" class="grid-item" :class="{ 'has-note': !!item.note }">
                   <div class="grid-item-name">{{ item.itemName }}</div>
+                  <div v-if="item.note" class="grid-item-note">
+                    <span class="note-icon">⚠️</span>
+                    <span class="note-text">{{ item.note }}</span>
+                  </div>
                   <div class="grid-item-footer">
                     <span class="grid-item-qty">SL: {{ item.quantity }}</span>
                     <button class="btn-grid btn-start" @click="handleStart(item.id)">
@@ -54,8 +58,12 @@
                 <span class="item-count">{{ table.items.length }} món</span>
               </div>
               <div class="grid-card-body">
-                <div v-for="item in table.items" :key="item.id" class="grid-item">
+                <div v-for="item in table.items" :key="item.id" class="grid-item" :class="{ 'has-note': !!item.note }">
                   <div class="grid-item-name">{{ item.itemName }}</div>
+                  <div v-if="item.note" class="grid-item-note">
+                    <span class="note-icon">⚠️</span>
+                    <span class="note-text">{{ item.note }}</span>
+                  </div>
                   <div class="grid-item-footer">
                     <span class="grid-item-qty">SL: {{ item.quantity }}</span>
                     <button class="btn-grid btn-done" @click="handleDone(item.id)">
@@ -84,6 +92,7 @@ interface KitchenItem {
   itemName: string
   quantity: number
   status: string
+  note?: string | null
 }
 
 interface KitchenTable {
@@ -344,11 +353,41 @@ onUnmounted(() => {
   padding: 8px;
 }
 
+.grid-item.has-note {
+  border: 2px solid #fd7e14;
+  background: #fff8f1;
+}
+
 .grid-item-name {
   font-weight: 500;
   font-size: 0.875rem;
   color: #212529;
   margin-bottom: 6px;
+}
+
+.grid-item-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  background: #fff3cd;
+  border-left: 3px solid #f59f00;
+  padding: 6px 8px;
+  border-radius: 3px;
+  margin-bottom: 8px;
+  font-size: 0.8rem;
+  color: #704d00;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.grid-item-note .note-icon {
+  flex-shrink: 0;
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.grid-item-note .note-text {
+  font-weight: 500;
 }
 
 .grid-item-footer {

@@ -164,14 +164,51 @@
           <div class="scroll">
             <div v-if="cart.length === 0" class="empty">Chưa có món</div>
 
-            <div v-for="item in cart" :key="item.key" class="cart-item">
-              <div>
-                <strong>{{ item.quantity }}x</strong> {{ item.name }}
+            <div v-for="item in cart" :key="item.key" class="cart-item" :class="{ 'has-note': !!item.note }">
+              <div class="cart-item-row">
+                <div class="cart-item-info">
+                  <div><strong>{{ item.quantity }}x</strong> {{ item.name }}</div>
+                  <div v-if="item.note" class="cart-item-note-badge" @click="openNote(item)" title="Click để sửa ghi chú">
+                    📝 {{ item.note }}
+                  </div>
+                </div>
+
+                <div class="cart-item-actions">
+                  <button
+                    class="btn-note-icon"
+                    :class="{ active: !!item.note }"
+                    @click="openNote(item)"
+                    :title="item.note ? 'Sửa ghi chú' : 'Thêm ghi chú'"
+                  >📝</button>
+                  <button class="btn small" @click="decrease(item)">-</button>
+                  <button class="btn small" @click="increase(item)">+</button>
+                </div>
               </div>
 
-              <div>
-                <button class="btn small" @click="decrease(item)">-</button>
-                <button class="btn small" @click="increase(item)">+</button>
+              <div v-if="noteEditingKey === item.key" class="note-popover">
+                <div class="note-popover-title">Ghi chú cho món này</div>
+                <div class="note-chips">
+                  <button
+                    v-for="chip in NOTE_CHIPS"
+                    :key="chip"
+                    type="button"
+                    class="note-chip"
+                    :class="{ selected: noteDraft.includes(chip) }"
+                    @click="toggleChip(chip)"
+                  >{{ chip }}</button>
+                </div>
+                <textarea
+                  v-model="noteDraft"
+                  class="note-textarea"
+                  placeholder="Ghi chú khác (ví dụ: dị ứng hải sản, ăn chay, không hành...)"
+                  maxlength="500"
+                  rows="2"
+                ></textarea>
+                <div class="note-popover-actions">
+                  <button type="button" class="note-btn note-btn-cancel" @click="cancelNote">Hủy</button>
+                  <button v-if="item.note" type="button" class="note-btn note-btn-clear" @click="clearNote(item)">Xóa ghi chú</button>
+                  <button type="button" class="note-btn note-btn-save" @click="saveNote(item)">Lưu</button>
+                </div>
               </div>
             </div>
           </div>
@@ -337,6 +374,58 @@ interface CartItem {
   name: string
   price: number
   quantity: number
+  note?: string
+}
+
+const NOTE_CHIPS = [
+  'Không cay',
+  'Ít cay',
+  'Không hành',
+  'Ít muối',
+  'Không đường',
+  'Nhiều đá',
+  'Không đá',
+  'Tách riêng',
+]
+
+const noteEditingKey = ref<string | null>(null)
+const noteDraft = ref('')
+
+function openNote(item: CartItem) {
+  noteEditingKey.value = item.key
+  noteDraft.value = item.note || ''
+}
+
+function cancelNote() {
+  noteEditingKey.value = null
+  noteDraft.value = ''
+}
+
+function toggleChip(chip: string) {
+  const parts = noteDraft.value
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+  const idx = parts.indexOf(chip)
+  if (idx >= 0) {
+    parts.splice(idx, 1)
+  } else {
+    parts.push(chip)
+  }
+  noteDraft.value = parts.join(', ')
+}
+
+function saveNote(item: CartItem) {
+  const trimmed = noteDraft.value.trim()
+  item.note = trimmed || undefined
+  noteEditingKey.value = null
+  noteDraft.value = ''
+}
+
+function clearNote(item: CartItem) {
+  item.note = undefined
+  noteEditingKey.value = null
+  noteDraft.value = ''
 }
 
 /* DATA */
@@ -535,17 +624,20 @@ async function order() {
 
   try {
     const items: OrderItemRequest[] = cart.value.map((item) => {
+      const note = item.note?.trim() || undefined
       if (item.key.startsWith('product')) {
         return {
           itemType: 'PRODUCT',
           productId: Number(item.key.split('-')[1]),
           quantity: item.quantity,
+          note,
         }
       }
       return {
         itemType: 'COMBO',
         productComboId: Number(item.key.split('-')[1]),
         quantity: item.quantity,
+        note,
       }
     })
 
@@ -841,9 +933,8 @@ function formatPrice(price: number) {
 /* CART */
 .cart-item {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px;
+  flex-direction: column;
+  padding: 14px 16px;
   margin-bottom: 12px;
   background: white;
   border-radius: 12px;
@@ -851,6 +942,178 @@ function formatPrice(price: number) {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   border: 2px solid transparent;
   color: #2d3748;
+  transition: border-color 0.2s ease;
+}
+
+.cart-item.has-note {
+  border-color: #f6ad55;
+  background: #fffaf0;
+}
+
+.cart-item-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.cart-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.cart-item-note-badge {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 4px 10px;
+  background: #fefcbf;
+  color: #744210;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border: 1px solid #f6e05e;
+}
+
+.cart-item-note-badge:hover {
+  background: #faf089;
+}
+
+.cart-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.btn-note-icon {
+  border: 1px solid #e2e8f0;
+  background: white;
+  border-radius: 8px;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  padding: 0;
+}
+
+.btn-note-icon:hover {
+  border-color: #ed8936;
+  background: #fffaf0;
+}
+
+.btn-note-icon.active {
+  border-color: #ed8936;
+  background: #fed7aa;
+}
+
+/* NOTE POPOVER */
+.note-popover {
+  margin-top: 12px;
+  padding: 12px;
+  background: #fffaf0;
+  border: 1px solid #f6ad55;
+  border-radius: 10px;
+}
+
+.note-popover-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #7b341e;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.note-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.note-chip {
+  padding: 5px 10px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  font-size: 12px;
+  color: #4a5568;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.note-chip:hover {
+  border-color: #ed8936;
+  color: #7b341e;
+}
+
+.note-chip.selected {
+  background: #ed8936;
+  border-color: #ed8936;
+  color: white;
+  font-weight: 500;
+}
+
+.note-textarea {
+  width: 100%;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  resize: vertical;
+  color: #2d3748;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.note-textarea:focus {
+  border-color: #ed8936;
+}
+
+.note-popover-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.note-btn {
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: none;
+  font-size: 13px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: opacity 0.15s ease;
+}
+
+.note-btn:hover {
+  opacity: 0.85;
+}
+
+.note-btn-cancel {
+  background: #edf2f7;
+  color: #4a5568;
+}
+
+.note-btn-clear {
+  background: #fed7d7;
+  color: #c53030;
+}
+
+.note-btn-save {
+  background: #ed8936;
+  color: white;
 }
 
 /* FOOTER */

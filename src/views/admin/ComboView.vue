@@ -116,17 +116,6 @@
             </div>
 
             <div class="form-group full">
-              <label>Mã combo</label>
-              <input
-                v-model="newCombo.comboCode"
-                placeholder="Để trống sẽ tự động tạo mã..."
-                :disabled="isEdit"
-                @input="newCombo.comboCode = newCombo.comboCode.toUpperCase()"
-                class="uppercase-input"
-              />
-            </div>
-
-            <div class="form-group full">
               <label>Giá combo</label>
               <div class="price-section">
                 <input 
