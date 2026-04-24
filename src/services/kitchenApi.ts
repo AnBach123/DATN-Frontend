@@ -28,6 +28,7 @@ export interface KitchenItem {
   status: KitchenStatus
   itemType: string // PRODUCT | COMBO
   note?: string | null // Ghi chú của khách (không cay, ít muối, dị ứng...)
+  orderedAt?: string | null // ISO timestamp khi staff order — FE tính timer + age
 }
 
 export interface KitchenTable {

@@ -4,6 +4,14 @@
     <div class="header">
       <h2>Bếp - Quản lý món</h2>
       <div class="header-actions">
+        <button
+          class="sound-btn"
+          :class="{ muted: !soundEnabled }"
+          @click="toggleSound"
+          :title="soundEnabled ? 'Tắt âm báo' : 'Bật âm báo'"
+        >
+          {{ soundEnabled ? '🔔 Âm báo: Bật' : '🔕 Âm báo: Tắt' }}
+        </button>
         <button class="logout-btn" @click="logout">Đăng xuất</button>
       </div>
     </div>
@@ -24,14 +32,20 @@
                 <span class="item-count">{{ table.items.length }} món</span>
               </div>
               <div class="grid-card-body">
-                <div v-for="item in table.items" :key="item.id" class="grid-item" :class="{ 'has-note': !!item.note }">
-                  <div class="grid-item-name">{{ item.itemName }}</div>
+                <div v-for="item in table.items" :key="item.id" class="grid-item" :class="[getAgeClass(item.orderedAt), { 'has-note': !!item.note }]">
+                  <div class="grid-item-top">
+                    <div class="grid-item-name">{{ item.itemName }}</div>
+                    <div class="grid-item-qty-big">×{{ item.quantity }}</div>
+                  </div>
                   <div v-if="item.note" class="grid-item-note">
                     <span class="note-icon">⚠️</span>
                     <span class="note-text">{{ item.note }}</span>
                   </div>
                   <div class="grid-item-footer">
-                    <span class="grid-item-qty">SL: {{ item.quantity }}</span>
+                    <span class="grid-item-timer">
+                      <span class="timer-dot"></span>
+                      {{ formatElapsed(item.orderedAt) }}
+                    </span>
                     <button class="btn-grid btn-start" @click="handleStart(item.id)">
                       Thực hiện
                     </button>
@@ -58,14 +72,20 @@
                 <span class="item-count">{{ table.items.length }} món</span>
               </div>
               <div class="grid-card-body">
-                <div v-for="item in table.items" :key="item.id" class="grid-item" :class="{ 'has-note': !!item.note }">
-                  <div class="grid-item-name">{{ item.itemName }}</div>
+                <div v-for="item in table.items" :key="item.id" class="grid-item" :class="[getAgeClass(item.orderedAt), { 'has-note': !!item.note }]">
+                  <div class="grid-item-top">
+                    <div class="grid-item-name">{{ item.itemName }}</div>
+                    <div class="grid-item-qty-big">×{{ item.quantity }}</div>
+                  </div>
                   <div v-if="item.note" class="grid-item-note">
                     <span class="note-icon">⚠️</span>
                     <span class="note-text">{{ item.note }}</span>
                   </div>
                   <div class="grid-item-footer">
-                    <span class="grid-item-qty">SL: {{ item.quantity }}</span>
+                    <span class="grid-item-timer">
+                      <span class="timer-dot"></span>
+                      {{ formatElapsed(item.orderedAt) }}
+                    </span>
                     <button class="btn-grid btn-done" @click="handleDone(item.id)">
                       Hoàn thành
                     </button>
@@ -93,6 +113,7 @@ interface KitchenItem {
   quantity: number
   status: string
   note?: string | null
+  orderedAt?: string | null
 }
 
 interface KitchenTable {
@@ -103,27 +124,127 @@ interface KitchenTable {
 
 const tables = ref<KitchenTable[]>([])
 
+// Tick mỗi 15s để timer + màu age tự cập nhật (không cần reload API)
+const now = ref(Date.now())
+let tickInterval: number | null = null
+
+// Âm báo khi có order mới — lưu preference vào localStorage
+const soundEnabled = ref(localStorage.getItem('kitchen_sound') !== 'off')
+let audioCtx: AudioContext | null = null
+
+function toggleSound() {
+  soundEnabled.value = !soundEnabled.value
+  localStorage.setItem('kitchen_sound', soundEnabled.value ? 'on' : 'off')
+  // Unlock AudioContext ngay khi user tương tác — tránh bị chặn autoplay
+  if (soundEnabled.value) {
+    playBeep()
+  }
+}
+
+// Beep: 2 tiếng ngắn cao độ (800Hz + 1000Hz) để chú ý mà không khó chịu
+function playBeep() {
+  if (!soundEnabled.value) return
+  try {
+    if (!audioCtx) {
+      const AC = window.AudioContext || (window as any).webkitAudioContext
+      audioCtx = new AC()
+    }
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume()
+    }
+    const tone = (freq: number, start: number, duration: number) => {
+      const osc = audioCtx!.createOscillator()
+      const gain = audioCtx!.createGain()
+      osc.type = 'sine'
+      osc.frequency.value = freq
+      gain.gain.setValueAtTime(0, audioCtx!.currentTime + start)
+      gain.gain.linearRampToValueAtTime(0.25, audioCtx!.currentTime + start + 0.02)
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx!.currentTime + start + duration)
+      osc.connect(gain).connect(audioCtx!.destination)
+      osc.start(audioCtx!.currentTime + start)
+      osc.stop(audioCtx!.currentTime + start + duration)
+    }
+    tone(880, 0, 0.18)
+    tone(1175, 0.22, 0.22)
+  } catch (e) {
+    console.warn('Không phát được âm báo:', e)
+  }
+}
+
 // WebSocket instance
 let wsClient: DashboardWebSocket | null = null
 
-// Computed: Bàn có món ORDERED (chưa làm)
+// Sort FIFO: món order trước lên đầu (oldest first). Món thiếu orderedAt đẩy xuống cuối.
+function sortFifo(items: KitchenItem[]): KitchenItem[] {
+  return [...items].sort((a, b) => {
+    const ta = a.orderedAt ? new Date(a.orderedAt).getTime() : Number.MAX_SAFE_INTEGER
+    const tb = b.orderedAt ? new Date(b.orderedAt).getTime() : Number.MAX_SAFE_INTEGER
+    return ta - tb
+  })
+}
+
+// Tính số phút đã chờ
+function getElapsedMinutes(orderedAt?: string | null): number {
+  if (!orderedAt) return 0
+  const ms = now.value - new Date(orderedAt).getTime()
+  return Math.max(0, Math.floor(ms / 60000))
+}
+
+// Text hiển thị: "vừa xong" / "3 phút" / "1 giờ 12 phút"
+function formatElapsed(orderedAt?: string | null): string {
+  if (!orderedAt) return '—'
+  const mins = getElapsedMinutes(orderedAt)
+  if (mins < 1) return 'vừa xong'
+  if (mins < 60) return `${mins} phút`
+  const h = Math.floor(mins / 60)
+  const m = mins % 60
+  return m > 0 ? `${h} giờ ${m} phút` : `${h} giờ`
+}
+
+// Color aging: xanh 0-5p, vàng 5-10p, đỏ 10p+
+function getAgeClass(orderedAt?: string | null): string {
+  if (!orderedAt) return 'age-unknown'
+  const mins = getElapsedMinutes(orderedAt)
+  if (mins < 5) return 'age-fresh'
+  if (mins < 10) return 'age-warning'
+  return 'age-urgent'
+}
+
+// Sort bàn theo món cũ nhất trong bàn (bàn chờ lâu nhất lên đầu)
+function sortTablesByOldestItem(tbls: KitchenTable[]): KitchenTable[] {
+  return [...tbls].sort((a, b) => {
+    const oldestA = a.items.reduce((min, it) => {
+      const t = it.orderedAt ? new Date(it.orderedAt).getTime() : Number.MAX_SAFE_INTEGER
+      return Math.min(min, t)
+    }, Number.MAX_SAFE_INTEGER)
+    const oldestB = b.items.reduce((min, it) => {
+      const t = it.orderedAt ? new Date(it.orderedAt).getTime() : Number.MAX_SAFE_INTEGER
+      return Math.min(min, t)
+    }, Number.MAX_SAFE_INTEGER)
+    return oldestA - oldestB
+  })
+}
+
+// Computed: Bàn có món ORDERED (chưa làm) — items FIFO, tables sort theo món cũ nhất
 const orderedTables = computed((): KitchenTable[] => {
-  return tables.value
+  const filtered = tables.value
     .map((table) => ({
       ...table,
-      items: table.items.filter((item) => item.status === 'ORDERED'),
+      items: sortFifo(table.items.filter((item) => item.status === 'ORDERED')),
     }))
     .filter((table) => table.items.length > 0)
+  return sortTablesByOldestItem(filtered)
 })
 
-// Computed: Bàn có món IN_PROGRESS (đang làm)
+// Computed: Bàn có món IN_PROGRESS (đang làm) — items FIFO
 const inProgressTables = computed((): KitchenTable[] => {
-  return tables.value
+  const filtered = tables.value
     .map((table) => ({
       ...table,
-      items: table.items.filter((item) => item.status === 'IN_PROGRESS'),
+      items: sortFifo(table.items.filter((item) => item.status === 'IN_PROGRESS')),
     }))
     .filter((table) => table.items.length > 0)
+  return sortTablesByOldestItem(filtered)
 })
 
 async function fetchKitchen() {
@@ -160,7 +281,12 @@ function logout() {
 
 onMounted(() => {
   fetchKitchen()
-  
+
+  // Tick timer mỗi 15s để age color + elapsed text tự cập nhật
+  tickInterval = window.setInterval(() => {
+    now.value = Date.now()
+  }, 15000)
+
   // Initialize WebSocket
   const token = localStorage.getItem('accessToken') || ''
   console.log('🔑 Kitchen - Token for WebSocket:', token ? 'Found' : 'Not found (dev mode)')
@@ -173,6 +299,10 @@ onMounted(() => {
   // Subscribe to kitchen updates BEFORE connecting
   wsClient.subscribeKitchenUpdates((update) => {
     console.log('📢 Kitchen update received:', update)
+    // Beep khi có order mới — action bắt đầu bằng ITEMS_ORDERED
+    if (update?.action && update.action.startsWith('ITEMS_ORDERED')) {
+      playBeep()
+    }
     // Refresh kitchen data when there's an update
     fetchKitchen()
   })
@@ -183,6 +313,10 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  if (tickInterval !== null) {
+    clearInterval(tickInterval)
+    tickInterval = null
+  }
   // Disconnect WebSocket
   if (wsClient) {
     wsClient.disconnect()
@@ -236,6 +370,31 @@ onUnmounted(() => {
 
 .logout-btn:hover {
   background: #bb2d3b;
+}
+
+.sound-btn {
+  padding: 8px 14px;
+  border: 1px solid #0d6efd;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.875rem;
+  background: white;
+  color: #0d6efd;
+  transition: all 0.2s;
+}
+
+.sound-btn:hover {
+  background: #e7f1ff;
+}
+
+.sound-btn.muted {
+  border-color: #adb5bd;
+  color: #6c757d;
+}
+
+.sound-btn.muted:hover {
+  background: #f1f3f5;
 }
 
 /* 2 COLUMNS LAYOUT */
@@ -294,7 +453,7 @@ onUnmounted(() => {
 /* TABLES GRID (Both columns - grid cards) */
 .tables-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
   gap: 12px;
 }
 
@@ -329,6 +488,7 @@ onUnmounted(() => {
 
 .grid-card-header .table-name {
   font-weight: 600;
+  font-size: 0.95rem;
 }
 
 .grid-card-header .item-count {
@@ -349,20 +509,72 @@ onUnmounted(() => {
 .grid-item {
   background: white;
   border: 1px solid #e9ecef;
-  border-radius: 4px;
-  padding: 8px;
+  border-radius: 6px;
+  padding: 8px 10px;
+  transition: all 0.2s ease;
+}
+
+/* AGE COLOR — ưu tiên làm món chờ lâu */
+.grid-item.age-fresh {
+  border-left: 4px solid #20c997;
+}
+
+.grid-item.age-warning {
+  border-left: 4px solid #ffc107;
+  background: #fffbea;
+}
+
+.grid-item.age-urgent {
+  border-left: 4px solid #dc3545;
+  background: #fff5f6;
+  animation: pulseUrgent 2.5s ease-in-out infinite;
+}
+
+.grid-item.age-unknown {
+  border-left: 4px solid #adb5bd;
+}
+
+@keyframes pulseUrgent {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.2); }
+  50%      { box-shadow: 0 0 0 4px rgba(220, 53, 69, 0); }
 }
 
 .grid-item.has-note {
-  border: 2px solid #fd7e14;
+  border-color: #fd7e14;
   background: #fff8f1;
 }
 
-.grid-item-name {
-  font-weight: 500;
-  font-size: 0.875rem;
-  color: #212529;
+.grid-item.has-note.age-urgent {
+  background: #fff5f6;
+}
+
+.grid-item-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
   margin-bottom: 6px;
+}
+
+.grid-item-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #1a202c;
+  line-height: 1.3;
+  flex: 1;
+  min-width: 0;
+}
+
+.grid-item-qty-big {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #0d6efd;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.grid-item.age-urgent .grid-item-qty-big {
+  color: #dc3545;
 }
 
 .grid-item-note {
@@ -371,18 +583,19 @@ onUnmounted(() => {
   gap: 6px;
   background: #fff3cd;
   border-left: 3px solid #f59f00;
-  padding: 6px 8px;
+  padding: 5px 8px;
   border-radius: 3px;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   font-size: 0.8rem;
   color: #704d00;
   line-height: 1.35;
   word-break: break-word;
+  font-weight: 500;
 }
 
 .grid-item-note .note-icon {
   flex-shrink: 0;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   line-height: 1;
 }
 
@@ -397,26 +610,48 @@ onUnmounted(() => {
   gap: 8px;
 }
 
-.grid-item-qty {
-  font-size: 0.8rem;
-  color: #6c757d;
+.grid-item-timer {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.78rem;
+  color: #495057;
   font-weight: 500;
+  font-variant-numeric: tabular-nums;
 }
 
+.timer-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #20c997;
+  flex-shrink: 0;
+}
+
+.grid-item.age-warning .timer-dot { background: #ffc107; }
+.grid-item.age-warning .grid-item-timer { color: #7a5200; }
+.grid-item.age-urgent .timer-dot { background: #dc3545; }
+.grid-item.age-urgent .grid-item-timer { color: #a52834; font-weight: 600; }
+.grid-item.age-unknown .timer-dot { background: #adb5bd; }
+
 .btn-grid {
-  padding: 4px 10px;
+  padding: 5px 12px;
   border: none;
   border-radius: 4px;
   font-weight: 500;
-  font-size: 0.75rem;
+  font-size: 0.78rem;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.15s ease;
   white-space: nowrap;
 }
 
 .btn-grid:hover {
   transform: translateY(-1px);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.btn-grid:active {
+  transform: translateY(0);
 }
 
 .btn-grid.btn-start {
