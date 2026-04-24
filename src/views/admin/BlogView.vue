@@ -2,15 +2,48 @@
   <div class="blog-container">
     <div class="page-header">
       <h2 class="page-title">Quản lý bài viết</h2>
-      <button class="add-btn" @click="openAddModal">+ Thêm bài viết</button>
+      <button v-if="currentTab === 'active'" class="add-btn" @click="openAddModal">+ Thêm bài viết</button>
+    </div>
+
+    <!-- BANNER sau khi vô hiệu hóa -->
+    <transition name="slide-fade">
+      <div v-if="banner" class="info-banner" :class="banner.type">
+        <span class="banner-icon">{{ banner.type === 'success' ? '✓' : 'ℹ' }}</span>
+        <div class="banner-content">
+          <div class="banner-title">{{ banner.title }}</div>
+          <div class="banner-message">{{ banner.message }}</div>
+        </div>
+        <div class="banner-actions">
+          <button v-if="banner.undoId" class="banner-btn primary" @click="handleUndo(banner.undoId)">Kích hoạt lại</button>
+          <button v-if="banner.type === 'success'" class="banner-btn" @click="switchTab('disabled')">Xem danh sách vô hiệu</button>
+          <button class="banner-close" @click="banner = null">×</button>
+        </div>
+      </div>
+    </transition>
+
+    <!-- TABS -->
+    <div class="tab-bar">
+      <button
+        :class="['tab-btn', { active: currentTab === 'active' }]"
+        @click="switchTab('active')"
+      >
+        Bài đang quản lý
+      </button>
+      <button
+        :class="['tab-btn', { active: currentTab === 'disabled' }]"
+        @click="switchTab('disabled')"
+      >
+        Đã vô hiệu hóa
+        <span v-if="disabledCount > 0" class="tab-count">{{ disabledCount }}</span>
+      </button>
     </div>
 
     <!-- FILTER -->
     <div class="filters-section">
       <div class="filter-row">
         <input v-model="searchKeyword" placeholder="Tìm tiêu đề bài viết..." class="search-input" @input="handleSearch" />
-        <select v-model="filterStatus" class="filter-select" @change="applyFilter">
-          <option value="">Tất cả</option>
+        <select v-if="currentTab === 'active'" v-model="filterStatus" class="filter-select" @change="applyFilter">
+          <option value="">Tất cả trạng thái</option>
           <option value="PUBLISHED">Đã xuất bản</option>
           <option value="SCHEDULED">Đã lên lịch</option>
           <option value="DRAFT">Bản nháp</option>
@@ -37,20 +70,25 @@
             <th>Danh mục</th>
             <th>Tác giả</th>
             <th>Lượt xem</th>
-            <th>Ngày tạo</th>
+            <th v-if="currentTab === 'active'">Ngày tạo</th>
             <th>Trạng thái</th>
-            <th>Thời hạn</th>
+            <th v-if="currentTab === 'active'">Thời hạn</th>
+            <th v-if="currentTab === 'disabled'">Người vô hiệu</th>
+            <th v-if="currentTab === 'disabled'">Ngày vô hiệu</th>
+            <th v-if="currentTab === 'disabled'">Còn lại</th>
             <th>Hành động</th>
           </tr>
         </thead>
         <tbody>
           <tr v-if="loading">
-            <td colspan="10" class="loading-cell">Đang tải...</td>
+            <td :colspan="tableColSpan" class="loading-cell">Đang tải...</td>
           </tr>
           <tr v-else-if="pagedPosts.length === 0">
-            <td colspan="10" class="empty-cell">Không có bài viết</td>
+            <td :colspan="tableColSpan" class="empty-cell">
+              {{ currentTab === 'disabled' ? 'Không có bài nào trong danh sách vô hiệu' : 'Không có bài viết' }}
+            </td>
           </tr>
-          <tr v-else v-for="post in pagedPosts" :key="post.id">
+          <tr v-else v-for="post in pagedPosts" :key="post.id" :class="{ 'row-disabled': post.status === 'DISABLED' }">
             <td>{{ post.id }}</td>
             <td>
               <img v-if="post.thumbnailUrl" :src="post.thumbnailUrl" class="post-thumb" />
@@ -62,13 +100,15 @@
             </td>
             <td>{{ post.author }}</td>
             <td class="text-center">{{ post.viewCount }}</td>
-            <td>{{ formatDate(post.createdAt) }}</td>
+
+            <!-- ACTIVE TAB columns -->
+            <td v-if="currentTab === 'active'">{{ formatDate(post.createdAt) }}</td>
             <td>
               <span :class="['status', statusClass(post.status)]">
                 {{ statusLabel(post.status) }}
               </span>
             </td>
-            <td class="schedule-cell">
+            <td v-if="currentTab === 'active'" class="schedule-cell">
               <div v-if="post.status === 'SCHEDULED'" class="schedule-info">
                 <span class="schedule-icon">⏰</span> {{ formatDateTime(post.scheduledPublishAt) }}
               </div>
@@ -77,10 +117,26 @@
               </div>
               <span v-else class="no-expiry">Vô thời hạn</span>
             </td>
+
+            <!-- DISABLED TAB columns -->
+            <td v-if="currentTab === 'disabled'" class="audit-cell">{{ post.disabledBy || '--' }}</td>
+            <td v-if="currentTab === 'disabled'" class="audit-cell">{{ formatDateTime(post.disabledAt) }}</td>
+            <td v-if="currentTab === 'disabled'" class="audit-cell">
+              <span :class="['days-left', daysLeftClass(post.disabledAt)]">
+                {{ daysUntilCleanup(post.disabledAt) }} ngày
+              </span>
+            </td>
+
             <td>
               <div class="action-btns">
-                <button class="edit-btn" @click="openEdit(post)">Sửa</button>
-                <button class="delete-btn" @click="handleDelete(post.id)">Xóa</button>
+                <template v-if="currentTab === 'active'">
+                  <button class="edit-btn" @click="openEdit(post)">Sửa</button>
+                  <button class="disable-btn" @click="handleDisable(post)">Vô hiệu hóa</button>
+                </template>
+                <template v-else>
+                  <button class="restore-btn" @click="handleRestore(post)">Kích hoạt lại</button>
+                  <button class="permanent-btn" @click="openPermanentConfirm(post)">Xóa vĩnh viễn</button>
+                </template>
               </div>
             </td>
           </tr>
@@ -97,6 +153,46 @@
         :class="['page-btn', { active: p === currentPage }]"
       >{{ p }}</button>
       <button @click="currentPage++" :disabled="currentPage === totalPages" class="pagination-btn">Sau &#8250;</button>
+    </div>
+
+    <!-- MODAL CONFIRM XÓA VĨNH VIỄN -->
+    <div v-if="permanentConfirm" class="modal-overlay" @click="cancelPermanentConfirm">
+      <div class="modal-content danger-modal" @click.stop>
+        <div class="modal-header danger-header">
+          <h2>⚠️ Xóa vĩnh viễn bài viết</h2>
+          <button class="close-btn" @click="cancelPermanentConfirm">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="danger-warning">
+            <p>Bạn sắp xóa <strong>vĩnh viễn</strong> bài viết:</p>
+            <div class="post-preview">"{{ permanentConfirm.title }}"</div>
+            <p class="warning-text">
+              Hành động này <strong>KHÔNG THỂ hoàn tác</strong>. Toàn bộ dữ liệu bài viết và ảnh đính kèm
+              sẽ bị xóa khỏi database. Dữ liệu không thể khôi phục sau khi xóa.
+            </p>
+            <p class="confirm-instruction">
+              Để xác nhận, vui lòng gõ chính xác từ khóa <code>XOA</code> vào ô dưới:
+            </p>
+            <input
+              v-model="permanentConfirmText"
+              type="text"
+              placeholder="Gõ XOA để xác nhận"
+              class="confirm-input"
+              @keyup.enter="doPermanentDelete"
+            />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="cancel-btn" @click="cancelPermanentConfirm">Hủy</button>
+          <button
+            class="danger-btn"
+            :disabled="permanentConfirmText !== 'XOA' || permanentDeleting"
+            @click="doPermanentDelete"
+          >
+            {{ permanentDeleting ? 'Đang xóa...' : 'Xóa vĩnh viễn' }}
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- MODAL -->
@@ -235,7 +331,7 @@ import { ref, computed, onMounted } from 'vue'
 import * as blogApi from '@/services/blogApi'
 import axiosInstance from '@/services/axiosInstance'
 
-type PostStatus = 'DRAFT' | 'SCHEDULED' | 'PUBLISHED' | 'EXPIRED'
+type PostStatus = 'DRAFT' | 'SCHEDULED' | 'PUBLISHED' | 'EXPIRED' | 'DISABLED'
 
 type Post = {
   id: number
@@ -253,9 +349,25 @@ type Post = {
   publishedAt: string
   scheduledPublishAt: string | null
   expiresAt: string | null
+  disabledAt: string | null
+  disabledBy: string | null
 }
 
+type TabKey = 'active' | 'disabled'
+
+type Banner = {
+  type: 'success' | 'info'
+  title: string
+  message: string
+  undoId?: number
+} | null
+
+const RETENTION_DAYS = 30
+
+const currentTab = ref<TabKey>('active')
 const allPosts = ref<Post[]>([])
+const disabledPosts = ref<Post[]>([])
+const disabledCount = ref(0)
 const filteredPosts = ref<Post[]>([])
 const loading = ref(false)
 const showModal = ref(false)
@@ -263,6 +375,16 @@ const isEdit = ref(false)
 const editingId = ref<number | null>(null)
 const submitting = ref(false)
 const aiLoading = ref(false)
+
+const banner = ref<Banner>(null)
+let bannerTimer: ReturnType<typeof setTimeout> | null = null
+
+// State cho modal xóa vĩnh viễn
+const permanentConfirm = ref<Post | null>(null)
+const permanentConfirmText = ref('')
+const permanentDeleting = ref(false)
+
+const tableColSpan = computed(() => currentTab.value === 'active' ? 10 : 10)
 
 const searchKeyword = ref('')
 const filterStatus = ref('')
@@ -364,6 +486,7 @@ const statusLabel = (status?: PostStatus): string => {
     case 'PUBLISHED': return 'Đã xuất bản'
     case 'SCHEDULED': return 'Đã lên lịch'
     case 'EXPIRED': return 'Đã hết hạn'
+    case 'DISABLED': return 'Đã vô hiệu hóa'
     case 'DRAFT':
     default: return 'Bản nháp'
   }
@@ -374,6 +497,7 @@ const statusClass = (status?: PostStatus): string => {
     case 'PUBLISHED': return 'published'
     case 'SCHEDULED': return 'scheduled'
     case 'EXPIRED': return 'expired'
+    case 'DISABLED': return 'disabled'
     case 'DRAFT':
     default: return 'draft'
   }
@@ -397,22 +521,50 @@ const localInputToIso = (localStr: string): string | null => {
 const loadPosts = async () => {
   loading.value = true
   try {
-    allPosts.value = await blogApi.getAllPosts()
+    if (currentTab.value === 'active') {
+      allPosts.value = await blogApi.getAllPosts()
+    } else {
+      disabledPosts.value = await blogApi.getDisabledPosts()
+    }
     applyFilter()
+    // Luôn refresh count thùng rác để cập nhật badge
+    loadDisabledCount()
   } finally {
     loading.value = false
   }
 }
 
+const loadDisabledCount = async () => {
+  try {
+    const list = await blogApi.getDisabledPosts()
+    disabledCount.value = list.length
+    if (currentTab.value === 'disabled') {
+      disabledPosts.value = list
+    }
+  } catch { /* ignore */ }
+}
+
+const switchTab = (tab: TabKey) => {
+  if (currentTab.value === tab) return
+  currentTab.value = tab
+  searchKeyword.value = ''
+  filterStatus.value = ''
+  filterCategory.value = ''
+  currentPage.value = 1
+  loadPosts()
+}
+
 const applyFilter = () => {
-  let result = [...allPosts.value]
+  const source = currentTab.value === 'active' ? allPosts.value : disabledPosts.value
+  let result = [...source]
 
   if (searchKeyword.value) {
     const kw = searchKeyword.value.toLowerCase()
     result = result.filter(p => p.title.toLowerCase().includes(kw))
   }
 
-  if (filterStatus.value) {
+  // Chỉ filter theo status khi ở tab active (disabled tab tất cả đều DISABLED)
+  if (currentTab.value === 'active' && filterStatus.value) {
     result = result.filter(p => p.status === filterStatus.value)
   }
 
@@ -422,6 +574,29 @@ const applyFilter = () => {
 
   filteredPosts.value = result
   currentPage.value = 1
+}
+
+const showBanner = (b: Banner) => {
+  if (bannerTimer) clearTimeout(bannerTimer)
+  banner.value = b
+  if (b) {
+    bannerTimer = setTimeout(() => { banner.value = null }, 6000)
+  }
+}
+
+const daysUntilCleanup = (disabledAt: string | null | undefined): number => {
+  if (!disabledAt) return RETENTION_DAYS
+  const d = parseBackendDate(disabledAt)
+  if (!d) return RETENTION_DAYS
+  const elapsed = Math.floor((Date.now() - d.getTime()) / (1000 * 60 * 60 * 24))
+  return Math.max(0, RETENTION_DAYS - elapsed)
+}
+
+const daysLeftClass = (disabledAt: string | null | undefined): string => {
+  const left = daysUntilCleanup(disabledAt)
+  if (left <= 3) return 'critical'
+  if (left <= 7) return 'warning'
+  return ''
 }
 
 const handleSearch = () => {
@@ -561,13 +736,72 @@ const handleSubmit = async () => {
   }
 }
 
-const handleDelete = async (id: number) => {
-  if (!confirm('Bạn có chắc chắn muốn xóa bài viết này?')) return
+// Vô hiệu hóa (soft delete)
+const handleDisable = async (post: Post) => {
+  if (!confirm(`Vô hiệu hóa bài "${post.title}"?\n\nBài sẽ được chuyển sang danh sách vô hiệu.\nDữ liệu vẫn được lưu trữ và có thể kích hoạt lại trong 30 ngày.`)) return
   try {
-    await blogApi.deletePost(id)
+    await blogApi.disablePost(post.id)
+    showBanner({
+      type: 'success',
+      title: 'Đã vô hiệu hóa bài viết',
+      message: `"${post.title}" đã được chuyển sang danh sách vô hiệu. Dữ liệu vẫn được lưu trong database.`,
+      undoId: post.id
+    })
     loadPosts()
-  } catch {
-    alert('Lỗi khi xóa bài viết')
+  } catch (err: any) {
+    alert(err?.response?.data?.message || 'Lỗi khi vô hiệu hóa bài viết')
+  }
+}
+
+// Kích hoạt lại bài đã vô hiệu hóa (từ banner undo HOẶC từ tab disabled)
+const handleUndo = async (id: number) => {
+  try {
+    await blogApi.restorePost(id)
+    showBanner({
+      type: 'info',
+      title: 'Đã kích hoạt lại',
+      message: 'Bài viết quay về trạng thái bản nháp. Bạn có thể chỉnh sửa và xuất bản lại.'
+    })
+    currentTab.value = 'active'
+    loadPosts()
+  } catch (err: any) {
+    alert(err?.response?.data?.message || 'Lỗi khi kích hoạt lại')
+  }
+}
+
+const handleRestore = async (post: Post) => {
+  if (!confirm(`Kích hoạt lại bài "${post.title}"?\n\nBài sẽ quay về trạng thái bản nháp để admin tự xuất bản lại.`)) return
+  await handleUndo(post.id)
+}
+
+// Mở modal xác nhận xóa vĩnh viễn
+const openPermanentConfirm = (post: Post) => {
+  permanentConfirm.value = post
+  permanentConfirmText.value = ''
+}
+
+const cancelPermanentConfirm = () => {
+  permanentConfirm.value = null
+  permanentConfirmText.value = ''
+}
+
+const doPermanentDelete = async () => {
+  if (!permanentConfirm.value) return
+  if (permanentConfirmText.value !== 'XOA') return
+  permanentDeleting.value = true
+  try {
+    await blogApi.permanentDeletePost(permanentConfirm.value.id)
+    showBanner({
+      type: 'info',
+      title: 'Đã xóa vĩnh viễn',
+      message: `Bài "${permanentConfirm.value.title}" cùng ảnh đính kèm đã bị xóa khỏi database.`
+    })
+    cancelPermanentConfirm()
+    loadPosts()
+  } catch (err: any) {
+    alert(err?.response?.data?.message || 'Lỗi khi xóa vĩnh viễn')
+  } finally {
+    permanentDeleting.value = false
   }
 }
 
@@ -581,6 +815,8 @@ const generateWithAI = async () => {
 
   try {
     const token = localStorage.getItem('accessToken')
+    const email = localStorage.getItem('email')
+    const username = localStorage.getItem('username')
     const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080'
     const body = JSON.stringify({
       title: form.value.title,
@@ -592,7 +828,10 @@ const generateWithAI = async () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {})
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        // Audit log cần header này khi security.api.enabled=false
+        ...(username ? { 'X-Employee-Username': username } : {}),
+        ...(email ? { 'X-Customer-Email': email } : {})
       },
       body
     })
@@ -707,6 +946,43 @@ onMounted(loadPosts)
 .status.draft { background: #fefcbf; color: #744210; }
 .status.scheduled { background: #bee3f8; color: #2a4365; }
 .status.expired { background: #e2e8f0; color: #4a5568; }
+.status.disabled { background: #fed7d7; color: #742a2a; }
+
+/* TABS */
+.tab-bar { display: flex; gap: 4px; background: white; border-radius: 12px 12px 0 0; padding: 6px 6px 0 6px; margin-bottom: -1px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+.tab-btn { padding: 10px 20px; background: transparent; border: none; border-bottom: 3px solid transparent; font-size: 14px; font-weight: 600; color: #718096; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px; border-radius: 8px 8px 0 0; }
+.tab-btn:hover { background: #f7fafc; color: #2d3748; }
+.tab-btn.active { color: #667eea; border-bottom-color: #667eea; background: #f0f4ff; }
+.tab-count { background: #edf2f7; color: #4a5568; font-size: 12px; font-weight: 600; padding: 1px 9px; border-radius: 999px; min-width: 22px; text-align: center; line-height: 1.6; transition: all 0.2s; }
+.tab-btn.active .tab-count { background: #667eea; color: white; }
+
+/* BANNER */
+.info-banner { display: flex; align-items: flex-start; gap: 12px; padding: 14px 18px; border-radius: 10px; margin-bottom: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+.info-banner.success { background: #f0fff4; border-left: 4px solid #38a169; color: #22543d; }
+.info-banner.info { background: #ebf8ff; border-left: 4px solid #3182ce; color: #2a4365; }
+.banner-icon { font-size: 20px; font-weight: 700; flex-shrink: 0; margin-top: 2px; }
+.banner-content { flex: 1; }
+.banner-title { font-weight: 700; font-size: 14px; margin-bottom: 2px; }
+.banner-message { font-size: 13px; line-height: 1.5; }
+.banner-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.banner-btn { padding: 6px 14px; border: 1px solid currentColor; background: transparent; color: inherit; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.banner-btn.primary { background: currentColor; }
+.banner-btn.primary span, .banner-btn.primary { color: white; background: #22543d; }
+.info-banner.info .banner-btn.primary { background: #2a4365; }
+.banner-close { background: transparent; border: none; font-size: 22px; color: inherit; cursor: pointer; padding: 0 6px; opacity: 0.6; }
+.banner-close:hover { opacity: 1; }
+.slide-fade-enter-active, .slide-fade-leave-active { transition: all 0.3s ease; }
+.slide-fade-enter-from, .slide-fade-leave-to { transform: translateY(-10px); opacity: 0; }
+
+/* DISABLED ROW */
+.row-disabled { background: #fefefe; opacity: 0.85; }
+.row-disabled .title-cell { color: #718096; }
+.audit-cell { font-size: 12px; color: #4a5568; white-space: nowrap; }
+
+/* DAYS LEFT BADGE */
+.days-left { padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; background: #e6fffa; color: #234e52; }
+.days-left.warning { background: #fefcbf; color: #744210; }
+.days-left.critical { background: #fed7d7; color: #742a2a; }
 
 .schedule-cell { font-size: 12px; color: #4a5568; white-space: nowrap; }
 .schedule-info { display: inline-flex; align-items: center; gap: 4px; }
@@ -717,9 +993,29 @@ onMounted(loadPosts)
 .text-center { text-align: center; }
 .loading-cell, .empty-cell { text-align: center; padding: 20px; }
 
-.action-btns { display: flex; gap: 6px; }
+.action-btns { display: flex; gap: 6px; flex-wrap: wrap; }
 .edit-btn { padding: 5px 12px; border: none; border-radius: 6px; background: #667eea; color: white; font-size: 12px; cursor: pointer; }
-.delete-btn { padding: 5px 12px; border: none; border-radius: 6px; background: #e53e3e; color: white; font-size: 12px; cursor: pointer; }
+.edit-btn:hover { background: #5568d3; }
+.disable-btn { padding: 5px 12px; border: none; border-radius: 6px; background: #ed8936; color: white; font-size: 12px; cursor: pointer; }
+.disable-btn:hover { background: #dd6b20; }
+.restore-btn { padding: 5px 12px; border: none; border-radius: 6px; background: #38a169; color: white; font-size: 12px; cursor: pointer; }
+.restore-btn:hover { background: #2f855a; }
+.permanent-btn { padding: 5px 12px; border: 1px solid #e53e3e; border-radius: 6px; background: white; color: #e53e3e; font-size: 12px; cursor: pointer; }
+.permanent-btn:hover { background: #e53e3e; color: white; }
+
+/* DANGER MODAL */
+.danger-modal { width: 520px; }
+.danger-header { background: linear-gradient(135deg, #e53e3e, #c53030) !important; }
+.danger-warning p { margin: 10px 0; font-size: 14px; line-height: 1.6; color: #2d3748; }
+.post-preview { padding: 12px 16px; background: #fef2f2; border-left: 3px solid #e53e3e; border-radius: 4px; font-weight: 600; color: #742a2a; font-style: italic; margin: 12px 0; }
+.warning-text { background: #fffaf0; padding: 10px 14px; border-radius: 6px; font-size: 13px !important; color: #744210 !important; line-height: 1.6 !important; }
+.confirm-instruction { margin-top: 16px !important; font-size: 13px !important; }
+.confirm-instruction code { background: #fed7d7; padding: 2px 8px; border-radius: 4px; font-weight: 700; color: #742a2a; font-family: monospace; font-size: 14px; }
+.confirm-input { width: 100%; padding: 10px 14px; border: 2px solid #fed7d7; border-radius: 8px; font-size: 15px; font-family: monospace; text-transform: uppercase; margin-top: 8px; }
+.confirm-input:focus { outline: none; border-color: #e53e3e; }
+.danger-btn { background: #e53e3e; color: white; border: none; padding: 8px 18px; border-radius: 8px; cursor: pointer; font-weight: 600; }
+.danger-btn:hover:not(:disabled) { background: #c53030; }
+.danger-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
 /* MODAL */
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; justify-content: center; align-items: center; z-index: 1000; }

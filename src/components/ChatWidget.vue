@@ -243,6 +243,8 @@ const send = async () => {
 
   try {
     const token = localStorage.getItem('accessToken')
+    const email = localStorage.getItem('email')
+    const username = localStorage.getItem('username')
     const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 
     const historyToSend = messages.value.slice(0, -1).map(m => ({
@@ -254,7 +256,11 @@ const send = async () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {})
+        // JWT khi security bật
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        // Header định danh khi security tắt (dev mode) — audit log đọc các header này
+        ...(username ? { 'X-Employee-Username': username } : {}),
+        ...(email ? { 'X-Customer-Email': email } : {})
       },
       body: JSON.stringify({ messages: historyToSend })
     })

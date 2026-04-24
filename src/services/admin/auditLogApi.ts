@@ -1,5 +1,12 @@
 import axiosInstance from '../axiosInstance'
 
+export interface FieldChange {
+  field: string
+  fieldLabel: string
+  oldValue: string
+  newValue: string
+}
+
 export interface AuditLogResponse {
   id: string
   userEmail: string
@@ -20,14 +27,20 @@ export interface AuditLogResponse {
   createdAt: string
   severity: string
   executionTimeMs: number
+  changes?: FieldChange[]
 }
 
 export interface AuditLogSearchRequest {
   userEmail?: string
   userRole?: string
   actionType?: string
+  /** Category filter — match substring (vd: "CREATE" match cả BLOG_CREATE, PRODUCT_CREATE...) */
+  actionCategory?: string
+  /** Full-text search — match trong actionDescription, userEmail, userFullName, entityId */
+  keyword?: string
   entityType?: string
   severity?: string
+  entityId?: string
   startDate?: string
   endDate?: string
   page?: number

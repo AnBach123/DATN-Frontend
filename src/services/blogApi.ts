@@ -18,8 +18,27 @@ export const updatePost = async (id: number, data: any) => {
   return res.data.data
 }
 
-export const deletePost = async (id: number) => {
-  const res = await axiosInstance.delete(`${BLOG_API}/admin/${id}`)
+// Vô hiệu hóa (soft delete)
+export const disablePost = async (id: number) => {
+  const res = await axiosInstance.put(`${BLOG_API}/admin/${id}/disable`)
+  return res.data
+}
+
+// Kích hoạt lại bài đã vô hiệu hóa
+export const restorePost = async (id: number) => {
+  const res = await axiosInstance.put(`${BLOG_API}/admin/${id}/restore`)
+  return res.data
+}
+
+// Danh sách bài đã vô hiệu hóa
+export const getDisabledPosts = async () => {
+  const res = await axiosInstance.get(`${BLOG_API}/admin/disabled`)
+  return res.data.data
+}
+
+// Xóa vĩnh viễn (chỉ dùng khi bài đã bị vô hiệu hóa)
+export const permanentDeletePost = async (id: number) => {
+  const res = await axiosInstance.delete(`${BLOG_API}/admin/${id}/permanent`)
   return res.data
 }
 
