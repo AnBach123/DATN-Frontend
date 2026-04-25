@@ -3,8 +3,7 @@ import { ref, onMounted } from 'vue'
 import {
   getAllReviewsAdmin,
   approveReview,
-  rejectReview,
-  deleteReview
+  rejectReview
 } from '@/services/reviewApi'
 import AdminPageHeader from '@/components/admin/AdminPageHeader.vue'
 
@@ -95,21 +94,6 @@ const reject = (id: number) => {
   })
 }
 
-const removeReview = (id: number) => {
-  openConfirm('Bạn có chắc muốn xóa đánh giá này?', async () => {
-    actionLoadingId.value = id
-    try {
-      await deleteReview(id)
-      await load()
-    } catch (e) {
-      console.error('Lỗi xóa review:', e)
-      alert('Không thể xóa đánh giá')
-    } finally {
-      actionLoadingId.value = null
-    }
-  })
-}
-
 const handleConfirm = async () => {
   if (confirmAction.value) {
     await confirmAction.value()
@@ -182,12 +166,13 @@ onMounted(load)
             <td colspan="6" class="empty-cell">Không có đánh giá nào</td>
           </tr>
 
-        <tr 
-  v-else 
-  v-for="r in reviews" 
+        <tr
+  v-else
+  v-for="r in reviews"
   :key="r.id"
   @click="openDetail(r)"
   style="cursor: pointer"
+  :class="{ 'row-discontinued': r.status === 'REJECTED' }"
 >
             <td class="name-cell">
               <div class="name">{{ r.name }}</div>
@@ -227,14 +212,6 @@ onMounted(load)
                   :disabled="!canReject(r.status) || actionLoadingId === r.id"
                 >
                   {{ actionLoadingId === r.id ? '...' : 'Từ chối' }}
-                </button>
-
-                <button
-                  class="delete-btn"
-                 @click.stop="removeReview(r.id)"
-                  :disabled="actionLoadingId === r.id"
-                >
-                  {{ actionLoadingId === r.id ? '...' : 'Xóa' }}
                 </button>
               </div>
             </td>
@@ -412,6 +389,30 @@ onMounted(load)
 
 .review-table tbody tr:hover {
   background: #f8fbff;
+}
+
+/* Đánh giá đã từ chối — làm xám mờ để dễ phân biệt với đang chờ/đã duyệt */
+.review-table tbody tr.row-discontinued {
+  background: #f8fafc;
+  color: #94a3b8;
+}
+
+.review-table tbody tr.row-discontinued td {
+  color: #94a3b8;
+}
+
+.review-table tbody tr.row-discontinued .name {
+  color: #64748b;
+  font-weight: 500;
+}
+
+.review-table tbody tr.row-discontinued .stars {
+  filter: grayscale(80%);
+  opacity: 0.6;
+}
+
+.review-table tbody tr.row-discontinued:hover {
+  background: #f1f5f9;
 }
 
 .name {

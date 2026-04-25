@@ -44,7 +44,7 @@
             <td colspan="8" class="empty-cell">Không có combo</td>
           </tr>
 
-          <tr v-else v-for="c in combos" :key="c.id">
+          <tr v-else v-for="c in combos" :key="c.id" :class="{ 'row-discontinued': !c.isActive }">
             <td>{{ c.id }}</td>
             <td class="code-cell">{{ c.comboCode || '—' }}</td>
             <td class="name">{{ c.comboName }}</td>
@@ -297,7 +297,10 @@ const handleSearch = () => {
 const loadProducts = async () => {
   try {
     const response = await axiosInstance.get('/api/products')
-    allProducts.value = response.data.data
+    // Chỉ lấy sản phẩm còn kinh doanh — không cho thêm món đã ngừng vào combo mới
+    allProducts.value = (response.data.data || []).filter(
+      (p: { availabilityStatus?: string }) => p.availabilityStatus === 'AVAILABLE'
+    )
     filteredProducts.value = allProducts.value
   } catch (error) {
     console.error('Error loading products:', error)
@@ -727,6 +730,25 @@ onMounted(() => {
 
 .combo-table tbody tr:hover {
   background: #f0f4ff;
+}
+
+/* Combo đã ngừng kinh doanh — làm xám mờ để admin dễ phân biệt */
+.combo-table tbody tr.row-discontinued {
+  background: #f8fafc;
+  color: #94a3b8;
+}
+
+.combo-table tbody tr.row-discontinued .name {
+  color: #64748b;
+  font-weight: 500;
+}
+
+.combo-table tbody tr.row-discontinued .code-cell {
+  color: #94a3b8;
+}
+
+.combo-table tbody tr.row-discontinued:hover {
+  background: #f1f5f9;
 }
 
 .name {

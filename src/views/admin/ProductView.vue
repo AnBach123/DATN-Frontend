@@ -73,12 +73,17 @@
             <td colspan="9" class="empty-cell">Không có sản phẩm</td>
           </tr>
 
-          <tr v-else v-for="p in products" :key="p.id">
+          <tr
+            v-else
+            v-for="p in products"
+            :key="p.id"
+            :class="{ 'row-discontinued': p.availabilityStatus !== 'AVAILABLE' }"
+          >
             <td>
-              <img 
-                v-if="p.imageUrl" 
-                :src="p.imageUrl" 
-                alt="Product" 
+              <img
+                v-if="p.imageUrl"
+                :src="p.imageUrl"
+                alt="Product"
                 class="product-thumbnail"
                 @error="onImgError"
               />
@@ -573,6 +578,31 @@ onMounted(loadProducts)
 
 .product-table tbody tr:hover {
   background: #f0f4ff;
+}
+
+/* Row sản phẩm đã ngừng kinh doanh — làm xám mờ để admin dễ phân biệt */
+.product-table tbody tr.row-discontinued {
+  background: #f8fafc;
+  color: #94a3b8;
+}
+
+.product-table tbody tr.row-discontinued .product-thumbnail,
+.product-table tbody tr.row-discontinued .no-image {
+  filter: grayscale(80%);
+  opacity: 0.55;
+}
+
+.product-table tbody tr.row-discontinued .name {
+  color: #64748b;
+  font-weight: 500;
+}
+
+.product-table tbody tr.row-discontinued .code-cell {
+  color: #94a3b8;
+}
+
+.product-table tbody tr.row-discontinued:hover {
+  background: #f1f5f9;
 }
 
 .product-thumbnail {

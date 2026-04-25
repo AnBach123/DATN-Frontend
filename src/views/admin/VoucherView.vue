@@ -61,7 +61,11 @@
               <tr v-if="productVouchers.length === 0">
                 <td colspan="10" class="empty">Không có dữ liệu</td>
               </tr>
-              <tr v-for="voucher in productVouchers" :key="voucher.id">
+              <tr
+                v-for="voucher in productVouchers"
+                :key="voucher.id"
+                :class="{ 'row-discontinued': !voucher.isActive }"
+              >
                 <td>{{ voucher.id }}</td>
                 <td>{{ voucher.voucherCode }}</td>
                 <td>{{ voucher.voucherName }}</td>
@@ -154,7 +158,11 @@
               <tr v-if="customerVouchers.length === 0">
                 <td colspan="8" class="empty">Không có dữ liệu</td>
               </tr>
-              <tr v-for="voucher in customerVouchers" :key="voucher.id">
+              <tr
+                v-for="voucher in customerVouchers"
+                :key="voucher.id"
+                :class="{ 'row-discontinued': voucher.voucherStatus !== 'Hoạt động' && voucher.voucherStatus !== 'ACTIVE' }"
+              >
                 <td>{{ voucher.id }}</td>
                 <td>{{ voucher.voucherCode }}</td>
                 <td>{{ voucher.voucherName }}</td>
@@ -1430,6 +1438,25 @@ onMounted(() => {
 
 .voucher-table tbody tr:hover {
   background: rgba(102, 126, 234, 0.05);
+}
+
+/* Voucher đã ngừng / hết hạn / đã dùng — làm xám mờ để dễ phân biệt */
+.voucher-table tbody tr.row-discontinued {
+  background: #f8fafc;
+  color: #94a3b8;
+}
+
+.voucher-table tbody tr.row-discontinued td {
+  color: #94a3b8;
+}
+
+.voucher-table tbody tr.row-discontinued .discount-badge {
+  opacity: 0.55;
+  filter: grayscale(70%);
+}
+
+.voucher-table tbody tr.row-discontinued:hover {
+  background: #f1f5f9;
 }
 
 .empty {

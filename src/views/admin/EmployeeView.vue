@@ -68,7 +68,11 @@
             <tr v-if="employees.length === 0">
               <td colspan="10" class="empty">Không có dữ liệu</td>
             </tr>
-            <tr v-for="employee in employees" :key="employee.id">
+            <tr
+              v-for="employee in employees"
+              :key="employee.id"
+              :class="{ 'row-discontinued': !employee.isActive }"
+            >
               <td>{{ employee.id }}</td>
               <td>{{ employee.fullName }}</td>
               <td>{{ employee.username }}</td>
@@ -705,6 +709,25 @@ select:focus {
 
 .employee-table tbody tr:hover {
   background: rgba(102, 126, 234, 0.05);
+}
+
+/* Tài khoản đã khóa — làm xám mờ để dễ phân biệt với tài khoản đang hoạt động */
+.employee-table tbody tr.row-discontinued {
+  background: #f8fafc;
+  color: #94a3b8;
+}
+
+.employee-table tbody tr.row-discontinued td {
+  color: #94a3b8;
+}
+
+.employee-table tbody tr.row-discontinued .role-badge {
+  opacity: 0.55;
+  filter: grayscale(70%);
+}
+
+.employee-table tbody tr.row-discontinued:hover {
+  background: #f1f5f9;
 }
 
 .empty {
