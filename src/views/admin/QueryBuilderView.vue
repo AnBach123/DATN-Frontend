@@ -1595,11 +1595,9 @@ const loadSavedQueries = async () => {
   loadingSavedQueries.value = true
   try {
     savedQueries.value = await queryBuilderService.getMyQueries()
-    
-    // Auto-execute all saved queries to show preview
-    for (const query of savedQueries.value) {
-      executeQueryPreview(query)
-    }
+    // Bỏ auto-execute từng query để xem preview — gây noise cho audit log
+    // (mỗi lần admin mở trang sẽ ghi log "Thực thi custom query" cho từng saved query).
+    // Preview chỉ chạy khi admin chủ động click vào 1 query cụ thể.
   } catch (err: any) {
     console.error('Load saved queries error:', err)
     error.value = err.response?.data?.message || 'Lỗi khi tải danh sách truy vấn'
@@ -1645,11 +1643,18 @@ const renderSavedQueryChart = (queryId: number, vizType: string) => {
   })
 }
 
-const openDetailView = (query: SavedQuery) => {
+const openDetailView = async (query: SavedQuery) => {
   detailQuery.value = query
   detailQueryResult.value = savedQueryResults.value.get(query.id) || null
   showDetailModal.value = true
-  
+
+  // Lazy-load: chỉ execute query khi admin chủ động mở chi tiết và chưa có cache.
+  // Trước đây load auto khi mount → ghi audit log noise.
+  if (!detailQueryResult.value) {
+    await executeQueryPreview(query)
+    detailQueryResult.value = savedQueryResults.value.get(query.id) || null
+  }
+
   // Render detail chart
   if (query.visualizationType !== 'TABLE' && detailQueryResult.value) {
     nextTick(() => {

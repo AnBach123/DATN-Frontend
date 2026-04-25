@@ -1,23 +1,10 @@
-import axios from 'axios'
-
-const api = axios.create({
-  baseURL: 'http://localhost:8080/api',
-  headers: {
-    'Content-Type': 'application/json',
-  },
-})
-
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('accessToken') || localStorage.getItem('token')
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
-  }
-  return config
-})
+// Dùng axiosInstance dùng chung — đã có interceptor gắn JWT token,
+// X-Employee-Username, X-Customer-Email cho audit log định danh.
+import api from './axiosInstance'
 
 const EmployeeService = {
   async getEmployees() {
-    const response = await api.get('/employees')
+    const response = await api.get('/api/employees')
     return response.data
   },
 
@@ -30,7 +17,7 @@ const EmployeeService = {
     if (params.fromDate) queryParams.fromDate = params.fromDate
     if (params.toDate) queryParams.toDate = params.toDate
 
-    const response = await api.get('/employees/search', {
+    const response = await api.get('/api/employees/search', {
       params: queryParams
     })
 
@@ -38,14 +25,14 @@ const EmployeeService = {
   },
 
   async sortEmployees(sortBy: string, direction: string) {
-    const response = await api.get('/employees/sort', {
+    const response = await api.get('/api/employees/sort', {
       params: { sortBy, direction },
     })
     return response.data
   },
 
   async getById(id: number) {
-    const response = await api.get(`/employees/${id}`)
+    const response = await api.get(`/api/employees/${id}`)
     return response.data
   },
 
@@ -62,7 +49,7 @@ const EmployeeService = {
       isActive: data.isActive ?? true,
     }
 
-    const response = await api.post('/employees', payload)
+    const response = await api.post('/api/employees', payload)
     return response.data
   },
 
@@ -78,12 +65,12 @@ const EmployeeService = {
       isActive: data.isActive ?? true,
     }
 
-    const response = await api.put(`/employees/${id}`, payload)
+    const response = await api.put(`/api/employees/${id}`, payload)
     return response.data
   },
 
   async deleteEmployee(id: number) {
-    const response = await api.delete(`/employees/${id}`)
+    const response = await api.delete(`/api/employees/${id}`)
     return response.data
   },
 }

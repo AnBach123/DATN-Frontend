@@ -290,41 +290,71 @@
             </div>
             
             <div class="widget-content">
-              <div class="widget-chart-container">
-                <canvas :id="`widget-chart-${item.savedQueryId}`"></canvas>
+              <!-- TABLE viz: render thành <table> với đầy đủ cột -->
+              <div
+                v-if="getSavedQueryVizType(item.savedQueryId) === 'TABLE' && savedQueryResults.has(item.savedQueryId)"
+                class="widget-table-wrapper"
+              >
+                <table class="widget-table">
+                  <thead>
+                    <tr>
+                      <th
+                        v-for="col in savedQueryResults.get(item.savedQueryId)!.columns"
+                        :key="col.name"
+                      >{{ col.displayName || col.name }}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      v-for="(row, rIdx) in savedQueryResults.get(item.savedQueryId)!.rows"
+                      :key="rIdx"
+                    >
+                      <td
+                        v-for="col in savedQueryResults.get(item.savedQueryId)!.columns"
+                        :key="col.name"
+                      >{{ formatTableCell(row[col.name]) }}</td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
-              
-              <!-- Data Summary - Left Side -->
-              <div v-if="savedQueryResults.has(item.savedQueryId)" class="widget-data-summary">
-                <div 
-                  v-for="(row, idx) in savedQueryResults.get(item.savedQueryId)!.rows" 
-                  :key="idx"
-                  class="data-item"
-                >
-                  <div class="data-item-header">
-                    <div class="data-category-wrapper">
-                      <span class="color-dot" :style="{ backgroundColor: getColorForIndex(idx) }"></span>
-                      <span class="data-category">{{ Object.values(row)[0] }}</span>
+
+              <!-- Chart viz (BAR/LINE/PIE/DOUGHNUT): canvas + data summary bên cạnh -->
+              <template v-else>
+                <div class="widget-chart-container">
+                  <canvas :id="`widget-chart-${item.savedQueryId}`"></canvas>
+                </div>
+
+                <div v-if="savedQueryResults.has(item.savedQueryId)" class="widget-data-summary">
+                  <div
+                    v-for="(row, idx) in savedQueryResults.get(item.savedQueryId)!.rows"
+                    :key="idx"
+                    class="data-item"
+                  >
+                    <div class="data-item-header">
+                      <div class="data-category-wrapper">
+                        <span class="color-dot" :style="{ backgroundColor: getColorForIndex(idx) }"></span>
+                        <span class="data-category">{{ Object.values(row)[0] }}</span>
+                      </div>
+                      <span class="data-amount">{{ formatPreviewValue(Object.values(row)[1]) }}</span>
                     </div>
-                    <span class="data-amount">{{ formatPreviewValue(Object.values(row)[1]) }}</span>
-                  </div>
-                  <div class="data-item-count">
-                    {{ calculatePercentage(item.savedQueryId, Object.values(row)[1]) }}
-                  </div>
-                  <div class="progress-bar-container">
-                    <div 
-                      class="progress-bar-fill" 
-                      :style="{ 
-                        width: calculatePercentage(item.savedQueryId, Object.values(row)[1]),
-                        backgroundColor: getColorForIndex(idx)
-                      }"
-                    ></div>
-                  </div>
-                  <div class="data-item-percentage">
-                    {{ calculatePercentage(item.savedQueryId, Object.values(row)[1]) }}
+                    <div class="data-item-count">
+                      {{ calculatePercentage(item.savedQueryId, Object.values(row)[1]) }}
+                    </div>
+                    <div class="progress-bar-container">
+                      <div
+                        class="progress-bar-fill"
+                        :style="{
+                          width: calculatePercentage(item.savedQueryId, Object.values(row)[1]),
+                          backgroundColor: getColorForIndex(idx)
+                        }"
+                      ></div>
+                    </div>
+                    <div class="data-item-percentage">
+                      {{ calculatePercentage(item.savedQueryId, Object.values(row)[1]) }}
+                    </div>
                   </div>
                 </div>
-              </div>
+              </template>
               
               <div v-show="!savedQueryResults.has(item.savedQueryId)" class="widget-loading-overlay">
                 <svg class="spinner" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -841,6 +871,18 @@ const onLayoutUpdated = (newLayout: any[]) => {
 const getSavedQueryName = (queryId: number): string => {
   const query = savedQueries.value.find(q => q.id === queryId)
   return query?.name || 'Unknown Query'
+}
+
+const getSavedQueryVizType = (queryId: number): string => {
+  const query = savedQueries.value.find(q => q.id === queryId)
+  return query?.visualizationType || 'TABLE'
+}
+
+// Format giá trị cell trong bảng — xử lý null, số, ngày
+const formatTableCell = (value: unknown): string => {
+  if (value === null || value === undefined) return '—'
+  if (typeof value === 'number') return value.toLocaleString('vi-VN')
+  return String(value)
 }
 
 const getChartColors = () => {
@@ -1848,6 +1890,52 @@ onMounted(async () => {
 
 .widget-chart-container canvas {
   max-height: 100%;
+}
+
+/* TABLE widget */
+.widget-table-wrapper {
+  flex: 1;
+  overflow: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: white;
+}
+
+.widget-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.widget-table thead {
+  position: sticky;
+  top: 0;
+  background: #f8fafc;
+  z-index: 1;
+}
+
+.widget-table th {
+  text-align: left;
+  padding: 8px 12px;
+  font-weight: 600;
+  color: #475569;
+  border-bottom: 1px solid #e2e8f0;
+  white-space: nowrap;
+}
+
+.widget-table td {
+  padding: 8px 12px;
+  color: #1e293b;
+  border-bottom: 1px solid #f1f5f9;
+  white-space: nowrap;
+}
+
+.widget-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.widget-table tbody tr:last-child td {
+  border-bottom: none;
 }
 
 .widget-data-summary {
