@@ -69,16 +69,12 @@
             @click="toggleTableSelection(table)"
           >
             <div class="table-header">
-              <div class="table-number">#{{ table.id }}</div>
+              <span class="table-name">{{ table.name }}</span>
               <!-- Show customer name if occupied/reserved, otherwise show capacity -->
               <div v-if="table.customerName && (table.status === 'IN_USE' || table.status === 'OCCUPIED' || table.status === 'RESERVED')" class="table-customer-name">
                 👤 {{ table.customerName }}
               </div>
               <div v-else class="table-capacity">{{ table.capacity }} chỗ</div>
-            </div>
-            <div class="table-name-row">
-              <span class="table-name">{{ table.name }}</span>
-              <span v-if="table.customerName && (table.status === 'IN_USE' || table.status === 'OCCUPIED' || table.status === 'RESERVED')" class="table-capacity-small">{{ table.capacity }} chỗ</span>
             </div>
             
             <div class="table-status-badge" :class="getStatusClass(table)">
@@ -283,24 +279,32 @@ const reservedCount = computed(() =>
   tables.value.filter(t => t.status === 'RESERVED').length
 );
 
+// Sort theo tên bàn — natural sort: A1 < A2 < A9 < A10 < B1
+// (localeCompare numeric:true xử lý đúng số trong tên, không bị A1, A10, A11, A2)
+const sortByTableName = (a: { name: string }, b: { name: string }) => {
+  return (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' })
+}
+
 const filteredTables = computed(() => {
+  const sorted = [...tables.value].sort(sortByTableName)
+
   if (!searchQuery.value.trim()) {
-    return tables.value;
+    return sorted
   }
-  
-  const query = searchQuery.value.toLowerCase().trim();
-  return tables.value.filter(table => {
+
+  const query = searchQuery.value.toLowerCase().trim()
+  return sorted.filter(table => {
     // Search by customer name
     if (table.customerName && table.customerName.toLowerCase().includes(query)) {
-      return true;
+      return true
     }
     // Search by table name
     if (table.name.toLowerCase().includes(query)) {
-      return true;
+      return true
     }
-    return false;
-  });
-});
+    return false
+  })
+})
 
 const selectedTableNames = computed(() => {
   return tables.value
@@ -884,9 +888,10 @@ const handleCheckIn = async () => {
 }
 
 .table-name {
-  font-size: 16px;
-  font-weight: 700;
-  color: #1e293b;
+  font-size: 22px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.3px;
 }
 
 .table-capacity-small {

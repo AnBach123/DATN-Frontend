@@ -28,11 +28,18 @@
 
         <select v-model="filters.tableStatus" class="filter-input" @change="searchTables">
           <option value="">Tất cả trạng thái</option>
-          <option value="AVAILABLE">Còn trống</option>
-          <option value="RESERVED">Đã đặt</option>
-          <option value="OCCUPIED">Đang sử dụng</option>
-          <option value="CLEANING">Đang dọn</option>
-          <option value="OUT_OF_SERVICE">Ngưng phục vụ</option>
+          <option value="ACTIVE">Đang hoạt động</option>
+          <option value="OUT_OF_SERVICE">Ngưng hoạt động</option>
+        </select>
+
+        <select v-model="filters.area" class="filter-input" @change="searchTables">
+          <option value="">Tất cả khu</option>
+          <option value="A">Khu A</option>
+          <option value="B">Khu B</option>
+          <option value="C">Khu C</option>
+          <option value="D">Khu D</option>
+          <option value="E">Khu E</option>
+          <option value="F">Khu F</option>
         </select>
 
         <input
@@ -77,15 +84,22 @@
               <td colspan="8" class="empty">Không có dữ liệu</td>
             </tr>
 
-            <tr v-for="table in tables" :key="table.id">
+            <tr
+  v-for="table in tables"
+  :key="table.id"
+  :class="{ 'row-discontinued': table.tableStatus === 'OUT_OF_SERVICE' }"
+>
   <td>{{ table.id }}</td>
   <td>{{ table.tableName }}</td>
   <td>Khu {{ table.area || '---' }}</td>
   <td>{{ table.floor ? 'Tầng ' + table.floor : '---' }}</td>
   <td>{{ table.seatingCapacity }} người</td>
   <td>
-    <span class="status-badge" :class="table.tableStatus?.toLowerCase()">
-      {{ formatTableStatus(table.tableStatus) }}
+    <span
+      class="status-badge"
+      :class="table.tableStatus === 'OUT_OF_SERVICE' ? 'out_of_service' : 'available'"
+    >
+      {{ table.tableStatus === 'OUT_OF_SERVICE' ? 'Ngưng hoạt động' : 'Đang hoạt động' }}
     </span>
   </td>
   <td>{{ formatDate(table.createdAt) }}</td>
@@ -144,7 +158,12 @@
           <div class="form-grid">
             <div class="form-group">
               <label>Tên bàn *</label>
-              <input v-model="form.tableName" type="text" placeholder="Nhập tên bàn" />
+              <input
+                :value="form.tableName"
+                type="text"
+                placeholder="Nhập tên bàn"
+                @input="onTableNameInput($event)"
+              />
             </div>
 
        <div class="form-group">
@@ -161,17 +180,9 @@
 
             <div class="form-group">
   <label>Khu vực *</label>
-  <select v-model="form.area" @change="updateFloorByArea">
-    <option value="">-- Chọn khu vực --</option>
-    <option value="A">Khu A</option>
-    <option value="B">Khu B</option>
-    <option value="C">Khu C</option>
-    <option value="D">Khu D</option>
-    <option value="E">Khu E</option>
-    <option value="F">Khu F</option>
-  </select>
+  <input :value="form.area" type="text" disabled />
 </div>
-  
+
 <div class="form-group">
   <label>Tầng</label>
   <input v-model="form.floor" type="text" disabled />
@@ -208,7 +219,11 @@
 
             <div class="form-group">
               <label>Tên bàn *</label>
-              <input v-model="form.tableName" type="text" />
+              <input
+                :value="form.tableName"
+                type="text"
+                @input="onTableNameInput($event)"
+              />
             </div>
 
        <div class="form-group">
@@ -224,15 +239,7 @@
 </div>
 <div class="form-group">
   <label>Khu vực *</label>
-  <select v-model="form.area" @change="updateFloorByArea">
-    <option value="">-- Chọn khu vực --</option>
-    <option value="A">Khu A</option>
-    <option value="B">Khu B</option>
-    <option value="C">Khu C</option>
-    <option value="D">Khu D</option>
-    <option value="E">Khu E</option>
-    <option value="F">Khu F</option>
-  </select>
+  <input :value="form.area" type="text" disabled />
 </div>
 
 <div class="form-group">
@@ -246,7 +253,12 @@
         <div class="detail-footer">
           <button class="reset-btn" @click="closeDetailModal">Đóng</button>
           <button class="save-btn" @click="openUpdateConfirm">Cập nhật</button>
-          <button class="lock-btn" @click="disableTable">
+          <button
+            class="lock-btn"
+            @click="disableTable"
+            :disabled="!canToggleStatus"
+            :title="canToggleStatus ? '' : disableButtonTooltip"
+          >
             {{ form.tableStatus === 'OUT_OF_SERVICE' ? 'Mở lại bàn' : 'Ngưng phục vụ' }}
           </button>
         </div>
@@ -283,13 +295,74 @@ const allTables = ref<any[]>([])
 const loading = ref(false)
 const errorMessage = ref('')
 
+// Danh sách khu hợp lệ — đồng bộ với dropdown filter & form. Sửa ở đây nếu mở
+// thêm khu mới (G, H...) thì tất cả validation sẽ tự cập nhật.
+const VALID_AREAS = ['A', 'B', 'C', 'D', 'E', 'F'] as const
+
 const filters = ref({
   keyword: '',
   seatingCapacity: '',
   tableStatus: '',
+  area: '',
   fromDate: '',
   toDate: '',
 })
+
+// Validate input tên bàn theo format <Khu><Số>:
+// - Ký tự đầu phải là 1 chữ thuộc VALID_AREAS (uppercase tự động)
+// - Các ký tự sau chỉ được là số
+// - Ký tự không hợp lệ bị strip ngay trên UI
+// - Đồng thời auto-fill form.area + form.floor theo chữ đầu
+const onTableNameInput = (e: Event) => {
+  const raw = (e.target as HTMLInputElement).value.toUpperCase()
+  let cleaned = ''
+  let area = ''
+
+  for (let i = 0; i < raw.length; i++) {
+    const ch = raw.charAt(i)
+    if (i === 0) {
+      if ((VALID_AREAS as readonly string[]).includes(ch)) {
+        cleaned += ch
+        area = ch
+      }
+      // Nếu chữ đầu không thuộc khu hợp lệ → bỏ qua, đợi user gõ chữ đúng
+    } else {
+      // Sau chữ khu chỉ chấp nhận số
+      if (/[0-9]/.test(ch)) {
+        cleaned += ch
+      }
+    }
+  }
+
+  form.value.tableName = cleaned
+  form.value.area = area
+  updateFloorByArea()
+
+  // Đồng bộ giá trị input thực tế (Vue không tự rerender khv-bind nếu raw === cleaned)
+  ;(e.target as HTMLInputElement).value = cleaned
+}
+
+// Lọc theo khu + theo trạng thái (chỉ phân biệt Đang hoạt động vs Ngưng hoạt động)
+// + đẩy bàn ngưng hoạt động xuống cuối. Áp dụng FE sau khi nhận data từ BE.
+const applyClientTransforms = (rows: any[]): any[] => {
+  let result = rows || []
+
+  if (filters.value.area) {
+    result = result.filter((t) => t.area === filters.value.area)
+  }
+
+  if (filters.value.tableStatus === 'ACTIVE') {
+    result = result.filter((t) => t.tableStatus !== 'OUT_OF_SERVICE')
+  } else if (filters.value.tableStatus === 'OUT_OF_SERVICE') {
+    result = result.filter((t) => t.tableStatus === 'OUT_OF_SERVICE')
+  }
+
+  return [...result].sort((a, b) => {
+    const aOut = a.tableStatus === 'OUT_OF_SERVICE' ? 1 : 0
+    const bOut = b.tableStatus === 'OUT_OF_SERVICE' ? 1 : 0
+    return aOut - bOut
+  })
+}
 
 const sortBy = ref('')
 const direction = ref('asc')
@@ -340,7 +413,8 @@ const loadTables = async () => {
     errorMessage.value = ''
     const res = await DiningTableService.getTables()
     allTables.value = res || []
-    tables.value = paginateData(allTables.value)
+    currentPage.value = 0
+    tables.value = paginateData(applyClientTransforms(allTables.value))
   } catch (error) {
     console.error(error)
     errorMessage.value = 'Không thể tải danh sách bàn'
@@ -370,10 +444,11 @@ const searchTables = () => {
         return
       }
 
+      // tableStatus + area là filter FE-only (xử lý trong applyClientTransforms),
+      // không gửi xuống BE — BE không hiểu giá trị synthetic "ACTIVE".
       const hasFilter =
         filters.value.keyword ||
         filters.value.seatingCapacity ||
-        filters.value.tableStatus ||
         filters.value.fromDate ||
         filters.value.toDate
 
@@ -384,7 +459,7 @@ const searchTables = () => {
       const res = await DiningTableService.searchTables({
         keyword: filters.value.keyword,
         seatingCapacity: filters.value.seatingCapacity || null,
-        tableStatus: filters.value.tableStatus,
+        tableStatus: '',
         fromDate: filters.value.fromDate || null,
         toDate: filters.value.toDate || null,
         sortBy: sortBy.value,
@@ -393,7 +468,7 @@ const searchTables = () => {
 
       allTables.value = res || []
       currentPage.value = 0
-      tables.value = paginateData(allTables.value)
+      tables.value = paginateData(applyClientTransforms(allTables.value))
     } catch (error) {
       console.error(error)
       errorMessage.value = 'Không thể tìm kiếm bàn'
@@ -424,12 +499,14 @@ const paginateData = (data: any[]) => {
   return data.slice(start, end)
 }
 
-const totalPages = computed(() => Math.ceil(allTables.value.length / pageSize.value))
+const totalPages = computed(() =>
+  Math.ceil(applyClientTransforms(allTables.value).length / pageSize.value)
+)
 
 const goToPage = (page: number) => {
   if (page >= 0 && page < totalPages.value) {
     currentPage.value = page
-    tables.value = paginateData(allTables.value)
+    tables.value = paginateData(applyClientTransforms(allTables.value))
   }
 }
 
@@ -488,7 +565,7 @@ const closeDetailModal = () => {
 }
 
 const submitAddForm = () => {
-  if (!form.value.tableName || !form.value.seatingCapacity || !form.value.tableStatus || !form.value.area) {
+  if (!form.value.tableName || !form.value.seatingCapacity || !form.value.area) {
     alert('Vui lòng nhập đầy đủ thông tin')
     return
   }
@@ -498,7 +575,7 @@ const submitAddForm = () => {
 }
 
 const openUpdateConfirm = () => {
-  if (!form.value.tableName || !form.value.seatingCapacity || !form.value.tableStatus || !form.value.area) {
+  if (!form.value.tableName || !form.value.seatingCapacity || !form.value.area) {
     alert('Vui lòng nhập đầy đủ thông tin')
     return
   }
@@ -510,20 +587,28 @@ const openUpdateConfirm = () => {
 const handleConfirm = async () => {
   showConfirm.value = false
 
-  const payload = {
-  tableName: form.value.tableName,
-  seatingCapacity: Number(form.value.seatingCapacity),
-  tableStatus: form.value.tableStatus,
-  area: form.value.area,
-}
-
   try {
     if (confirmType.value === 'add') {
-      await DiningTableService.createTable(payload)
+      // Tạo bàn mới — luôn AVAILABLE. Status vận hành (RESERVED/OCCUPIED/CLEANING)
+      // chỉ được set bởi flow đặt bàn / check-in / dọn bàn, không phải admin.
+      await DiningTableService.createTable({
+        tableName: form.value.tableName,
+        seatingCapacity: Number(form.value.seatingCapacity),
+        tableStatus: 'AVAILABLE',
+        area: form.value.area,
+      })
       alert('Thêm bàn thành công')
       closeModal()
     } else if (confirmType.value === 'edit' && form.value.id) {
-      await DiningTableService.updateTable(form.value.id, payload)
+      // Sửa bàn — KHÔNG gửi tableStatus để giữ nguyên status hiện tại của BE.
+      // Admin chỉ đổi status qua nút "Ngưng phục vụ / Mở lại bàn" (toàn bộ giữa
+      // AVAILABLE ↔ OUT_OF_SERVICE). Tránh trường hợp bàn đang OCCUPIED bị reset
+      // về AVAILABLE chỉ vì admin sửa tên/khu.
+      await DiningTableService.updateTable(form.value.id, {
+        tableName: form.value.tableName,
+        seatingCapacity: Number(form.value.seatingCapacity),
+        area: form.value.area,
+      })
       alert('Cập nhật bàn thành công')
       closeDetailModal()
     }
@@ -535,8 +620,29 @@ const handleConfirm = async () => {
   }
 }
 
+// Toggle status chỉ cho phép khi bàn AVAILABLE (chuyển sang OUT_OF_SERVICE)
+// hoặc đã OUT_OF_SERVICE (mở lại). Bàn đang RESERVED/OCCUPIED/CLEANING phải đợi
+// trống rồi mới được ngưng — tránh kick khách giữa chừng.
+const canToggleStatus = computed(() => {
+  const s = form.value.tableStatus
+  return s === 'AVAILABLE' || s === 'OUT_OF_SERVICE'
+})
+
+const disableButtonTooltip = computed(() => {
+  const s = form.value.tableStatus
+  if (s === 'OCCUPIED') return 'Bàn đang có khách — không thể ngưng phục vụ'
+  if (s === 'RESERVED') return 'Bàn đã được đặt — không thể ngưng phục vụ'
+  if (s === 'CLEANING') return 'Bàn đang dọn — đợi xong rồi ngưng'
+  return ''
+})
+
 const disableTable = async () => {
   if (!form.value.id) return
+
+  if (!canToggleStatus.value) {
+    alert(disableButtonTooltip.value || 'Trạng thái bàn hiện tại không cho phép thao tác này.')
+    return
+  }
 
   const isDisabled = form.value.tableStatus === 'OUT_OF_SERVICE'
   const confirmText = isDisabled
@@ -565,17 +671,6 @@ const formatDate = (date: string) => {
   if (!date) return ''
   return date.split(' ')[0]
 }
-
-const formatTableStatus = (status: string) =>
-  (
-    {
-      AVAILABLE: 'Còn trống',
-      RESERVED: 'Đã đặt',
-      OCCUPIED: 'Đang sử dụng',
-      CLEANING: 'Đang dọn',
-      OUT_OF_SERVICE: 'Ngưng phục vụ',
-    } as Record<string, string>
-  )[status] || '---'
 
 onMounted(loadTables)
 </script>
@@ -714,6 +809,25 @@ onMounted(loadTables)
   background: rgba(102, 126, 234, 0.05);
 }
 
+/* Bàn đã ngưng phục vụ — làm xám mờ và đẩy xuống dưới (sort) */
+.table-list tbody tr.row-discontinued {
+  background: #f8fafc;
+  color: #94a3b8;
+}
+
+.table-list tbody tr.row-discontinued td {
+  color: #94a3b8;
+}
+
+.table-list tbody tr.row-discontinued .status-badge {
+  opacity: 0.55;
+  filter: grayscale(70%);
+}
+
+.table-list tbody tr.row-discontinued:hover {
+  background: #f1f5f9;
+}
+
 .sortable {
   cursor: pointer;
   user-select: none;
@@ -792,6 +906,14 @@ onMounted(loadTables)
   background: #e53e3e;
   color: white;
   cursor: pointer;
+  transition: all 0.2s;
+}
+
+.lock-btn:disabled {
+  background: #cbd5e0;
+  color: #718096;
+  cursor: not-allowed;
+  opacity: 0.7;
 }
 
 .modal-overlay {
