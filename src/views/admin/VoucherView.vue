@@ -1,10 +1,11 @@
 <template>
   <div class="voucher-page">
     <div class="content">
-      <div class="page-header">
-        <h2 class="page-title">QUẢN LÝ VOUCHER</h2>
-        <button class="add-btn" @click="handleAddVoucher">+ Thêm voucher</button>
-      </div>
+      <AdminPageHeader title="Quản lý voucher">
+        <template #actions>
+          <button class="add-btn" @click="handleAddVoucher">+ Thêm voucher</button>
+        </template>
+      </AdminPageHeader>
 
       <!-- TABS -->
       <div class="tabs">
@@ -479,6 +480,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import VoucherService from '@/services/voucherService'
 import axiosInstance from '@/services/axiosInstance'
+import AdminPageHeader from '@/components/admin/AdminPageHeader.vue'
 
 const activeTab = ref('product')
 
@@ -1279,7 +1281,6 @@ onMounted(() => {
 <style scoped>
 .voucher-page {
   padding: 24px;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
   min-height: 100vh;
 }
 

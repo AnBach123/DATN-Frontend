@@ -1,38 +1,38 @@
 <template>
   <div class="report-view">
-    <div class="report-header">
-      <h1 class="page-title">BÁO CÁO</h1>
-      
-      <div class="date-range-controls">
-        <div class="period-select-wrapper">
-          <select v-model="selectedPeriod" @change="handlePeriodChange" class="period-select">
-            <option value="today">Hôm nay</option>
-            <option value="7days">7 ngày</option>
-            <option value="30days">30 ngày</option>
-            <option value="90days">90 ngày</option>
-          </select>
-        </div>
-        
-        <div class="date-range-picker" ref="dateRangePicker">
-          <button @click="toggleDatePicker" class="date-range-btn">
-            <span>{{ formatDateRange }}</span>
-          </button>
-          <div v-if="showDatePicker" class="date-picker-dropdown">
-            <div class="date-picker-row">
-              <div class="date-picker-col">
-                <label>Từ ngày</label>
-                <input type="date" v-model="dateRange.start" class="date-input" />
+    <AdminPageHeader title="Báo cáo">
+      <template #actions>
+        <div class="date-range-controls">
+          <div class="period-select-wrapper">
+            <select v-model="selectedPeriod" @change="handlePeriodChange" class="period-select">
+              <option value="today">Hôm nay</option>
+              <option value="7days">7 ngày</option>
+              <option value="30days">30 ngày</option>
+              <option value="90days">90 ngày</option>
+            </select>
+          </div>
+
+          <div class="date-range-picker" ref="dateRangePicker">
+            <button @click="toggleDatePicker" class="date-range-btn">
+              <span>{{ formatDateRange }}</span>
+            </button>
+            <div v-if="showDatePicker" class="date-picker-dropdown">
+              <div class="date-picker-row">
+                <div class="date-picker-col">
+                  <label>Từ ngày</label>
+                  <input type="date" v-model="dateRange.start" class="date-input" />
+                </div>
+                <div class="date-picker-col">
+                  <label>Đến ngày</label>
+                  <input type="date" v-model="dateRange.end" class="date-input" />
+                </div>
               </div>
-              <div class="date-picker-col">
-                <label>Đến ngày</label>
-                <input type="date" v-model="dateRange.end" class="date-input" />
-              </div>
+              <button @click="applyDateRange" class="apply-btn">Áp dụng</button>
             </div>
-            <button @click="applyDateRange" class="apply-btn">Áp dụng</button>
           </div>
         </div>
-      </div>
-    </div>
+      </template>
+    </AdminPageHeader>
 
     <div class="report-tabs-container">
       <div class="report-tabs">
@@ -307,6 +307,7 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { reportService, type RevenueReport, type ProductReport } from '@/services/reportService'
 import { Chart, registerables } from 'chart.js'
+import AdminPageHeader from '@/components/admin/AdminPageHeader.vue'
 
 Chart.register(...registerables)
 

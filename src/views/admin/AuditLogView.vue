@@ -1,9 +1,6 @@
 <template>
   <div class="audit-log-view">
-    <div class="page-header">
-      <h1>Nhật ký hoạt động</h1>
-      <p class="subtitle">Theo dõi tất cả hoạt động trong hệ thống</p>
-    </div>
+    <AdminPageHeader title="Nhật ký hoạt động" />
 
     <!-- Search bar — tự tìm khi gõ (debounce 300ms) -->
     <div class="search-bar">
@@ -295,6 +292,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { auditLogApi, type AuditLogResponse, type AuditLogSearchRequest } from '@/services/admin/auditLogApi'
+import AdminPageHeader from '@/components/admin/AdminPageHeader.vue'
 
 const loading = ref(false)
 const auditLogs = ref<AuditLogResponse[]>([])

@@ -1,11 +1,10 @@
 <template>
   <div class="combo-container">
-    <div class="page-header">
-      <h2 class="page-title">Quản lý combo</h2>
-      <button class="add-btn" @click="openAddModal">
-        + Thêm combo
-      </button>
-    </div>
+    <AdminPageHeader title="Quản lý combo">
+      <template #actions>
+        <button class="add-btn" @click="openAddModal">+ Thêm combo</button>
+      </template>
+    </AdminPageHeader>
 
     <!-- FILTER -->
     <div class="filters-section">
@@ -256,6 +255,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import axiosInstance from '@/services/axiosInstance'
+import AdminPageHeader from '@/components/admin/AdminPageHeader.vue'
 
 const combos = ref<any[]>([])
 const loading = ref(false)
@@ -648,7 +648,6 @@ onMounted(() => {
 <style scoped>
 .combo-container {
   padding: 24px;
-  background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
   min-height: 100vh;
 }
 

@@ -77,7 +77,11 @@ const breadcrumbs = computed(() => {
     reservations: 'Đặt bàn',
     invoices: 'Hóa đơn',
     employees: 'Nhân viên',
+    reviews: 'Đánh giá',
     reports: 'Báo cáo',
+    'query-builder': 'Truy vấn dữ liệu',
+    'audit-logs': 'Nhật ký hoạt động',
+    blog: 'Bài viết',
     settings: 'Cài đặt'
   }
   return paths.map(p => labels[p] || p)

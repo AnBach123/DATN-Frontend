@@ -1,10 +1,11 @@
 <template>
   <div class="employee-page">
     <div class="content">
-      <div class="page-header">
-        <h2 class="page-title">QUẢN LÝ NHÂN VIÊN</h2>
-        <button class="add-btn" @click="openAddModal">+ Thêm nhân viên</button>
-      </div>
+      <AdminPageHeader title="Quản lý nhân viên">
+        <template #actions>
+          <button class="add-btn" @click="openAddModal">+ Thêm nhân viên</button>
+        </template>
+      </AdminPageHeader>
 
       <div class="filter-bar">
         <input
@@ -293,6 +294,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import EmployeeService from '@/services/employee'
+import AdminPageHeader from '@/components/admin/AdminPageHeader.vue'
 
 const employees = ref<any[]>([])
 const allEmployees = ref<any[]>([])
@@ -540,7 +542,6 @@ const formatRole = (role: string) =>
 /* PAGE BACKGROUND */
 .employee-page {
   padding: 24px;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
   min-height: 100vh;
 }
 

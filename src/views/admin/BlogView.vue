@@ -1,9 +1,10 @@
 <template>
   <div class="blog-container">
-    <div class="page-header">
-      <h2 class="page-title">Quản lý bài viết</h2>
-      <button v-if="currentTab === 'active'" class="add-btn" @click="openAddModal">+ Thêm bài viết</button>
-    </div>
+    <AdminPageHeader title="Quản lý bài viết">
+      <template #actions>
+        <button v-if="currentTab === 'active'" class="add-btn" @click="openAddModal">+ Thêm bài viết</button>
+      </template>
+    </AdminPageHeader>
 
     <!-- BANNER sau khi vô hiệu hóa -->
     <transition name="slide-fade">
@@ -329,6 +330,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import * as blogApi from '@/services/blogApi'
+import AdminPageHeader from '@/components/admin/AdminPageHeader.vue'
 import axiosInstance from '@/services/axiosInstance'
 
 type PostStatus = 'DRAFT' | 'SCHEDULED' | 'PUBLISHED' | 'EXPIRED' | 'DISABLED'
@@ -919,7 +921,7 @@ onMounted(loadPosts)
 </script>
 
 <style scoped>
-.blog-container { padding: 24px; background: linear-gradient(135deg, #f5f7fa, #c3cfe2); min-height: 100vh; }
+.blog-container { padding: 24px; min-height: 100vh; }
 
 .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 .page-title { font-size: 28px; font-weight: 700; color: #2d3748; }

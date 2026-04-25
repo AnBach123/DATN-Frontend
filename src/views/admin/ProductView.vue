@@ -1,11 +1,10 @@
 <template>
   <div class="product-container">
-    <div class="page-header">
-      <h2 class="page-title">Quản lý sản phẩm</h2>
-      <button class="add-btn" @click="openAddModal">
-        + Thêm sản phẩm
-      </button>
-    </div>
+    <AdminPageHeader title="Quản lý sản phẩm">
+      <template #actions>
+        <button class="add-btn" @click="openAddModal">+ Thêm sản phẩm</button>
+      </template>
+    </AdminPageHeader>
 
     <!-- FILTER -->
     <div class="filters-section">
@@ -227,6 +226,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import * as productApi from '@/services/admin/productApi'
+import AdminPageHeader from '@/components/admin/AdminPageHeader.vue'
 import axiosInstance from '@/services/axiosInstance'
 
 const products = ref<any[]>([])
@@ -494,7 +494,6 @@ onMounted(loadProducts)
 <style scoped>
 .product-container {
   padding: 24px;
-  background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
   min-height: 100vh;
 }
 

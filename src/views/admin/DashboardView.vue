@@ -1,8 +1,6 @@
 <template>
   <div class="dashboard">
-    <div class="dashboard-header">
-      <h1 class="page-title">TRANG CHỦ</h1>
-    </div>
+    <AdminPageHeader title="Trang chủ" />
 
     <!-- Row 1: Stats Cards -->
     <div class="stats-grid">
@@ -89,7 +87,7 @@
 
       <div class="chart-card top-products">
         <div class="card-header">
-          <h3>Top sản phẩm bán chạy hôm nay</h3>
+          <h3>{{ topProductsLabel }}</h3>
         </div>
         <div class="products-list">
           <div v-for="(product, index) in topProducts" :key="product.id" class="product-item">
@@ -310,6 +308,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import StatCard from '@/components/admin/StatCard.vue'
 import RevenueChart from '@/components/admin/RevenueChart.vue'
+import AdminPageHeader from '@/components/admin/AdminPageHeader.vue'
 import { dashboardService, type DashboardStats, type TopProduct, type RecentInvoice, type TableStatus, type TableDetail } from '@/services/dashboardService'
 import { DashboardWebSocket } from '@/services/websocket/DashboardWebSocket'
 
@@ -460,6 +459,30 @@ const invoiceLabel = computed(() => {
     const diffTime = Math.abs(endDate.getTime() - startDate.getTime())
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1
     return `Hóa đơn ${diffDays} ngày`
+  }
+})
+
+const topProductsLabel = computed(() => {
+  const start = dateRange.value.start
+  const end = dateRange.value.end
+  if (!start || !end) return 'Top sản phẩm bán chạy'
+
+  const today = new Date().toISOString().split('T')[0]
+
+  if (selectedPeriod.value === 'today' && start === today && end === today) {
+    return 'Top sản phẩm bán chạy hôm nay'
+  } else if (selectedPeriod.value === '7days') {
+    return 'Top sản phẩm bán chạy 7 ngày'
+  } else if (selectedPeriod.value === '30days') {
+    return 'Top sản phẩm bán chạy 30 ngày'
+  } else if (selectedPeriod.value === '90days') {
+    return 'Top sản phẩm bán chạy 90 ngày'
+  } else {
+    const startDate = new Date(start)
+    const endDate = new Date(end)
+    const diffTime = Math.abs(endDate.getTime() - startDate.getTime())
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1
+    return `Top sản phẩm bán chạy ${diffDays} ngày`
   }
 })
 

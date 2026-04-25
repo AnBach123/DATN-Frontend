@@ -1,10 +1,11 @@
 <template>
   <div class="table-page">
     <div class="content">
-      <div class="page-header">
-        <h2 class="page-title">QUẢN LÝ BÀN</h2>
-        <button class="add-btn" @click="openAddModal">+ Thêm bàn</button>
-      </div>
+      <AdminPageHeader title="Quản lý bàn">
+        <template #actions>
+          <button class="add-btn" @click="openAddModal">+ Thêm bàn</button>
+        </template>
+      </AdminPageHeader>
 
       <!-- FILTER BAR -->
       <div class="filter-bar">
@@ -239,24 +240,6 @@
   <input v-model="form.floor" type="text" disabled />
 </div>
 
-     <div class="form-group">
-  <label>Trạng thái hiện tại</label>
-  <input
-    :value="selectedTable ? formatTableStatus(selectedTable.tableStatus) : ''"
-    disabled
-  />
-</div>
-
-<div class="form-group">
-  <label>Trạng thái cập nhật *</label>
-  <select v-model="form.tableStatus">
-    <option value="">-- Chọn trạng thái --</option>
-    <option value="AVAILABLE">Còn trống</option>
-    <option value="RESERVED">Đã đặt</option>
-    <option value="OCCUPIED">Đang sử dụng</option>
-    <option value="CLEANING">Đang dọn</option>
-  </select>
-</div>
           </div>
         </div>
 
@@ -293,6 +276,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import DiningTableService from '@/services/diningTable'
+import AdminPageHeader from '@/components/admin/AdminPageHeader.vue'
 
 const tables = ref<any[]>([])
 const allTables = ref<any[]>([])
@@ -599,7 +583,6 @@ onMounted(loadTables)
 <style scoped>
 .table-page {
   padding: 24px;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
   min-height: 100vh;
 }
 

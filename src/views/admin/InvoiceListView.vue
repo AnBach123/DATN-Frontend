@@ -1,8 +1,6 @@
 <template>
   <div class="invoice-list-container">
-    <div class="header-section">
-      <h2>Danh sách hóa đơn</h2>
-    </div>
+    <AdminPageHeader title="Danh sách hóa đơn" />
 
     <div class="filters-section">
       <div class="filter-row">
@@ -328,6 +326,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { invoiceService, type InvoicePageResponse, type RecentInvoice, type InvoiceDetail } from '@/services/dashboardService'
+import AdminPageHeader from '@/components/admin/AdminPageHeader.vue'
 
 const invoices = ref<RecentInvoice[]>([])
 const loading = ref(false)
@@ -508,7 +507,6 @@ onMounted(() => {
 <style scoped>
 .invoice-list-container {
   padding: 24px;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
   min-height: 100vh;
 }
 

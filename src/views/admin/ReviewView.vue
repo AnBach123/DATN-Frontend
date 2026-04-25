@@ -6,6 +6,7 @@ import {
   rejectReview,
   deleteReview
 } from '@/services/reviewApi'
+import AdminPageHeader from '@/components/admin/AdminPageHeader.vue'
 
 interface Review {
   id: number
@@ -144,12 +145,7 @@ onMounted(load)
 
 <template>
   <div class="review-container">
-    <div class="header-section">
-      <div>
-        <h2>Quản lý đánh giá</h2>
-        <p class="sub-title">Duyệt, từ chối và quản lý phản hồi khách hàng</p>
-      </div>
-    </div>
+    <AdminPageHeader title="Quản lý đánh giá" />
 
     <div class="filters-section">
       <div class="filter-row">
@@ -336,7 +332,6 @@ onMounted(load)
 <style scoped>
 .review-container {
   padding: 24px;
-  background: linear-gradient(135deg, #f8fafc, #eef2ff);
   min-height: 100vh;
 }
 

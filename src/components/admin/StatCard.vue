@@ -6,7 +6,7 @@
       <div class="stat-value">{{ value }}</div>
       <div class="stat-change" :class="trend">
         <span class="trend-icon">{{ trendIcon }}</span>
-        <span>{{ Math.abs(percentChange) }}%</span>
+        <span>{{ formattedPercent }}%</span>
       </div>
     </div>
   </div>
@@ -30,6 +30,14 @@ const trendIcon = computed(() => {
   if (props.trend === 'up') return '↑'
   if (props.trend === 'down') return '↓'
   return '→'
+})
+
+// Làm tròn 1 chữ số thập phân, bỏ ".0" nếu là số nguyên (VD: 142.307... → 142.3, 100 → 100)
+const formattedPercent = computed(() => {
+  const v = Math.abs(props.percentChange)
+  if (!Number.isFinite(v)) return '0'
+  const rounded = Math.round(v * 10) / 10
+  return Number.isInteger(rounded) ? `${rounded}` : rounded.toFixed(1)
 })
 </script>
 

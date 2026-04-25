@@ -1,10 +1,7 @@
 <template>
   <div class="invoice-list-container">
 
-    <!-- HEADER -->
-    <div class="header-section">
-      <h2>Quản lý khách hàng</h2>
-    </div>
+    <AdminPageHeader title="Quản lý khách hàng" />
 
     <!-- FILTER -->
     <div class="filters-section">
@@ -58,7 +55,6 @@
             <th @click="sort('fullName')">Họ tên {{ icon('fullName') }}</th>
             <th>SĐT</th>
             <th>Email</th>
-            <th>Giới tính</th>
             <th @click="sort('createdAt')">Ngày tạo {{ icon('createdAt') }}</th>
             <th @click="sort('loyaltyPoints')">Điểm {{ icon('loyaltyPoints') }}</th>
             <th>Trạng thái</th>
@@ -68,11 +64,11 @@
 
         <tbody>
           <tr v-if="loading">
-            <td colspan="8" class="loading-cell">Đang tải...</td>
+            <td colspan="7" class="loading-cell">Đang tải...</td>
           </tr>
 
           <tr v-else-if="list.length === 0">
-            <td colspan="8" class="empty-cell">Không có dữ liệu</td>
+            <td colspan="7" class="empty-cell">Không có dữ liệu</td>
           </tr>
 
           <tr v-else v-for="c in list" :key="c.id">
@@ -80,7 +76,6 @@
             <td class="code-cell">{{ c.fullName }}</td>
             <td>{{ c.phoneNumber }}</td>
             <td>{{ c.email }}</td>
-            <td>{{ c.gender }}</td>
             <td>{{ formatDate(c.createdAt) }}</td>
             <td>{{ c.loyaltyPoints }}</td>
 
@@ -212,6 +207,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { customerApi } from '@/services/admin/customerApi'
+import AdminPageHeader from '@/components/admin/AdminPageHeader.vue'
 
 const list = ref<any[]>([])
 const allCustomers = ref<any[]>([])
@@ -352,7 +348,6 @@ onMounted(fetchData)
 <style scoped>
 .invoice-list-container {
   padding: 24px;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
   min-height: 100vh;
 }
 
