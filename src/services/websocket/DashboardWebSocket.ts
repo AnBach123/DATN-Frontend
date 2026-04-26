@@ -63,22 +63,23 @@ export class DashboardWebSocket {
       return; // Silent return - already connected
     }
 
-    // Store token for reconnect (empty string is valid for dev mode)
-    this.token = token || '';
-    
+    // Đọc lại token từ localStorage nếu caller không truyền — phòng trường hợp
+    // component mount xong tại thời điểm token đã có sẵn.
+    const finalToken = token || localStorage.getItem('accessToken') || '';
+    this.token = finalToken;
+
     this.connectionState = 'connecting';
 
-    // Pass token via query parameter (industry standard for SockJS)
-    // Empty token is allowed when security is disabled (dev mode)
-    const socketUrl = this.token 
-      ? `${this.wsUrl}?token=${encodeURIComponent(this.token)}`
-      : this.wsUrl;
-    
+    // KHÔNG gửi token qua URL nữa vì SockJS không kế thừa query string sang
+    // các transport phụ (xhr_streaming, eventsource...). Gửi qua STOMP CONNECT
+    // header thay vì URL — interceptor backend (WebSocketChannelInterceptor)
+    // sẽ validate JWT trong frame CONNECT.
     this.client = new Client({
-      webSocketFactory: () => new SockJS(socketUrl) as WebSocket,
-      
-      // No headers needed - authentication happens at handshake level
-      connectHeaders: {},
+      webSocketFactory: () => new SockJS(this.wsUrl) as WebSocket,
+
+      connectHeaders: finalToken
+        ? { Authorization: `Bearer ${finalToken}` }
+        : {},
       
       onConnect: () => {
         this.connectionState = 'connected';

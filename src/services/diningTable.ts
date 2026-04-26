@@ -1,6 +1,8 @@
-import axios from 'axios'
+// Dùng axiosInstance dùng chung — interceptor đã gắn JWT Authorization header
+// + X-Employee-Username / X-Customer-Email cho audit log định danh.
+import axios from './axiosInstance'
 
-const API_URL = 'http://localhost:8080/api/tables'
+const API_URL = '/api/tables'
 
 export default {
   async getTables() {

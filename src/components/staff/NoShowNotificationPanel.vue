@@ -213,12 +213,15 @@ const setupWebSocket = () => {
     if (token && token.startsWith('Bearer ')) {
       token = token.substring(7);
     }
-    
+
+    // Token gửi qua STOMP CONNECT header (KHÔNG qua URL — SockJS không kế thừa query string).
     const wsUrl = import.meta.env.VITE_API_BASE_URL + '/ws';
-    const socketUrl = token ? `${wsUrl}?token=${token}` : wsUrl;
-    
+
     stompClient = new Client({
-      webSocketFactory: () => new SockJS(socketUrl) as WebSocket,
+      webSocketFactory: () => new SockJS(wsUrl) as WebSocket,
+      connectHeaders: token
+        ? { Authorization: `Bearer ${token}` }
+        : {},
       
       onConnect: () => {
         console.log('✅ No-show WebSocket connected');
